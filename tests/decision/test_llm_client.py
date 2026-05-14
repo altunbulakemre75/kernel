@@ -22,7 +22,7 @@ def test_schema_required_fields():
 def test_llm_response_dataclass_structure():
     r = LLMResponse(
         action="alert", threat_level="high", confidence=0.9,
-        reasoning="test", roe_reference="ROE-3",
+        reasoning="test", roe_reference="POL-3",
         raw={"x": 1}, provider="ollama", model="llama3",
     )
     assert r.action == "alert"

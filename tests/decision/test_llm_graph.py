@@ -12,7 +12,7 @@ from services.decision.roe import load_roe
 from services.decision.schemas import Action, ThreatLevel
 
 
-CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "roe" / "default.yaml"
+CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "policies" / "default.yaml"
 
 
 def _track(**overrides) -> dict:

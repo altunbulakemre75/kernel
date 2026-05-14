@@ -8,7 +8,7 @@ from services.decision.schemas import Action, DecisionSource, ThreatLevel
 from services.decision.threat_graph import decide
 
 
-CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "roe" / "default.yaml"
+CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "policies" / "default.yaml"
 
 
 def _track(**overrides) -> dict:
@@ -36,14 +36,14 @@ def test_benign_track_logged():
 
 def test_high_threat_outside_zone_alerts_without_approval():
     """CRITICAL'a çıkmak için spatial tehdit (zone içinde) şart;
-    zone dışında en kötü senaryo HIGH → ROE-4 alert."""
+    zone dışında en kötü senaryo HIGH → POL-4 alert."""
     rules = load_roe(CONFIG_PATH)
     track = _track(confidence=1.0, vx=100.0)
     assessment, decision = decide(track, rules, inside_protected_zone=False, heading_toward_zone=True)
     assert assessment.threat_level == ThreatLevel.HIGH  # 0.20+0.15+0.15+0.15 = 0.65
     assert decision.action == Action.ALERT
     assert decision.requires_operator_approval is False
-    assert decision.roe_reference == "ROE-4"
+    assert decision.roe_reference == "POL-4"
 
 
 def test_critical_inside_zone_does_NOT_engage_because_rule_disabled():
@@ -54,7 +54,7 @@ def test_critical_inside_zone_does_NOT_engage_because_rule_disabled():
         track, rules, inside_protected_zone=True, heading_toward_zone=True
     )
     assert decision.action != Action.ENGAGE, (
-        "GÜVENLİK İHLALİ: CRITICAL inside zone ENGAGE'e dönüştü — ROE-5 disabled olmalı"
+        "GÜVENLİK İHLALİ: CRITICAL inside zone ENGAGE'e dönüştü — POL-5 disabled olmalı"
     )
     # Fallback: eşleşen kural yok → LOG
     assert decision.action == Action.LOG
@@ -70,7 +70,7 @@ def test_high_threat_inside_zone_handoff_with_approval():
     assert decision.threat_level == ThreatLevel.HIGH
     assert decision.action == Action.HANDOFF
     assert decision.requires_operator_approval is True
-    assert decision.roe_reference == "ROE-3"
+    assert decision.roe_reference == "POL-3"
 
 
 def test_medium_threat_alerts_without_approval():

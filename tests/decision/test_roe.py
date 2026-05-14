@@ -7,7 +7,7 @@ from services.decision.roe import evaluate_roe, load_roe
 from services.decision.schemas import Action, ROERule, ThreatLevel
 
 
-CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "roe" / "default.yaml"
+CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "policies" / "default.yaml"
 
 
 # ── Loader tests ──────────────────────────────────────────────────
