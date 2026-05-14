@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+# ── Project metadata ──────────────────────────────────────────────────────────
+[project]
+name        = "kernel"
+version     = "0.1.0"
+description = "Decision provenance and accountability infrastructure for autonomous systems"
+readme      = "README.md"
+license     = { text = "Apache-2.0" }
+authors     = [{ name = "Emre Altunbulak" }]
+requires-python = ">=3.10"
+
+# Dependencies are maintained in requirements.txt — single source of truth.
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+
+[tool.setuptools.packages.find]
+where   = ["."]
+include = ["services*"]
+
+# ── Optional dependency groups ────────────────────────────────────────────────
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+]
+
+llm = [
+    # Activate with: pip install -e ".[llm]"
+    # Required when KERNEL_DECISION_LLM_ENABLED=true
+    "langgraph>=0.2.0",
+    "anthropic>=0.40.0",
+]
+
+# ── Ruff ──────────────────────────────────────────────────────────────────────
+[tool.ruff]
+line-length    = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4", "PT"]
+ignore = ["E501"]
+
+# ── Mypy ──────────────────────────────────────────────────────────────────────
+[tool.mypy]
+python_version        = "3.10"
+strict                = false
+ignore_missing_imports = true
+
+# ── Pytest ────────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths    = ["tests"]
+asyncio_mode = "auto"
+addopts      = "-v --tb=short"
