@@ -33,12 +33,12 @@ if TYPE_CHECKING:
 
 # ── Prometheus ────────────────────────────────────────────────────
 _messages_total = Counter(
-    "nizam_rf_odid_messages_total",
+    "kernel_rf_odid_messages_total",
     "Total ODID message count",
     ["sensor_id", "msg_type"],
 )
 _parse_errors_total = Counter(
-    "nizam_rf_odid_parse_errors_total",
+    "kernel_rf_odid_parse_errors_total",
     "ODID parse errors",
     ["sensor_id"],
 )
@@ -47,7 +47,7 @@ _parse_errors_total = Counter(
 class NATSSubject:
     @staticmethod
     def odid(sensor_id: str) -> str:
-        return f"nizam.raw.rf.odid.{sensor_id}"
+        return f"kernel.raw.rf.odid.{sensor_id}"
 
 
 # ── Pure function: raw bytes → ODIDEvent ──────────────────────────

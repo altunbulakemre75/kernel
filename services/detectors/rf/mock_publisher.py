@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-_mock_sent = Counter("nizam_rf_mock_sent_total", "Mock ODID publish count", ["sensor_id"])
+_mock_sent = Counter("kernel_rf_mock_sent_total", "Mock ODID publish count", ["sensor_id"])
 
 
 @dataclass

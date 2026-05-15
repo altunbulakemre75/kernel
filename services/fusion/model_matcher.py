@@ -1,14 +1,23 @@
-"""Drone model identification — in-memory vector lookup.
+"""Entity model classification — in-memory vector lookup.
 
-Real FAISS is optional: fast at high volume (10k+ drone models). At low
-volume, simple numpy nearest-neighbour is sufficient and does not require
-FAISS installation. Two paths:
-  1. FAISS available → IndexFlatL2
-  2. Otherwise → numpy argmin
+Performs nearest-neighbor matching of sensor-derived feature vectors against
+a catalog of known entity signatures. Used by the fusion layer to attach
+a likely model/type label to a track without requiring a heavyweight
+classifier in the hot path.
 
-Data: services/fusion/drone_catalog.json — {model_name, manufacturer, embedding[16]}
-In production: YOLO feature extractor output or TF-IDF hash of ODID
-manufacturer+UA_type string can be used as the embedding.
+The catalog format (`services/fusion/drone_catalog.json`) is domain-neutral
+— it stores `{model_name, manufacturer, embedding[16]}` records. The name
+reflects the original deployment context (UAS tracking) but the matcher
+itself is type-agnostic; any entity catalog with the same schema works
+(vehicle types, vessel classes, etc.).
+
+Two backend paths:
+  1. FAISS available  → IndexFlatL2 (fast for 10k+ entries)
+  2. FAISS unavailable → numpy argmin (sufficient for small catalogs,
+                                      no install dependency)
+
+Embedding source in production: YOLO feature extractor output, or
+ODID manufacturer + UA_type lookup.
 """
 from __future__ import annotations
 

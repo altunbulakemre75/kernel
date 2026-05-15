@@ -44,7 +44,7 @@ class Measurement(BaseModel):
 class Track(BaseModel):
     """Fused track produced by the fusion engine.
 
-    NATS subject: nizam.tracks.active
+    NATS subject: kernel.tracks.active
     """
     track_id: str
     state: TrackState

@@ -30,7 +30,7 @@ log = logging.getLogger(__name__)
 OUI_PATH = Path(__file__).parent / "drone_ouis.json"
 
 _wifi_events_total = Counter(
-    "nizam_rf_wifi_events_total",
+    "kernel_rf_wifi_events_total",
     "WiFi OUI match count",
     ["sensor_id", "vendor"],
 )
@@ -79,7 +79,7 @@ def build_wifi_event(
 class NATSSubject:
     @staticmethod
     def wifi(sensor_id: str) -> str:
-        return f"nizam.raw.rf.wifi.{sensor_id}"
+        return f"kernel.raw.rf.wifi.{sensor_id}"
 
 
 async def publish_event(nc: "nats.aio.client.Client", event: WiFiOUIEvent) -> None:

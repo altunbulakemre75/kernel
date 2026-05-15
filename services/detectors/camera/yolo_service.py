@@ -22,23 +22,23 @@ if TYPE_CHECKING:
 
 # ── Prometheus metrics ────────────────────────────────────────────
 _detections_total = Counter(
-    "nizam_camera_detections_total",
+    "kernel_camera_detections_total",
     "Total detection count",
     ["sensor_id", "class_name"],
 )
 _inference_ms = Histogram(
-    "nizam_camera_inference_ms",
+    "kernel_camera_inference_ms",
     "YOLO inference time (ms)",
     buckets=[5, 10, 20, 50, 100, 200, 500],
 )
-_fps = Gauge("nizam_camera_fps", "Current FPS", ["sensor_id"])
+_fps = Gauge("kernel_camera_fps", "Current FPS", ["sensor_id"])
 
 
 # ── NATS subject helper ──────────────────────────────────────────
 class NATSSubject:
     @staticmethod
     def camera(sensor_id: str) -> str:
-        return f"nizam.raw.camera.{sensor_id}"
+        return f"kernel.raw.camera.{sensor_id}"
 
 
 # ── Pure functions (testable) ─────────────────────────────────────

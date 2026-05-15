@@ -1,17 +1,17 @@
 """Fusion service — collects NATS sensor messages and merges them into tracks.
 
 Input subjects:
-  - nizam.raw.camera.*
-  - nizam.raw.rf.odid.*
-  - nizam.raw.rf.wifi.*
+  - kernel.raw.camera.*
+  - kernel.raw.rf.odid.*
+  - kernel.raw.rf.wifi.*
 
 Output subject:
-  - nizam.tracks.active  (track pydantic JSON)
+  - kernel.tracks.active  (track pydantic JSON)
 
 Prometheus:
-  - nizam_fusion_measurements_total{sensor_type}
-  - nizam_fusion_active_tracks
-  - nizam_fusion_tick_ms
+  - kernel_fusion_measurements_total{sensor_type}
+  - kernel_fusion_active_tracks
+  - kernel_fusion_tick_ms
 """
 from __future__ import annotations
 
@@ -40,12 +40,12 @@ log = logging.getLogger(__name__)
 DEFAULT_REF = (39.9334, 32.8597)
 
 _meas_total = Counter(
-    "nizam_fusion_measurements_total",
+    "kernel_fusion_measurements_total",
     "Number of measurements entering fusion",
     ["sensor_type"],
 )
-_active_gauge = Gauge("nizam_fusion_active_tracks", "Active track count")
-_tick_ms = Histogram("nizam_fusion_tick_ms", "Tick duration (ms)", buckets=[1, 5, 10, 25, 50, 100, 250])
+_active_gauge = Gauge("kernel_fusion_active_tracks", "Active track count")
+_tick_ms = Histogram("kernel_fusion_tick_ms", "Tick duration (ms)", buckets=[1, 5, 10, 25, 50, 100, 250])
 
 
 def latlon_to_enu(lat: float, lon: float, ref_lat: float, ref_lon: float) -> tuple[float, float]:
@@ -240,7 +240,7 @@ class FusionService:
                     payload["longitude"] = lon
                     payload["altitude"] = track.z
                     await self._nc.publish(
-                        "nizam.tracks.active", json.dumps(payload).encode()
+                        "kernel.tracks.active", json.dumps(payload).encode()
                     )
 
             dt_ms = (time.monotonic() - t0) * 1000.0
@@ -266,9 +266,9 @@ class FusionService:
             await self._on_sim_cop(msg.data)
 
         self._subs = [
-            await self._nc.subscribe("nizam.raw.rf.odid.>", cb=odid_cb),
-            await self._nc.subscribe("nizam.raw.camera.>", cb=camera_cb),
-            await self._nc.subscribe("nizam.raw.sim.cop", cb=sim_cop_cb),
+            await self._nc.subscribe("kernel.raw.rf.odid.>", cb=odid_cb),
+            await self._nc.subscribe("kernel.raw.camera.>", cb=camera_cb),
+            await self._nc.subscribe("kernel.raw.sim.cop", cb=sim_cop_cb),
         ]
         log.info("Fusion service listening on NATS %s", self.nats_url)
 

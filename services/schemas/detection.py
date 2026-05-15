@@ -22,7 +22,7 @@ class Detection(TypedDict):
 class CameraDetectionEvent(BaseModel):
     """Single-frame detection from a camera sensor.
 
-    NATS subject: nizam.raw.camera.{sensor_id}
+    NATS subject: kernel.raw.camera.{sensor_id}
     """
 
     sensor_id: str

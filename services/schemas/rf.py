@@ -65,7 +65,7 @@ class ODIDLocation(BaseModel):
 class ODIDEvent(BaseModel):
     """Single ODID packet — contains one or more messages.
 
-    NATS subject: nizam.raw.rf.odid.{sensor_id}
+    NATS subject: kernel.raw.rf.odid.{sensor_id}
     """
     sensor_id: str
     timestamp_iso: str
@@ -78,7 +78,7 @@ class ODIDEvent(BaseModel):
 class WiFiOUIEvent(BaseModel):
     """WiFi OUI-based drone manufacturer detection.
 
-    NATS subject: nizam.raw.rf.wifi.{sensor_id}
+    NATS subject: kernel.raw.rf.wifi.{sensor_id}
     """
     sensor_id: str
     timestamp_iso: str
