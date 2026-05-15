@@ -1,4 +1,4 @@
-"""Deterministic tehdit değerlendirme testleri."""
+"""Deterministic threat assessment tests."""
 from __future__ import annotations
 
 from services.decision.rules import assess_threat

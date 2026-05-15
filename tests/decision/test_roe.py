@@ -19,14 +19,14 @@ def test_default_roe_loads():
 
 
 def test_default_engage_rule_is_DISABLED():
-    """CRITICAL: ENGAGE kuralı varsayılan olarak DEVRE DIŞI olmalı."""
+    """CRITICAL: ENGAGE rule must be DISABLED by default."""
     rules = load_roe(CONFIG_PATH)
     engage_rules = [r for r in rules if r.action == Action.ENGAGE]
-    # En az bir ENGAGE kuralı var ve hepsi disabled
+    # At least one ENGAGE rule exists and all are disabled
     assert len(engage_rules) >= 1
     for rule in engage_rules:
         assert rule.enabled is False, (
-            f"ENGAGE rule {rule.rule_id} is ENABLED by default — güvenlik ihlali!"
+            f"ENGAGE rule {rule.rule_id} is ENABLED by default — security violation!"
         )
 
 
@@ -87,11 +87,11 @@ def test_zone_constraint_must_match():
             action=Action.HANDOFF, enabled=True,
         ),
     ]
-    # Zone dışında → eşleşmez
+    # Outside zone → no match
     action_out, _ = evaluate_roe(rules, ThreatLevel.HIGH, inside_zone=False)
     assert action_out == Action.LOG
 
-    # Zone içinde → eşleşir
+    # Inside zone → matches
     action_in, matched = evaluate_roe(rules, ThreatLevel.HIGH, inside_zone=True)
     assert action_in == Action.HANDOFF
     assert matched is not None

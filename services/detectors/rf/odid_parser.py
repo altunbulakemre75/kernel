@@ -20,16 +20,16 @@ INVALID_ALT = -1000.0
 
 
 def parse_message_header(byte0: int) -> tuple[ODIDMessageType, int]:
-    """Üst nibble mesaj tipi, alt nibble protokol sürümü."""
+    """Upper nibble = message type, lower nibble = protocol version."""
     msg_type = ODIDMessageType(byte0 >> 4)
     protocol_version = byte0 & 0x0F
     return msg_type, protocol_version
 
 
 def parse_basic_id(payload: bytes) -> ODIDBasicID:
-    """Basic ID mesaj payload'ı (24 bayt, header hariç)."""
+    """Basic ID message payload (24 bytes, excluding header)."""
     if len(payload) < 2 + ODID_ID_SIZE:
-        raise ValueError(f"Basic ID payload çok kısa: {len(payload)}")
+        raise ValueError(f"Basic ID payload too short: {len(payload)}")
     id_type = ODIDIDType(payload[0] >> 4)
     ua_type = ODIDUAType(payload[0] & 0x0F)
     uas_id_bytes = payload[1 : 1 + ODID_ID_SIZE]
@@ -38,7 +38,7 @@ def parse_basic_id(payload: bytes) -> ODIDBasicID:
 
 
 def parse_location(payload: bytes) -> ODIDLocation:
-    """Location mesaj payload'ı (24 bayt, header hariç).
+    """Location message payload (24 bytes, excluding header).
 
     Layout (offset bytes):
       0  : Status(4) | HeightType(1) | EW(1) | SpeedMult(2)
@@ -57,7 +57,7 @@ def parse_location(payload: bytes) -> ODIDLocation:
       23 : Reserved
     """
     if len(payload) < 24:
-        raise ValueError(f"Location payload çok kısa: {len(payload)}")
+        raise ValueError(f"Location payload too short: {len(payload)}")
 
     flags = payload[0]
     ew_direction = (flags >> 1) & 0x01
@@ -109,9 +109,9 @@ def parse_location(payload: bytes) -> ODIDLocation:
 
 
 def parse_message(message: bytes) -> tuple[ODIDMessageType, ODIDBasicID | ODIDLocation | None]:
-    """Tek bir 25-bayt ODID mesajını ayrıştır."""
+    """Parse a single 25-byte ODID message."""
     if len(message) < ODID_MESSAGE_SIZE:
-        raise ValueError(f"Mesaj çok kısa: {len(message)} < {ODID_MESSAGE_SIZE}")
+        raise ValueError(f"Message too short: {len(message)} < {ODID_MESSAGE_SIZE}")
 
     msg_type, _protocol = parse_message_header(message[0])
     payload = message[1:]
@@ -126,7 +126,7 @@ def parse_message(message: bytes) -> tuple[ODIDMessageType, ODIDBasicID | ODIDLo
 def build_basic_id_message(
     id_type: ODIDIDType, ua_type: ODIDUAType, uas_id: str
 ) -> bytes:
-    """Test fixture üretici — gerçek parser'ı doğrulamak için."""
+    """Test fixture builder — for validating the real parser."""
     header = (ODIDMessageType.BASIC_ID << 4) | 0x2  # protocol v2
     flags = (int(id_type) << 4) | int(ua_type)
     id_bytes = uas_id.encode("ascii")[:ODID_ID_SIZE].ljust(ODID_ID_SIZE, b"\x00")
@@ -142,7 +142,7 @@ def build_location_message(
     heading_deg: float = 0.0,
     h_speed_mps: float = 0.0,
 ) -> bytes:
-    """Test fixture üretici — Location message."""
+    """Test fixture builder — Location message."""
     header = (ODIDMessageType.LOCATION << 4) | 0x2
     flags = 0x00  # status=0, EW=0, speedMult=0
     if heading_deg >= 180:

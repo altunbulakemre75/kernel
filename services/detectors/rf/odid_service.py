@@ -1,11 +1,11 @@
-"""ODID (Remote ID) tespit servisi — ham ODID paketlerini NATS'e yayınlar.
+"""ODID (Remote ID) detection service — publishes raw ODID packets to NATS.
 
-Veri kaynakları (pluggable):
-  - Bluetooth Legacy/LE (gelecek: bluez + D-Bus)
-  - WiFi NAN / WiFi Beacon (gelecek: scapy / airmon-ng)
-  - Mock source (test için, stdin'den hex satır)
+Data sources (pluggable):
+  - Bluetooth Legacy/LE (future: bluez + D-Bus)
+  - WiFi NAN / WiFi Beacon (future: scapy / airmon-ng)
+  - Mock source (for testing, reads hex lines from stdin)
 
-Kullanım:
+Usage:
     python -m services.detectors.rf.odid_service \
         --sensor-id edge-01 --nats nats://localhost:6222 --source mock
 """
@@ -34,12 +34,12 @@ if TYPE_CHECKING:
 # ── Prometheus ────────────────────────────────────────────────────
 _messages_total = Counter(
     "nizam_rf_odid_messages_total",
-    "Toplam ODID mesaj sayısı",
+    "Total ODID message count",
     ["sensor_id", "msg_type"],
 )
 _parse_errors_total = Counter(
     "nizam_rf_odid_parse_errors_total",
-    "ODID ayrıştırma hataları",
+    "ODID parse errors",
     ["sensor_id"],
 )
 
@@ -50,7 +50,7 @@ class NATSSubject:
         return f"nizam.raw.rf.odid.{sensor_id}"
 
 
-# ── Saf fonksiyon: raw bytes → ODIDEvent ──────────────────────────
+# ── Pure function: raw bytes → ODIDEvent ──────────────────────────
 
 def build_odid_event(
     raw: bytes,
@@ -58,9 +58,9 @@ def build_odid_event(
     source: str,
     rssi_dbm: float | None = None,
 ) -> ODIDEvent | None:
-    """Tek bir 25-bayt ODID mesajını ODIDEvent'e dönüştürür.
+    """Convert a single 25-byte ODID message to an ODIDEvent.
 
-    Bilinmeyen mesaj tipleri None döner (örn. Auth, SelfID).
+    Unknown message types return None (e.g. Auth, SelfID).
     """
     try:
         msg_type, parsed = parse_message(raw)
@@ -77,7 +77,7 @@ def build_odid_event(
     elif msg_type == ODIDMessageType.LOCATION and isinstance(parsed, ODIDLocation):
         location = parsed
     else:
-        return None  # diğer tipler bu serviste yayınlanmaz
+        return None  # other types not published by this service
 
     return ODIDEvent(
         sensor_id=sensor_id,
@@ -94,10 +94,10 @@ async def publish_event(nc: "nats.aio.client.Client", event: ODIDEvent) -> None:
     await nc.publish(subject, event.model_dump_json().encode())
 
 
-# ── Veri kaynakları ───────────────────────────────────────────────
+# ── Data sources ──────────────────────────────────────────────────
 
 async def mock_source_from_stdin() -> AsyncIterator[bytes]:
-    """stdin'den hex satır oku (test/geliştirme için)."""
+    """Read hex lines from stdin (for testing/development)."""
     loop = asyncio.get_event_loop()
     while True:
         line = await loop.run_in_executor(None, sys.stdin.readline)
@@ -112,7 +112,7 @@ async def mock_source_from_stdin() -> AsyncIterator[bytes]:
             continue
 
 
-# ── Ana servis ────────────────────────────────────────────────────
+# ── Main service ──────────────────────────────────────────────────
 
 async def run(sensor_id: str, nats_url: str, source: str) -> None:
     import nats
@@ -122,7 +122,7 @@ async def run(sensor_id: str, nats_url: str, source: str) -> None:
     if source == "mock":
         byte_stream = mock_source_from_stdin()
     else:
-        raise NotImplementedError(f"Kaynak henüz desteklenmiyor: {source}")
+        raise NotImplementedError(f"Source not yet supported: {source}")
 
     try:
         async for raw in byte_stream:
@@ -134,7 +134,7 @@ async def run(sensor_id: str, nats_url: str, source: str) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="NIZAM ODID RF Servisi")
+    parser = argparse.ArgumentParser(description="NIZAM ODID RF Service")
     parser.add_argument("--sensor-id", default="rf-01")
     parser.add_argument("--nats", default="nats://localhost:6222")
     parser.add_argument("--source", default="mock", choices=["mock", "bluetooth", "wifi-nan"])

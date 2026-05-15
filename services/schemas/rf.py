@@ -1,4 +1,4 @@
-"""RF sensör event şemaları — OpenDroneID (ASTM F3411) ve WiFi OUI."""
+"""RF sensor event schemas — OpenDroneID (ASTM F3411) and WiFi OUI."""
 from __future__ import annotations
 
 from enum import IntEnum
@@ -63,7 +63,7 @@ class ODIDLocation(BaseModel):
 
 
 class ODIDEvent(BaseModel):
-    """Tek bir ODID paketi — bir veya daha fazla mesaj içerir.
+    """Single ODID packet — contains one or more messages.
 
     NATS subject: nizam.raw.rf.odid.{sensor_id}
     """
@@ -76,7 +76,7 @@ class ODIDEvent(BaseModel):
 
 
 class WiFiOUIEvent(BaseModel):
-    """WiFi OUI tabanlı drone üreticisi tespiti.
+    """WiFi OUI-based drone manufacturer detection.
 
     NATS subject: nizam.raw.rf.wifi.{sensor_id}
     """

@@ -40,8 +40,8 @@ def test_optimal_two_two_assignment():
     kf1 = make_cv_filter(0.0, 0.0, 0.0, sigma_pos=5.0)
     kf2 = make_cv_filter(100.0, 0.0, 0.0, sigma_pos=5.0)
     measurements = [
-        np.array([100.0, 0.0, 0.0]),  # eşleşir kf2
-        np.array([0.0, 0.0, 0.0]),    # eşleşir kf1
+        np.array([100.0, 0.0, 0.0]),  # matches kf2
+        np.array([0.0, 0.0, 0.0]),    # matches kf1
     ]
     matches, u_t, u_m = associate([kf1, kf2], measurements)
     matches_set = {(t, m) for t, m in matches}

@@ -1,11 +1,11 @@
-"""JWT authentication — paylaşılan yardımcılar.
+"""JWT authentication — shared helpers.
 
-HS256 basit JWT; NIZAM_JWT_SECRET env'den okunur. Üretimde asimetrik
-(RS256) + public key dağıtım + token süresi 15dk önerilir.
+HS256 simple JWT; reads NIZAM_JWT_SECRET from env. In production, use asymmetric
+(RS256) + public key distribution + 15-minute token TTL recommended.
 
-Kullanım:
+Usage:
     token = issue_token(subject="opr-01", role="operator", ttl_s=3600)
-    payload = verify_token(token)   # dict veya raise AuthError
+    payload = verify_token(token)   # dict or raise AuthError
 """
 from __future__ import annotations
 
@@ -20,20 +20,20 @@ DEFAULT_TTL_S = 3600
 
 
 class AuthError(Exception):
-    """Token geçersiz, süresi dolmuş veya imza hatalı."""
+    """Token invalid, expired, or signature mismatch."""
 
 
 def _secret() -> str:
     secret = os.getenv("NIZAM_JWT_SECRET")
     if not secret:
-        raise AuthError("NIZAM_JWT_SECRET env'i set edilmeli (üretimde >=32 karakter)")
+        raise AuthError("NIZAM_JWT_SECRET env must be set (>=32 chars in production)")
     if len(secret) < 16:
-        raise AuthError("NIZAM_JWT_SECRET çok kısa (min 16 karakter)")
+        raise AuthError("NIZAM_JWT_SECRET too short (min 16 chars)")
     return secret
 
 
 def issue_token(subject: str, role: str = "operator", ttl_s: int = DEFAULT_TTL_S, **extra: Any) -> str:
-    """Token üret. sub = kullanıcı ID, role = operator/admin/service."""
+    """Issue a token. sub = user ID, role = operator/admin/service."""
     now = int(time.time())
     payload = {
         "sub": subject,
@@ -46,7 +46,7 @@ def issue_token(subject: str, role: str = "operator", ttl_s: int = DEFAULT_TTL_S
 
 
 def verify_token(token: str) -> dict:
-    """Token'ı doğrula ve payload döndür. Raise AuthError yanlışsa."""
+    """Verify token and return payload. Raises AuthError on failure."""
     try:
         return jwt.decode(token, _secret(), algorithms=[JWT_ALG])
     except jwt.ExpiredSignatureError as exc:

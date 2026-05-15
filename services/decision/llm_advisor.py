@@ -1,15 +1,15 @@
-"""LLM advisor — opsiyonel, kural engine'in YANINA çalışır, override etmez.
+"""LLM advisor — optional, runs ALONGSIDE the rule engine, does not override.
 
-Aktivasyon: KERNEL_DECISION_LLM_ENABLED=true env değişkeni (NIZAM_DECISION_LLM_ENABLED de çalışır).
-Paketler: pip install "langgraph>=0.2" "anthropic>=0.40" "llama-index>=0.12"
+Activation: KERNEL_DECISION_LLM_ENABLED=true env var (NIZAM_DECISION_LLM_ENABLED also works).
+Packages: pip install "langgraph>=0.2" "anthropic>=0.40" "llama-index>=0.12"
 
-Davranış:
-  1. Rule engine her zaman nihai karar kaynağı (safety-critical).
-  2. LLM önerir, rule engine ile birleştirilir → reconcile().
-  3. LLM "ENGAGE" dese bile, rule engine "ALERT" derse → ALERT kazanır.
+Behaviour:
+  1. Rule engine is always the authoritative decision source (safety-critical).
+  2. LLM advises; its recommendation is reconciled with the rule engine → reconcile().
+  3. Even if the LLM says "ENGAGE", if the rule engine says "ALERT" → ALERT wins.
 
-Bu dosya SHELL — gerçek LangGraph implementasyonu paketler yüklenince
-production-ready hale gelir. Şu an yoksa placeholder döner.
+This file is a SHELL — the real LangGraph implementation becomes
+production-ready once packages are installed. If absent, returns placeholder.
 """
 from __future__ import annotations
 
@@ -47,25 +47,25 @@ def is_llm_enabled() -> bool:
 async def query_llm_advisor(
     track: dict, assessment: ThreatAssessment
 ) -> LLMDecisionDict | None:
-    """Claude API ile anomali danışman sorgusu — structured output.
+    """Anomaly advisor query via Claude API — structured output.
 
-    Anthropic kurulu değilse None döner.
-    Decision policy RAG entegrasyonu: varsa doktriny blağlamı prompt'a eklenir.
+    Returns None if Anthropic is not installed.
+    Decision policy RAG integration: if available, doctrine context is added to the prompt.
     """
     if not is_llm_enabled():
         return None
     try:
         from anthropic import AsyncAnthropic  # noqa: PLC0415
     except ImportError:
-        log.warning("anthropic paketi yok — LLM advisor atlanıyor")
+        log.warning("anthropic package not installed — skipping LLM advisor")
         return None
 
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
-        log.warning("ANTHROPIC_API_KEY set değil — LLM advisor atlanıyor")
+        log.warning("ANTHROPIC_API_KEY not set — skipping LLM advisor")
         return None
 
-    # Opsiyonel: decision policy RAG bağlamı
+    # Optional: decision policy RAG context
     roe_context = ""
     try:
         from services.knowledge.roe_rag import ROERAG  # noqa: PLC0415
@@ -80,7 +80,7 @@ async def query_llm_advisor(
                 f"- [{r.rule_id or r.source}] {r.excerpt}" for r in roe_results[:2]
             )
     except Exception as exc:
-        log.debug("Policy RAG sorgusu başarısız: %s", exc)
+        log.debug("Policy RAG query failed: %s", exc)
 
     # Structured output — Claude tool use
     tools = [{
@@ -126,7 +126,7 @@ async def query_llm_advisor(
             messages=[{"role": "user", "content": prompt}],
         )
     except Exception as exc:
-        log.warning("Claude API çağrısı başarısız: %s", exc)
+        log.warning("Claude API call failed: %s", exc)
         return None
 
     for block in msg.content:
@@ -136,14 +136,14 @@ async def query_llm_advisor(
 
 
 def reconcile(rule_decision: Decision, llm_hint: LLMDecisionDict | None) -> Decision:
-    """LLM hint'i ile rule decision'ı birleştir — SAFETY FIRST.
+    """Reconcile the LLM hint with the rule decision — SAFETY FIRST.
 
-    Kurallar:
-      1. Rule engine ENGAGE demedi ise, LLM asla ENGAGE tetikleyemez.
-      2. Rule engine ALERT demişse, LLM HANDOFF diyebilir (upgrade ok).
-      3. Rule engine LOG demişse, LLM ALERT diyebilir (upgrade ok).
-      4. Rule engine daha ciddi → LLM downgrade edemez.
-      5. LLM reasoning rule decision reasoning'ine EK olarak iliştirilir.
+    Rules:
+      1. If the rule engine did not say ENGAGE, the LLM can never trigger ENGAGE.
+      2. If the rule engine said ALERT, the LLM may say HANDOFF (upgrade ok).
+      3. If the rule engine said LOG, the LLM may say ALERT (upgrade ok).
+      4. If the rule engine is more severe → the LLM cannot downgrade.
+      5. LLM reasoning is APPENDED to the rule decision reasoning.
     """
     if llm_hint is None:
         return rule_decision
@@ -152,7 +152,7 @@ def reconcile(rule_decision: Decision, llm_hint: LLMDecisionDict | None) -> Deci
     llm_action_str = llm_hint.get("action", "log")
     llm_action = Action(llm_action_str)
 
-    # Severity sıralaması (düşükten yükseğe)
+    # Severity ordering (low to high)
     severity = {
         Action.LOG: 0,
         Action.ALERT: 1,
@@ -160,7 +160,7 @@ def reconcile(rule_decision: Decision, llm_hint: LLMDecisionDict | None) -> Deci
         Action.ENGAGE: 3,
     }
 
-    # LLM sadece yukarı yönde upgrade öner, hiçbir zaman ENGAGE'e çıkaramaz
+    # LLM may only propose upward upgrades, never to ENGAGE
     final_action = rule_action
     if llm_action != Action.ENGAGE and severity[llm_action] > severity[rule_action]:
         final_action = llm_action
@@ -170,7 +170,7 @@ def reconcile(rule_decision: Decision, llm_hint: LLMDecisionDict | None) -> Deci
     return Decision(
         track_id=rule_decision.track_id,
         action=final_action,
-        threat_level=rule_decision.threat_level,  # rule engine seviyesi
+        threat_level=rule_decision.threat_level,  # rule engine level
         confidence=rule_decision.confidence,
         reasoning=merged_reasoning[:500],
         source=DecisionSource.RULE_ENGINE if final_action == rule_action else DecisionSource.LLM_ADVISOR,
@@ -180,5 +180,5 @@ def reconcile(rule_decision: Decision, llm_hint: LLMDecisionDict | None) -> Deci
     )
 
 
-# Boş kullanım önlemek için re-export
+# Re-export to prevent empty usage
 __all__ = ["query_llm_advisor", "reconcile", "is_llm_enabled", "ThreatLevel"]

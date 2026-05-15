@@ -20,7 +20,7 @@ class Detection(TypedDict):
 
 
 class CameraDetectionEvent(BaseModel):
-    """Kamera sensöründen gelen tek frame tespiti.
+    """Single-frame detection from a camera sensor.
 
     NATS subject: nizam.raw.camera.{sensor_id}
     """

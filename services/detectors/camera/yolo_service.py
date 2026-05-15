@@ -1,6 +1,6 @@
-"""YOLO kamera tespit servisi — tespitleri NATS'e yayınlar.
+"""YOLO camera detection service — publishes detections to NATS.
 
-Kullanım:
+Usage:
     python -m services.detectors.camera.yolo_service \
         --source 0 --sensor-id cam-01 --nats nats://localhost:4222
 """
@@ -23,25 +23,25 @@ if TYPE_CHECKING:
 # ── Prometheus metrics ────────────────────────────────────────────
 _detections_total = Counter(
     "nizam_camera_detections_total",
-    "Toplam tespit sayısı",
+    "Total detection count",
     ["sensor_id", "class_name"],
 )
 _inference_ms = Histogram(
     "nizam_camera_inference_ms",
-    "YOLO çıkarım süresi (ms)",
+    "YOLO inference time (ms)",
     buckets=[5, 10, 20, 50, 100, 200, 500],
 )
-_fps = Gauge("nizam_camera_fps", "Anlık FPS", ["sensor_id"])
+_fps = Gauge("nizam_camera_fps", "Current FPS", ["sensor_id"])
 
 
-# ── NATS subject yardımcısı ───────────────────────────────────────
+# ── NATS subject helper ──────────────────────────────────────────
 class NATSSubject:
     @staticmethod
     def camera(sensor_id: str) -> str:
         return f"nizam.raw.camera.{sensor_id}"
 
 
-# ── Saf fonksiyonlar (test edilebilir) ────────────────────────────
+# ── Pure functions (testable) ─────────────────────────────────────
 
 def build_detection_event(
     result: "Results",
@@ -49,7 +49,7 @@ def build_detection_event(
     frame_id: int,
     inference_ms: float,
 ) -> CameraDetectionEvent:
-    """Ultralytics Results → CameraDetectionEvent dönüşümü."""
+    """Convert Ultralytics Results → CameraDetectionEvent."""
     h, w = result.orig_shape
     detections: list[Detection] = []
 
@@ -80,7 +80,7 @@ def build_detection_event(
 
 
 async def publish_event(nc: "nats.aio.client.Client", event: CameraDetectionEvent) -> None:
-    """CameraDetectionEvent'i NATS'e yayınlar."""
+    """Publish a CameraDetectionEvent to NATS."""
     subject = NATSSubject.camera(event.sensor_id)
     payload = event.model_dump_json().encode()
     await nc.publish(subject, payload)
@@ -92,15 +92,15 @@ async def publish_event(nc: "nats.aio.client.Client", event: CameraDetectionEven
         ).inc()
 
 
-# ── Ana servis döngüsü ────────────────────────────────────────────
+# ── Main service loop ─────────────────────────────────────────────
 
 async def run(
     sensor_id: str, source: str | int, nats_url: str, model_name: str,
     shutdown: asyncio.Event | None = None,
 ) -> None:
-    """Ana döngü — OpenCV ile frame yakala, YOLO ile tespit et, NATS'e yayınla.
+    """Main loop — capture frames with OpenCV, detect with YOLO, publish to NATS.
 
-    shutdown event'i set olduğunda döngü biter, kamera + NATS temiz kapanır.
+    The loop exits when the shutdown event is set; camera + NATS are closed cleanly.
     """
     import logging as _lg
     import cv2
@@ -111,19 +111,19 @@ async def run(
     log_local = _lg.getLogger(__name__)
     _lg.basicConfig(level=_lg.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-    log_local.info("NATS bağlanıyor: %s", nats_url)
+    log_local.info("Connecting to NATS: %s", nats_url)
     nc = await nats.connect(nats_url)
-    log_local.info("YOLO yükleniyor: %s", model_name)
+    log_local.info("Loading YOLO: %s", model_name)
     model = YOLO(model_name)
 
     cap_source = int(source) if str(source).isdigit() else source
-    log_local.info("Kamera açılıyor: %s", cap_source)
+    log_local.info("Opening camera: %s", cap_source)
     cap = cv2.VideoCapture(cap_source, cv2.CAP_DSHOW if isinstance(cap_source, int) else cv2.CAP_ANY)
     if not cap.isOpened():
-        log_local.error("Kamera açılamadı (source=%s)", cap_source)
+        log_local.error("Could not open camera (source=%s)", cap_source)
         await nc.drain()
         return
-    log_local.info("Kamera açık, YOLO tespit başlıyor")
+    log_local.info("Camera open, YOLO detection starting")
 
     frame_id = 0
     fps_ts = time.monotonic()
@@ -153,9 +153,9 @@ async def run(
                     log_local.info("frame=%d fps=%.1f last_inf=%.1fms", frame_id, fps_count / elapsed, inf_ms)
                 fps_count = 0
                 fps_ts = time.monotonic()
-            await asyncio.sleep(0)  # event loop'a nefes ver
+            await asyncio.sleep(0)  # yield to the event loop
     finally:
-        log_local.info("YOLO kapatılıyor... (frame=%d)", frame_id)
+        log_local.info("Shutting down YOLO... (frame=%d)", frame_id)
         cap.release()
         await nc.drain()
 
@@ -163,9 +163,9 @@ async def run(
 def main() -> None:
     from shared.lifecycle import run_with_shutdown
 
-    parser = argparse.ArgumentParser(description="NIZAM YOLO Kamera Servisi")
-    parser.add_argument("--source", default="0", help="Kamera indeksi veya video dosyası")
-    parser.add_argument("--sensor-id", default="cam-01", help="Sensör kimliği")
+    parser = argparse.ArgumentParser(description="NIZAM YOLO Camera Service")
+    parser.add_argument("--source", default="0", help="Camera index or video file")
+    parser.add_argument("--sensor-id", default="cam-01", help="Sensor ID")
     parser.add_argument("--nats", default="nats://localhost:4222", help="NATS URL")
     parser.add_argument(
         "--model", default="yolov8n.pt",
@@ -174,7 +174,7 @@ def main() -> None:
     parser.add_argument("--metrics-port", type=int, default=8001, help="Prometheus port")
     parser.add_argument(
         "--device", default=None,
-        help="torch device — 'cpu', 'cuda:0', veya None (auto). TensorRT için cuda zorunlu.",
+        help="torch device — 'cpu', 'cuda:0', or None (auto). TensorRT requires cuda.",
     )
     args = parser.parse_args()
 

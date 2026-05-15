@@ -1,4 +1,4 @@
-"""Track ve Measurement şemaları — füzyon katmanı için."""
+"""Track and Measurement schemas — for the fusion layer."""
 from __future__ import annotations
 
 from enum import Enum
@@ -7,10 +7,10 @@ from pydantic import BaseModel, Field
 
 
 class TrackState(str, Enum):
-    TENTATIVE = "tentative"   # yeni tespit, henüz doğrulanmamış
-    CONFIRMED = "confirmed"   # N ardışık tespitle doğrulandı
-    LOST = "lost"             # M ardışık kayıp (ama silinmedi)
-    DELETED = "deleted"       # sistem dışı
+    TENTATIVE = "tentative"   # new detection, not yet confirmed
+    CONFIRMED = "confirmed"   # confirmed by N consecutive detections
+    LOST = "lost"             # M consecutive misses (but not deleted)
+    DELETED = "deleted"       # removed from the system
 
 
 class SensorType(str, Enum):
@@ -22,47 +22,47 @@ class SensorType(str, Enum):
 
 
 class Measurement(BaseModel):
-    """Tek bir sensör ölçümü — füzyona girdi olur."""
+    """Single sensor measurement — input to the fusion engine."""
     sensor_id: str
     sensor_type: SensorType
     timestamp_iso: str
-    # 3D konum (ENU metre) veya lat/lon/alt — sensore göre değişir
+    # 3D position (ENU metres) or lat/lon/alt — varies by sensor
     x: float
     y: float
     z: float = 0.0
-    # Ölçüm gürültüsü (metre cinsinden 1-sigma)
+    # Measurement noise (1-sigma in metres)
     sigma_x: float = 5.0
     sigma_y: float = 5.0
     sigma_z: float = 10.0
-    # Opsiyonel meta
+    # Optional meta
     class_name: str | None = None
     class_conf: float | None = None
-    uas_id: str | None = None  # ODID varsa
+    uas_id: str | None = None  # if ODID is present
     rssi_dbm: float | None = None
 
 
 class Track(BaseModel):
-    """Füzyon motorunun ürettiği birleşik track.
+    """Fused track produced by the fusion engine.
 
     NATS subject: nizam.tracks.active
     """
     track_id: str
     state: TrackState
-    # Kalman state: [x, y, z, vx, vy, vz] (ENU metre, m/s)
+    # Kalman state: [x, y, z, vx, vy, vz] (ENU metres, m/s)
     x: float
     y: float
     z: float
     vx: float
     vy: float
     vz: float
-    # Kovaryans köşegeni (konum 1-sigma, metre)
+    # Covariance diagonal (position 1-sigma, metres)
     sigma_x: float
     sigma_y: float
     sigma_z: float
     # Meta
     last_update_iso: str
-    hits: int = Field(ge=0, description="Toplam tespit sayısı")
-    misses: int = Field(ge=0, description="Ardışık kaçırılan tick")
+    hits: int = Field(ge=0, description="Total detection count")
+    misses: int = Field(ge=0, description="Consecutive missed ticks")
     sources: list[SensorType] = Field(default_factory=list)
     uas_id: str | None = None
     class_name: str | None = None

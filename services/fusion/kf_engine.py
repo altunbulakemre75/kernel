@@ -1,10 +1,10 @@
-"""3D sabit-hız Kalman filtresi — filterpy tabanlı.
+"""3D constant-velocity Kalman filter — filterpy based.
 
-State:  [x, y, z, vx, vy, vz]  (ENU metre, m/s)
-Ölçüm:  [x, y, z]              (ENU metre)
+State:  [x, y, z, vx, vy, vz]  (ENU metres, m/s)
+Measurement:  [x, y, z]        (ENU metres)
 
-Sabit-hız model her track için bağımsız. IMM gelecekte eklenebilir
-(manevra durumlarında CA/CT filtreleri).
+Constant-velocity model, independent per track. IMM can be added later
+(CA/CT filters for manoeuvring states).
 """
 from __future__ import annotations
 
@@ -20,13 +20,13 @@ def make_cv_filter(
     sigma_vel: float = 50.0,
     process_noise: float = 1.0,
 ) -> KalmanFilter:
-    """Yeni bir sabit-hız 3D KF oluştur.
+    """Create a new constant-velocity 3D Kalman filter.
 
     Args:
-        x0, y0, z0: ilk konum (metre)
-        sigma_pos: ilk konum belirsizliği (1-sigma metre)
-        sigma_vel: ilk hız belirsizliği (1-sigma m/s)
-        process_noise: sürece eklenecek ivme gürültüsü (m/s^2)
+        x0, y0, z0: initial position (metres)
+        sigma_pos: initial position uncertainty (1-sigma metres)
+        sigma_vel: initial velocity uncertainty (1-sigma m/s)
+        process_noise: acceleration noise to add to the process (m/s^2)
     """
     kf = KalmanFilter(dim_x=6, dim_z=3)
     kf.x = np.array([x0, y0, z0, 0.0, 0.0, 0.0])
@@ -40,13 +40,13 @@ def make_cv_filter(
 
 
 def _set_transition(kf: KalmanFilter, dt: float) -> None:
-    """F (geçiş) ve Q (süreç gürültüsü) matrislerini dt ile güncelle."""
+    """Update F (transition) and Q (process noise) matrices for the given dt."""
     F = np.eye(6)
     F[0, 3] = F[1, 4] = F[2, 5] = dt
     kf.F = F
 
     q = getattr(kf, "_process_noise_std", 1.0)
-    # Discrete white noise acceleration (DWNA) modeli
+    # Discrete white noise acceleration (DWNA) model
     dt2 = dt * dt
     dt3 = dt2 * dt
     dt4 = dt2 * dt2
@@ -66,14 +66,14 @@ def predict(kf: KalmanFilter, dt: float) -> None:
 
 
 def update(kf: KalmanFilter, z: np.ndarray, measurement_sigma: float | None = None) -> None:
-    """Ölçümle güncelle. z = [x, y, z]."""
+    """Update with a measurement. z = [x, y, z]."""
     if measurement_sigma is not None:
         kf.R = np.eye(3) * (measurement_sigma**2)
     kf.update(z)
 
 
 def mahalanobis_distance(kf: KalmanFilter, z: np.ndarray) -> float:
-    """Mahalanobis mesafesi — ölçüm track'e ait olma ihtimali."""
+    """Mahalanobis distance — likelihood that the measurement belongs to the track."""
     y = z - kf.H @ kf.x
     S = kf.H @ kf.P @ kf.H.T + kf.R
     S_inv = np.linalg.inv(S)

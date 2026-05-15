@@ -1,13 +1,13 @@
-"""YOLO backbone feature extractor ile drone catalog üretici.
+"""YOLO backbone feature extractor drone catalog generator.
 
-Kullanım:
+Usage:
   python -m services.fusion.build_catalog \
       --images data/drones/*.jpg \
       --out services/fusion/drone_catalog.json
 
-Her imaj için YOLOv8 backbone'unun son feature map'ini global average
-pooling ile 16-boyutlu vektöre indirir (rastgele projeksiyon yerine
-gerçek feature kullanım).
+For each image, reduces the YOLOv8 backbone's last feature map to a
+16-dimensional vector via global average pooling (uses real features
+instead of random projection).
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ import numpy as np
 
 
 def extract_embedding(image_path: Path, model_name: str = "yolov8n.pt", dim: int = 16) -> list[float]:
-    """YOLO backbone → global-pooled → rastgele projeksiyon ile dim boyut."""
+    """YOLO backbone → global-pooled → random projection to dim dimensions."""
     from ultralytics import YOLO
     import cv2
     import torch
@@ -27,11 +27,12 @@ def extract_embedding(image_path: Path, model_name: str = "yolov8n.pt", dim: int
     model = YOLO(model_name)
     img = cv2.imread(str(image_path))
     if img is None:
-        raise ValueError(f"Image yüklenemedi: {image_path}")
+        raise ValueError(f"Could not load image: {image_path}")
 
-    # YOLO'nun kendi predict'i — embedding iç feature map'e ulaşmak karmaşık
-    # Basit: YOLO result.probs'u CLS head'e bağlıysa; aksi halde hash-like.
-    # Stabil/küçük: imajın 16-bin grayscale histogramı (drone silueti için uygun)
+    # YOLO's own predict — reaching internal feature maps is complex.
+    # Simple approach: if YOLO result.probs is tied to a CLS head, use that;
+    # otherwise use a hash-like approach.
+    # Stable/small: 16-bin grayscale histogram of the image (suitable for drone silhouettes)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     hist = cv2.calcHist([gray], [0], None, [dim], [0, 256]).flatten()
     hist = hist / (hist.sum() + 1e-9)
@@ -40,8 +41,8 @@ def extract_embedding(image_path: Path, model_name: str = "yolov8n.pt", dim: int
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--images", nargs="+", required=True, help="drone imaj dosyaları")
-    parser.add_argument("--labels", nargs="+", help="her imaj için (model_name, manufacturer) '|' ayraçlı")
+    parser.add_argument("--images", nargs="+", required=True, help="drone image files")
+    parser.add_argument("--labels", nargs="+", help="(model_name, manufacturer) per image, '|' delimited")
     parser.add_argument("--out", type=Path, default=Path("services/fusion/drone_catalog.json"))
     parser.add_argument("--dim", type=int, default=16)
     args = parser.parse_args()
@@ -60,7 +61,7 @@ def main() -> None:
         print(f"✓ {name}")
 
     args.out.write_text(json.dumps(entries, indent=2), encoding="utf-8")
-    print(f"Toplam {len(entries)} drone → {args.out}")
+    print(f"Total {len(entries)} drones → {args.out}")
 
 
 if __name__ == "__main__":

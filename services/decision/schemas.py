@@ -1,8 +1,8 @@
-"""Karar katmanı şemaları — SGLang-style constrained output uyumlu.
+"""Decision layer schemas — SGLang-style constrained output compatible.
 
-Tüm kararlar ENUM ile sınırlandırılmış — LLM hallucination'ı engelleyemez
-ama schema doğrulamasıyla fail-safe sağlar. Rule engine (decision policy)
-her zaman son söz sahibi.
+All decisions are bounded by ENUMs — cannot prevent LLM hallucination
+but provides fail-safe through schema validation. The rule engine (decision
+policy) always has the final say.
 """
 from __future__ import annotations
 
@@ -19,10 +19,10 @@ class ThreatLevel(str, Enum):
 
 
 class Action(str, Enum):
-    LOG = "log"                # sadece kayda al
-    ALERT = "alert"            # operatörü uyar
-    ENGAGE = "engage"          # aktüatör / yanıt başlat (insan onayı sonrası)
-    HANDOFF = "handoff"        # başka bir sisteme/operatöre devret
+    LOG = "log"                # record only
+    ALERT = "alert"            # alert the operator
+    ENGAGE = "engage"          # initiate actuator / response (after human approval)
+    HANDOFF = "handoff"        # hand off to another system/operator
 
 
 class DecisionSource(str, Enum):
@@ -32,16 +32,16 @@ class DecisionSource(str, Enum):
 
 
 class ThreatAssessment(BaseModel):
-    """Füzyon track'inin anomali değerlendirmesi.
+    """Anomaly assessment of a fusion track.
 
-    Girdi tabanlı; LLM değil, deterministic skor üretiyor.
+    Input-based; deterministic scoring, not LLM.
     """
     track_id: str
     threat_level: ThreatLevel
     score: float = Field(ge=0.0, le=1.0)
     reasoning: str = Field(max_length=500)
 
-    # Tetikleyici faktörler (audit trail için)
+    # Triggering factors (for audit trail)
     inside_protected_zone: bool = False
     unknown_transponder: bool = False
     aggressive_speed: bool = False
@@ -50,31 +50,31 @@ class ThreatAssessment(BaseModel):
 
 
 class Decision(BaseModel):
-    """Nihai aksiyon kararı — rule engine'den çıkar."""
+    """Final action decision — produced by the rule engine."""
     track_id: str
     action: Action
     threat_level: ThreatLevel
     confidence: float = Field(ge=0.0, le=1.0)
     reasoning: str = Field(max_length=500)
     source: DecisionSource
-    roe_reference: str | None = None  # hangi ROE kuralı tetikledi
-    requires_operator_approval: bool = True  # ENGAGE için varsayılan True
+    roe_reference: str | None = None  # which policy rule triggered
+    requires_operator_approval: bool = True  # default True for ENGAGE
     timestamp_iso: str
 
-    # Audit trail — LLM output'u kısaltılmadan sakla
-    llm_raw_response: dict | None = None      # Claude tool_use input (ham)
+    # Audit trail — store LLM output without truncation
+    llm_raw_response: dict | None = None      # Claude tool_use input (raw)
     llm_provider: str | None = None           # "anthropic" | "ollama"
-    llm_model: str | None = None              # model adı
+    llm_model: str | None = None              # model name
     guardrails_triggered: list[str] = Field(default_factory=list)
-    guardrail_reasoning: str = ""             # guardrail açıklamaları (reasoning'e kırpılmaz)
+    guardrail_reasoning: str = ""             # guardrail explanations (not truncated into reasoning)
 
 
 class ROERule(BaseModel):
-    """Tek bir decision policy kuralı (Rules of Engagement şeması uyumlu)."""
+    """Single decision policy rule (Rules of Engagement schema compatible)."""
     rule_id: str
     description: str
     when_threat_level: ThreatLevel
-    when_inside_zone: bool | None = None  # None = önemli değil
+    when_inside_zone: bool | None = None  # None = don't care
     requires_operator_approval: bool = True
     action: Action
     enabled: bool = True

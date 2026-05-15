@@ -1,4 +1,4 @@
-"""Füzyon servisi — NATS sensör mesajlarını toplayıp track'lere birleştirir.
+"""Fusion service — collects NATS sensor messages and merges them into tracks.
 
 Input subjects:
   - nizam.raw.camera.*
@@ -41,18 +41,19 @@ DEFAULT_REF = (39.9334, 32.8597)
 
 _meas_total = Counter(
     "nizam_fusion_measurements_total",
-    "Füzyona giren ölçüm sayısı",
+    "Number of measurements entering fusion",
     ["sensor_type"],
 )
-_active_gauge = Gauge("nizam_fusion_active_tracks", "Aktif track sayısı")
-_tick_ms = Histogram("nizam_fusion_tick_ms", "Tick süresi (ms)", buckets=[1, 5, 10, 25, 50, 100, 250])
+_active_gauge = Gauge("nizam_fusion_active_tracks", "Active track count")
+_tick_ms = Histogram("nizam_fusion_tick_ms", "Tick duration (ms)", buckets=[1, 5, 10, 25, 50, 100, 250])
 
 
 def latlon_to_enu(lat: float, lon: float, ref_lat: float, ref_lon: float) -> tuple[float, float]:
-    """Lat/lon → ENU (east, north metre).
+    """Lat/lon → ENU (east, north metres).
 
-    pyproj varsa tam küresel geometri; yoksa düz-Earth fallback. shared.geo
-    her iki yolu da yönetir — fusion service bu detayı bilmek zorunda değil.
+    Uses full spherical geometry if pyproj is available; otherwise flat-Earth
+    fallback. shared.geo handles both paths — the fusion service does not
+    need to know the details.
     """
     e, n, _ = _geo_latlon_to_enu(lat, lon, ref_lat, ref_lon)
     return e, n
@@ -64,7 +65,7 @@ def enu_to_latlon(east: float, north: float, ref_lat: float, ref_lon: float) -> 
 
 
 def odid_to_measurement(msg: dict, ref_lat: float, ref_lon: float) -> Measurement | None:
-    """ODIDEvent dict → Measurement. Location yoksa None."""
+    """ODIDEvent dict → Measurement. Returns None if no location."""
     loc = msg.get("location")
     if loc is None:
         return None
@@ -87,10 +88,10 @@ def camera_to_measurements(
     sensor_lat: float | None = None, sensor_lon: float | None = None,
     bearing_deg: float = 0.0,
 ) -> list[Measurement]:
-    """Kamera tespitlerini ölçümlere çevir.
+    """Convert camera detections to measurements.
 
-    Kalibrasyon dosyası varsa (`config/cameras/{sensor_id}.yaml`) bbox
-    → lat/lon projeksiyonu yapılır. Yoksa sabit nominal range fallback.
+    If a calibration file exists (`config/cameras/{sensor_id}.yaml`), bbox
+    → lat/lon projection is used. Otherwise falls back to fixed nominal range.
     """
     from services.detectors.camera.calibration import (
         load_calibration, project_bbox_to_position,
@@ -114,7 +115,7 @@ def camera_to_measurements(
             e, n = latlon_to_enu(lat, lon, ref_lat, ref_lon)
             z = alt
         except (KeyError, TypeError, ValueError):
-            # Fallback: sabit nominal range ekseninde
+            # Fallback: along fixed nominal range axis
             sensor_e, sensor_n = latlon_to_enu(
                 sensor_lat or calib.latitude, sensor_lon or calib.longitude,
                 ref_lat, ref_lon,
@@ -139,7 +140,7 @@ def camera_to_measurements(
 
 
 class FusionService:
-    """Füzyon servisinin orkestrasyonu — NATS subscriber + tick loop + publisher."""
+    """Fusion service orchestrator — NATS subscriber + tick loop + publisher."""
 
     def __init__(
         self,
@@ -158,12 +159,12 @@ class FusionService:
         self._queue: asyncio.Queue[Measurement] = asyncio.Queue(maxsize=queue_maxsize)
         self._nc = None
         self._subs: list = []
-        # DoS savunması
+        # DoS defence
         self._rate_limiter = SlidingWindowLimiter(max_events_per_sec_per_sensor)
         self._breaker = QueueCircuitBreaker(self._queue, component_name="fusion")
 
     async def _accept(self, sensor_id: str, is_critical: bool = False) -> bool:
-        """Rate limit + circuit breaker kontrolü. False → drop."""
+        """Rate limit + circuit breaker check. False → drop."""
         if not await self._rate_limiter.allow(sensor_id):
             return False
         return self._breaker.allow(sensor_id, is_critical=is_critical)
@@ -174,7 +175,7 @@ class FusionService:
         except json.JSONDecodeError:
             return
         sensor_id = msg.get("sensor_id", "rf-unknown")
-        if not await self._accept(sensor_id, is_critical=True):  # RF/ODID yüksek güven
+        if not await self._accept(sensor_id, is_critical=True):  # RF/ODID high confidence
             return
         meas = odid_to_measurement(msg, self.ref_lat, self.ref_lon)
         if meas is not None:
@@ -197,7 +198,7 @@ class FusionService:
             _meas_total.labels(sensor_type=meas.sensor_type.value).inc()
 
     async def _on_sim_cop(self, raw: bytes) -> None:
-        """COP simulator bridge'den gelen track'ler. Direkt lat/lon taşır."""
+        """Tracks from the COP simulator bridge. Carries lat/lon directly."""
         try:
             msg = json.loads(raw.decode())
         except json.JSONDecodeError:
@@ -275,25 +276,25 @@ class FusionService:
             await self._tick_loop(shutdown)
         finally:
             log.info("Fusion service shutting down...")
-            # Önce subscriber'ları durdur — yeni mesaj gelmesin
+            # Stop subscribers first — no new messages
             for sub in self._subs:
                 try:
                     await sub.unsubscribe()
                 except Exception as exc:
-                    log.debug("unsubscribe hata: %s", exc)
-            # Kuyruktaki son batch'i işle
+                    log.debug("unsubscribe error: %s", exc)
+            # Process the final batch in the queue
             if not self._queue.empty():
                 last_batch = []
                 while not self._queue.empty():
                     last_batch.append(self._queue.get_nowait())
                 self.manager.step(last_batch, dt=self.tick_dt)
-                log.info("Son drain: %d ölçüm işlendi", len(last_batch))
-            # NATS connection drain — pending publish'ler flush
+                log.info("Final drain: %d measurements processed", len(last_batch))
+            # NATS connection drain — flush pending publishes
             await self._nc.drain()
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="NIZAM Füzyon Servisi")
+    parser = argparse.ArgumentParser(description="Kernel Fusion Service")
     parser.add_argument("--nats", default="nats://localhost:6222")
     parser.add_argument("--ref-lat", type=float, default=DEFAULT_REF[0])
     parser.add_argument("--ref-lon", type=float, default=DEFAULT_REF[1])

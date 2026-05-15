@@ -1,14 +1,14 @@
-"""Drone modeli tanımlama — in-memory vector lookup.
+"""Drone model identification — in-memory vector lookup.
 
-Gerçek FAISS opsiyonel: yüksek hacimde (10k+ drone model) FAISS hızlı.
-Düşük hacimde basit numpy nearest neighbor yeterli ve FAISS kurulum
-gerektirmez. Bu yüzden iki path:
-  1. FAISS varsa → IndexFlatL2
-  2. Yoksa → numpy argmin
+Real FAISS is optional: fast at high volume (10k+ drone models). At low
+volume, simple numpy nearest-neighbour is sufficient and does not require
+FAISS installation. Two paths:
+  1. FAISS available → IndexFlatL2
+  2. Otherwise → numpy argmin
 
-Veri: services/fusion/drone_catalog.json — {model_name, manufacturer, embedding[16]}
-Üretimde: YOLO feature extractor çıktısı veya ODID manufacturer+UA_type
-string'inin TF-IDF hash'i embedding olarak kullanılabilir.
+Data: services/fusion/drone_catalog.json — {model_name, manufacturer, embedding[16]}
+In production: YOLO feature extractor output or TF-IDF hash of ODID
+manufacturer+UA_type string can be used as the embedding.
 """
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ CATALOG_PATH = Path(__file__).parent / "drone_catalog.json"
 
 
 class DroneCatalog:
-    """Drone modeli lookup — hem FAISS hem numpy fallback."""
+    """Drone model lookup — both FAISS and numpy fallback."""
 
     def __init__(self, catalog_path: Path | None = None) -> None:
         path = catalog_path or CATALOG_PATH
@@ -50,21 +50,21 @@ class DroneCatalog:
             return None  # numpy fallback
 
     def query(self, embedding: list[float] | np.ndarray, threshold: float = 0.5) -> dict | None:
-        """En yakın drone modelini ara.
+        """Search for the nearest drone model.
 
         Args:
-            embedding: sorgu vektörü (16-dim)
-            threshold: maksimum L2 mesafe (0..inf, küçük iyi)
+            embedding: query vector (16-dim)
+            threshold: maximum L2 distance (0..inf, smaller is better)
 
         Returns:
-            {model_name, manufacturer, distance} veya None
+            {model_name, manufacturer, distance} or None
         """
         if len(self._entries) == 0:
             return None
         vec = np.asarray(embedding, dtype=np.float32).reshape(1, -1)
         if vec.shape[1] != self._vectors.shape[1]:
             raise ValueError(
-                f"Embedding boyutu uyuşmuyor: {vec.shape[1]} vs {self._vectors.shape[1]}"
+                f"Embedding dimension mismatch: {vec.shape[1]} vs {self._vectors.shape[1]}"
             )
 
         if self._index is not None:

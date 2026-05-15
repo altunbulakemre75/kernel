@@ -18,7 +18,7 @@ CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "policies" / "def
 def _track(**overrides) -> dict:
     base = {
         "track_id": "t-graph",
-        "latitude": 40.0, "longitude": 33.0,   # zone dışı
+        "latitude": 40.0, "longitude": 33.0,   # outside zone
         "altitude": 100.0,
         "confidence": 0.9,
         "hits": 10,
@@ -38,7 +38,7 @@ async def test_graph_runs_without_llm():
     decision = await run_graph(_track(), rules)
     assert decision is not None
     assert decision.track_id == "t-graph"
-    # LLM devre dışı → rule engine kararı
+    # LLM disabled -> rule engine decision
     assert decision.source.value in ("rule_engine", "llm_advisor")
 
 
@@ -49,10 +49,10 @@ async def test_graph_triggers_guardrail_in_friendly_zone():
         zone_id="OP", name="ops",
         center_lat=39.9334, center_lon=32.8597, radius_m=500,
     )]
-    track = _track(latitude=39.9335, longitude=32.8598, confidence=0.9)  # zone içi
+    track = _track(latitude=39.9335, longitude=32.8598, confidence=0.9)  # inside zone
     decision = await run_graph(track, rules, friendly_zones=zones,
                                inside_protected_zone=True)
-    # Zone içindeki HIGH → HANDOFF olabilir ama friendly zone alırsa ALERT
+    # HIGH inside zone -> can be HANDOFF but friendly zone makes it ALERT
     assert decision.action != Action.ENGAGE
     # friendly-zone guardrail tetiklendi
     assert any("friendly-zone" in g for g in decision.guardrails_triggered)

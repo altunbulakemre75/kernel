@@ -1,10 +1,10 @@
-"""RF mock publisher — gerçek SDR donanımı yokken ODID simüle eder.
+"""RF mock publisher — simulates ODID when real SDR hardware is unavailable.
 
-Saha demosu için: kamera gerçek drone tespit ederken bu servis
-sahte ODID mesajları yayınlar → fusion iki kaynağı birleştirir →
-"multi-sensor" demo kanıtı (donanım bekleyen Faz 2 için köprü).
+For field demos: while the camera detects a real drone, this service
+publishes fake ODID messages → fusion merges the two sources →
+"multi-sensor" proof of concept (bridge for Phase 2 awaiting hardware).
 
-Kullanım:
+Usage:
     python -m services.detectors.rf.mock_publisher \
         --sensor-id rf-sim-01 --nats nats://localhost:6222 --rate 2.0
 """
@@ -35,31 +35,29 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-_mock_sent = Counter("nizam_rf_mock_sent_total", "Mock ODID yayın sayısı", ["sensor_id"])
+_mock_sent = Counter("nizam_rf_mock_sent_total", "Mock ODID publish count", ["sensor_id"])
 
 
 @dataclass
 class MockDrone:
-    """Sahte drone — sabit yörünge üzerinde hareket eder."""
+    """Simulated drone — moves along a fixed orbit."""
     uas_id: str
-    manufacturer: str       # "DJI", "Parrot", ...
+    manufacturer: str
     ua_type: ODIDUAType
-    # Yörünge (Ankara merkezinde dairesel uçuş)
     center_lat: float = 39.9334
     center_lon: float = 32.8597
     radius_m: float = 500.0
     altitude_m: float = 120.0
     speed_mps: float = 12.0
-    phase_deg: float = 0.0   # başlangıç fazı
+    phase_deg: float = 0.0
     start_time: float = 0.0
 
 
 def _drone_position(drone: MockDrone, elapsed_s: float) -> tuple[float, float, float, float]:
-    """Drone'un şu anki (lat, lon, heading, speed) değerleri."""
+    """Current (lat, lon, heading, speed) of the drone."""
     EARTH_R = 6378137.0
-    angular_speed = drone.speed_mps / drone.radius_m  # rad/s
+    angular_speed = drone.speed_mps / drone.radius_m
     angle = math.radians(drone.phase_deg) + angular_speed * elapsed_s
-
     d_lat = math.degrees((drone.radius_m * math.sin(angle)) / EARTH_R)
     d_lon = math.degrees(
         (drone.radius_m * math.cos(angle))
@@ -73,12 +71,9 @@ def _drone_position(drone: MockDrone, elapsed_s: float) -> tuple[float, float, f
 
 async def run(sensor_id: str, nats_url: str, rate_hz: float, drone_count: int) -> None:
     import nats
-
     nc = await nats.connect(nats_url)
     clock = get_clock()
     start_ts = clock.monotonic()
-
-    # N tane sahte drone
     drones = [
         MockDrone(
             uas_id=f"MOCK-{random.choice(['DJI', 'PARROT', 'AUTEL'])}-{1000 + i}",
@@ -92,9 +87,7 @@ async def run(sensor_id: str, nats_url: str, rate_hz: float, drone_count: int) -
         )
         for i in range(drone_count)
     ]
-
-    log.info("Mock RF publisher: %d drone, %.1fHz, sensor=%s", drone_count, rate_hz, sensor_id)
-
+    log.info("Mock RF publisher: %d drones, %.1fHz, sensor=%s", drone_count, rate_hz, sensor_id)
     interval = 1.0 / rate_hz
     try:
         while True:
@@ -105,7 +98,7 @@ async def run(sensor_id: str, nats_url: str, rate_hz: float, drone_count: int) -
                     sensor_id=sensor_id,
                     timestamp_iso=clock.utcnow_iso(),
                     source="mock-rf",
-                    rssi_dbm=-60.0 - random.uniform(0, 20),  # -60 to -80 dBm
+                    rssi_dbm=-60.0 - random.uniform(0, 20),
                     basic_id=ODIDBasicID(
                         id_type=ODIDIDType.SERIAL_NUMBER,
                         ua_type=drone.ua_type,
@@ -129,11 +122,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="NIZAM RF Mock Publisher")
     parser.add_argument("--sensor-id", default="rf-mock-01")
     parser.add_argument("--nats", default="nats://localhost:6222")
-    parser.add_argument("--rate", type=float, default=2.0, help="Yayın frekansı (Hz)")
-    parser.add_argument("--drones", type=int, default=3, help="Sahte drone sayısı")
+    parser.add_argument("--rate", type=float, default=2.0, help="Publish rate (Hz)")
+    parser.add_argument("--drones", type=int, default=3, help="Number of simulated drones")
     parser.add_argument("--metrics-port", type=int, default=8007)
     args = parser.parse_args()
-
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     start_http_server(args.metrics_port)
     asyncio.run(run(args.sensor_id, args.nats, args.rate, args.drones))

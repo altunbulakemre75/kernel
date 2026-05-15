@@ -1,15 +1,15 @@
-"""Karar katmanı entry-point'leri.
+"""Decision layer entry points.
 
-Tek production path: ``llm_graph.run_graph()`` — async, 5-node pipeline
-(rule → RAG → LLM → guardrail → checkpoint). Bu modül iki shim sağlar:
+Single production path: ``llm_graph.run_graph()`` — async, 5-node pipeline
+(rule → RAG → LLM → guardrail → checkpoint). This module provides two shims:
 
-  - ``decide(track, rules, ...)`` — sync, RULE-ONLY fast path (LLM kapalı).
-    Test ve CLI çağrıları için. ``apply_guards=True`` ile guardrails de
-    ekleyebilir ama LLM advisor çalıştırmaz.
+  - ``decide(track, rules, ...)`` — sync, RULE-ONLY fast path (LLM off).
+    For tests and CLI calls. Can include guardrails with ``apply_guards=True``
+    but does not run the LLM advisor.
 
   - ``decide_full(track, rules, ...)`` — sync wrapper over ``run_graph``.
     Full production pipeline (LLM + RAG + guardrail + checkpoint).
-    Event loop'un içindeysen doğrudan ``await run_graph()`` çağır.
+    If inside an event loop, call ``await run_graph()`` directly.
 """
 from __future__ import annotations
 
@@ -36,9 +36,9 @@ def decide(
     friendly_zones: list[FriendlyZone] | None = None,
     apply_guards: bool = False,
 ) -> tuple[ThreatAssessment, Decision]:
-    """Sync rule-only karar — LLM advisor ÇALIŞTIRMAZ.
+    """Sync rule-only decision — does NOT run the LLM advisor.
 
-    Full production pipeline için ``decide_full()`` veya
+    For the full production pipeline, use ``decide_full()`` or
     ``await llm_graph.run_graph()``.
     """
     assessment = assess_threat(
@@ -56,7 +56,7 @@ def decide(
         rule_ref = None
 
     if action == Action.ENGAGE:
-        approval = True  # safety hardening — kural yazarı unutsa bile
+        approval = True  # safety hardening — even if the rule author forgot
 
     decision = Decision(
         track_id=track["track_id"],
@@ -83,10 +83,10 @@ def decide_full(
     heading_toward_zone: bool = False,
     friendly_zones: list[FriendlyZone] | None = None,
 ) -> Decision:
-    """Sync wrapper over full LangGraph 5-node production pipeline.
+    """Sync wrapper over the full LangGraph 5-node production pipeline.
 
-    ``asyncio.run()`` ile çalışır; mevcut bir event loop içindeysen
-    doğrudan ``await llm_graph.run_graph(...)`` kullan.
+    Runs with ``asyncio.run()``; if you are inside an existing event loop,
+    call ``await llm_graph.run_graph(...)`` directly.
     """
     from services.decision.llm_graph import run_graph
 

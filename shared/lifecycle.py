@@ -1,6 +1,6 @@
-"""Servis lifecycle yardımcıları — SIGTERM/SIGINT'te graceful shutdown.
+"""Service lifecycle helpers — graceful shutdown on SIGTERM/SIGINT.
 
-Kullanım:
+Usage:
     async def my_worker(shutdown: asyncio.Event):
         while not shutdown.is_set():
             await do_work()
@@ -22,14 +22,14 @@ log = logging.getLogger(__name__)
 
 
 def install_shutdown_handlers(shutdown: asyncio.Event) -> None:
-    """SIGTERM ve SIGINT'te shutdown event'ini set et."""
+    """Set the shutdown event on SIGTERM and SIGINT."""
     loop = asyncio.get_event_loop()
 
     def _handler(sig: int) -> None:
-        log.info("Shutdown signal alındı: %s", signal.Signals(sig).name)
+        log.info("Shutdown signal received: %s", signal.Signals(sig).name)
         shutdown.set()
 
-    # Windows SIGTERM desteklemez — sadece SIGINT (Ctrl+C)
+    # Windows does not support SIGTERM — only SIGINT (Ctrl+C)
     signals = [signal.SIGINT]
     if hasattr(signal, "SIGTERM"):
         signals.append(signal.SIGTERM)
@@ -38,7 +38,7 @@ def install_shutdown_handlers(shutdown: asyncio.Event) -> None:
         try:
             loop.add_signal_handler(sig, _handler, sig)
         except NotImplementedError:
-            # Windows loop.add_signal_handler desteklemez
+            # Windows does not support loop.add_signal_handler
             signal.signal(sig, lambda s, _f: _handler(s))
 
 
@@ -46,7 +46,7 @@ async def run_with_shutdown(
     worker: Callable[[asyncio.Event], Awaitable[None]],
     timeout_s: float = 10.0,
 ) -> None:
-    """Worker'ı shutdown event ile çalıştır, SIGTERM geldiğinde temiz kapan."""
+    """Run the worker with a shutdown event; clean exit on SIGTERM."""
     shutdown = asyncio.Event()
     install_shutdown_handlers(shutdown)
 
@@ -54,14 +54,14 @@ async def run_with_shutdown(
     try:
         await task
     except asyncio.CancelledError:
-        log.info("Worker iptal edildi")
+        log.info("Worker cancelled")
     finally:
         if not task.done():
             shutdown.set()
             try:
                 await asyncio.wait_for(task, timeout=timeout_s)
             except asyncio.TimeoutError:
-                log.warning("Worker %ss içinde kapanmadı, task cancel", timeout_s)
+                log.warning("Worker did not shut down within %ss, cancelling task", timeout_s)
                 task.cancel()
                 try:
                     await task

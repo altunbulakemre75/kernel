@@ -1,12 +1,12 @@
 """Per-sensor rate limit + queue-depth circuit breaker.
 
-DoS savunması: bir sensör saniyede 10k mesaj gönderse bile fusion
-kuyruğunu şişirmez. İki katman:
+DoS defence: even if a sensor sends 10k messages per second, it will
+not bloat the fusion queue. Two layers:
   1. SlidingWindowLimiter — per-sensor max events/sec
-  2. CircuitBreaker — aşağı-akış kuyruk > threshold ise drop
+  2. CircuitBreaker — drop when downstream queue > threshold
 
-Her iki yol da idempotent, thread-safe (asyncio lock) ve Prometheus
-metrikleri yayınlar.
+Both paths are idempotent, thread-safe (asyncio lock), and emit
+Prometheus metrics.
 """
 from __future__ import annotations
 
@@ -18,18 +18,18 @@ from prometheus_client import Counter, Gauge
 
 _rate_dropped = Counter(
     "nizam_rate_limit_dropped_total",
-    "Rate limit veya circuit breaker tarafından atılan mesaj sayısı",
+    "Messages dropped by rate limit or circuit breaker",
     ["sensor_id", "reason"],
 )
 _queue_depth = Gauge(
     "nizam_queue_depth_ratio",
-    "Aşağı-akış kuyruk doluluğu (0..1)",
+    "Downstream queue fill ratio (0..1)",
     ["component"],
 )
 
 
 class SlidingWindowLimiter:
-    """Her sensor_id için son N saniyedeki event sayısı >= max_events ise drop."""
+    """Drop if the event count for a sensor_id in the last N seconds >= max_events."""
 
     def __init__(self, max_events_per_sec: int = 100, window_s: float = 1.0) -> None:
         self.max_events = max_events_per_sec
@@ -38,7 +38,7 @@ class SlidingWindowLimiter:
         self._lock = asyncio.Lock()
 
     async def allow(self, sensor_id: str) -> bool:
-        """True → kabul, False → drop (metric counter artar)."""
+        """True → accept, False → drop (metric counter incremented)."""
         now = time.monotonic()
         cutoff = now - self.window_s
         async with self._lock:
@@ -56,10 +56,10 @@ class SlidingWindowLimiter:
 
 
 class QueueCircuitBreaker:
-    """Kuyruk belirli bir doluluğu aşınca low-priority drop.
+    """Drop low-priority events when the queue exceeds a fill threshold.
 
-    threshold=0.8 → kuyruk %80 doluysa drop başlar, %95'te acil mode.
-    Her sensör için aynı kural; sensor_priority daha sonra eklenir.
+    threshold=0.8 → dropping starts at 80% queue fill, emergency mode at 95%.
+    Same rule for every sensor; sensor_priority to be added later.
     """
 
     def __init__(
@@ -78,7 +78,7 @@ class QueueCircuitBreaker:
         return ratio
 
     def allow(self, sensor_id: str, is_critical: bool = False) -> bool:
-        """Track is_critical=True ise hard threshold'u dener, değilse soft."""
+        """If is_critical=True, use the hard threshold; otherwise use soft."""
         ratio = self._depth_ratio()
         if ratio >= self.hard:
             _rate_dropped.labels(sensor_id=sensor_id, reason="hard_breaker").inc()

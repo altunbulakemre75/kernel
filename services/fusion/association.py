@@ -1,7 +1,7 @@
-"""Veri ilişkilendirme — Hungarian + Mahalanobis gate.
+"""Data association — Hungarian + Mahalanobis gate.
 
-Track'leri ölçümlerle en düşük toplam maliyetle eşleştirir.
-Gate içine düşmeyen (Mahalanobis > eşik) çiftler atanmaz.
+Matches tracks to measurements with minimum total cost.
+Pairs outside the gate (Mahalanobis > threshold) are left unassigned.
 """
 from __future__ import annotations
 
@@ -11,22 +11,22 @@ from scipy.optimize import linear_sum_assignment
 from services.fusion.kf_engine import mahalanobis_distance
 
 
-# 3-DOF ölçümler için %99.7 gate (chi-square, df=3) ≈ sqrt(14.16)
+# 99.7% gate for 3-DOF measurements (chi-square, df=3) ≈ sqrt(14.16)
 DEFAULT_GATE = 3.77
 UNASSIGNED = -1
 
 
 def associate(
-    tracks: list,  # KalmanFilter listesi
+    tracks: list,  # KalmanFilter list
     measurements: list[np.ndarray],
     gate: float = DEFAULT_GATE,
 ) -> tuple[list[tuple[int, int]], list[int], list[int]]:
-    """Track'lerle ölçümleri Mahalanobis'e göre eşleştir.
+    """Match tracks to measurements by Mahalanobis distance.
 
     Returns:
-        matches: (track_idx, meas_idx) eşleşmeler
-        unmatched_tracks: eşleşmeyen track indeksleri
-        unmatched_meas: eşleşmeyen ölçüm indeksleri
+        matches: (track_idx, meas_idx) matched pairs
+        unmatched_tracks: indices of unmatched tracks
+        unmatched_meas: indices of unmatched measurements
     """
     n_tracks, n_meas = len(tracks), len(measurements)
     if n_tracks == 0 or n_meas == 0:

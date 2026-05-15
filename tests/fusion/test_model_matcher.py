@@ -11,7 +11,7 @@ def test_catalog_loads_default():
 
 def test_exact_match_returns_closest():
     catalog = DroneCatalog()
-    # DJI Mavic 3 embedding'ini kopyala
+    # Copy the DJI Mavic 3 embedding
     exact = [0.9, 0.1, 0.2, 0.0, 0.8, 0.3, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     result = catalog.query(exact, threshold=0.5)
     assert result is not None
@@ -29,5 +29,5 @@ def test_far_embedding_rejected_above_threshold():
 def test_wrong_dim_raises():
     catalog = DroneCatalog()
     import pytest
-    with pytest.raises(ValueError, match="Embedding boyutu"):
-        catalog.query([1.0, 2.0, 3.0])  # 3-dim yerine 16
+    with pytest.raises(ValueError, match="Embedding dimension"):
+        catalog.query([1.0, 2.0, 3.0])  # 3-dim instead of 16

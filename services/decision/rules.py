@@ -1,14 +1,15 @@
-"""Kural tabanlı anomali değerlendirmesi — LLM'SİZ, deterministic.
+"""Rule-based anomaly assessment — NO LLM, deterministic.
 
-Bu modül her zaman son sözü söyler. LLM advisor önerebilir, hiçbir zaman
-override edemez. Otonom sistemlerde bu zorunlu bir mimari seçim.
+This module always has the final say. The LLM advisor may suggest, but
+can never override. This is a mandatory architectural choice in autonomous
+systems.
 
-Anomali skoru girdileri (weighted):
-  - Korumalı bölge içinde mi?     +0.35
-  - Transponder yok mu (unknown)? +0.15
-  - Agresif hız (>30 m/s)?        +0.15
-  - Agresif yön (bölgeye doğru)?  +0.15
-  - Track güven skoru > 0.80?     +0.20 (baseline)
+Anomaly score inputs (weighted):
+  - Inside protected zone?         +0.35
+  - No transponder (unknown)?      +0.15
+  - Aggressive speed (>30 m/s)?    +0.15
+  - Aggressive heading (toward zone)? +0.15
+  - Track confidence > 0.80?       +0.20 (baseline)
   = Max 1.00
 """
 from __future__ import annotations
@@ -18,7 +19,7 @@ from services.decision.schemas import ThreatAssessment, ThreatLevel
 AGGRESSIVE_SPEED_MPS = 30.0
 HIGH_CONFIDENCE_THRESHOLD = 0.80
 
-# Skor → seviye eşikleri
+# Score → level thresholds
 LEVEL_THRESHOLDS = {
     ThreatLevel.LOW: 0.0,
     ThreatLevel.MEDIUM: 0.30,
@@ -42,7 +43,7 @@ def assess_threat(
     inside_protected_zone: bool = False,
     heading_toward_zone: bool = False,
 ) -> ThreatAssessment:
-    """Tek bir track için deterministic anomali değerlendirmesi."""
+    """Deterministic anomaly assessment for a single track."""
     score = 0.0
     factors: list[str] = []
 

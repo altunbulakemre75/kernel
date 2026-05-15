@@ -1,8 +1,8 @@
 """MAVSDK bridge — InterceptCommand → PX4 offboard.
 
-Not: Bu üretim-öncesi bir shell. Gerçek donanım/SITL testi
-MAVSDK, PX4 SITL (Gazebo) ve güvenlik fence'leri gerektirir.
-mavsdk Python paketi opsiyonel import edilir — yoksa mock modu.
+Note: This is a pre-production shell. Real hardware/SITL testing
+requires MAVSDK, PX4 SITL (Gazebo), and safety fences.
+The mavsdk Python package is imported optionally — if absent, mock mode.
 """
 from __future__ import annotations
 
@@ -14,9 +14,9 @@ log = logging.getLogger(__name__)
 
 
 class MAVSDKSender:
-    """PX4 drone'a MAVSDK offboard komutu gönderici.
+    """Sends MAVSDK offboard commands to a PX4 drone.
 
-    Kullanım:
+    Usage:
         sender = MAVSDKSender("udp://:14540")
         await sender.connect()
         await sender.dispatch(intercept_command)
@@ -30,16 +30,16 @@ class MAVSDKSender:
         try:
             from mavsdk import System
         except ImportError:
-            log.warning("mavsdk kurulu değil — mock modunda çalışıyor")
+            log.warning("mavsdk not installed — running in mock mode")
             self._drone = "mock"
             return
         self._drone = System()
         await self._drone.connect(system_address=self.connection_url)
 
     async def dispatch(self, cmd: InterceptCommand) -> None:
-        """InterceptCommand'i drone'a gönder. Operatör onayı zorunludur."""
+        """Dispatch an InterceptCommand to the drone. Operator approval is mandatory."""
         if not cmd.operator_approved:
-            raise RuntimeError("dispatch engeli: operator_approved=False")
+            raise RuntimeError("dispatch blocked: operator_approved=False")
 
         if self._drone == "mock" or self._drone is None:
             log.info(
@@ -49,7 +49,7 @@ class MAVSDKSender:
             )
             return
 
-        # Gerçek MAVSDK path — offboard position + arm
+        # Real MAVSDK path — offboard position + arm
         from mavsdk.offboard import OffboardError, PositionNedYaw
 
         if cmd.phase == InterceptPhase.ABORT or cmd.phase == InterceptPhase.RTB:
@@ -63,10 +63,10 @@ class MAVSDKSender:
             )
             await self._drone.offboard.start()
         except OffboardError as exc:
-            log.error("offboard hatası: %s", exc)
+            log.error("offboard error: %s", exc)
             raise
 
     async def close(self) -> None:
         if self._drone and self._drone != "mock":
-            # MAVSDK System nesnesi explicit close gerektirmiyor
+            # MAVSDK System object does not require explicit close
             pass

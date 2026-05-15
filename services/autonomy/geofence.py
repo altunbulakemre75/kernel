@@ -1,7 +1,8 @@
-"""Geofence — dost bölgeleri ve sivil alanları ihlal engelleme.
+"""Geofence — prevent violations of friendly zones and civilian areas.
 
-Her intercept komutu waypoint'inin yasaklı bölgelerle kesişmediği
-doğrulanır. Yasak bölge = no-fly zone (sivil, dost üs, havalanı...).
+Every intercept command waypoint is verified to not intersect with
+prohibited zones. Prohibited zone = no-fly zone (civilian, friendly
+base, airport...).
 """
 from __future__ import annotations
 
@@ -13,20 +14,20 @@ from services.autonomy.schemas import Waypoint
 
 
 class NoFlyZone(BaseModel):
-    """Dairesel no-fly zone (lat/lon merkez + yarıçap)."""
+    """Circular no-fly zone (lat/lon centre + radius)."""
     zone_id: str
     name: str
     center_lat: float
     center_lon: float
     radius_m: float
-    ceiling_m: float | None = None  # None = tüm irtifalar
+    ceiling_m: float | None = None  # None = all altitudes
 
 
 _EARTH_R_M = 6378137.0
 
 
 def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """İki nokta arası büyük-daire mesafesi (metre)."""
+    """Great-circle distance between two points (metres)."""
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
     a = (
@@ -38,7 +39,7 @@ def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 def violates_geofence(wp: Waypoint, zones: list[NoFlyZone]) -> NoFlyZone | None:
-    """Waypoint herhangi bir no-fly zone'a giriyorsa ilk eşleşen zone'u döner."""
+    """If the waypoint enters any no-fly zone, return the first matching zone."""
     for zone in zones:
         dist = haversine_m(wp.latitude, wp.longitude, zone.center_lat, zone.center_lon)
         if dist > zone.radius_m:

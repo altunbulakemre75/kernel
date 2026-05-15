@@ -1,11 +1,11 @@
-"""LLM sağlayıcı soyutlaması — Anthropic Claude öncelikli, Ollama fallback.
+"""LLM provider abstraction — Anthropic Claude primary, Ollama fallback.
 
-Saha dağıtımında internet olmayabilir. Sıralı olarak:
-  1. ANTHROPIC_API_KEY varsa → Claude API
-  2. Ollama localhost:11434 açıksa → local llama3.1
-  3. İkisi de yoksa → None (LLM advisor tamamen devre dışı)
+Internet may be unavailable in field deployment. Tried in order:
+  1. ANTHROPIC_API_KEY present → Claude API
+  2. Ollama localhost:11434 available → local llama3.1
+  3. Neither available → None (LLM advisor fully disabled)
 
-Her iki provider de aynı interface döndürür:
+Both providers return the same interface:
     LLMResponse(action, threat_level, confidence, reasoning, roe_reference, raw)
 """
 from __future__ import annotations
@@ -26,17 +26,17 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
 
 @dataclass
 class LLMResponse:
-    action: str          # "log" | "alert" | "handoff"  (ENGAGE yasak)
+    action: str          # "log" | "alert" | "handoff"  (ENGAGE prohibited)
     threat_level: str    # "low" | "medium" | "high" | "critical"
     confidence: float
     reasoning: str
     roe_reference: str | None
-    raw: dict[str, Any]  # ham response — audit trail için
+    raw: dict[str, Any]  # raw response — for audit trail
     provider: str        # "anthropic" | "ollama"
     model: str
 
 
-# ── Schema tanımı (Claude tool + Ollama JSON schema) ──────────────
+# ── Schema definition (Claude tool + Ollama JSON schema) ──────────
 
 DECISION_SCHEMA = {
     "type": "object",
@@ -47,7 +47,7 @@ DECISION_SCHEMA = {
         },
         "action": {
             "type": "string",
-            "enum": ["log", "alert", "handoff"],   # ENGAGE LLM'e yasak
+            "enum": ["log", "alert", "handoff"],   # ENGAGE prohibited for LLM
         },
         "confidence": {"type": "number", "minimum": 0, "maximum": 1},
         "reasoning": {"type": "string", "maxLength": 500},
@@ -64,7 +64,7 @@ async def _try_anthropic(prompt: str) -> LLMResponse | None:
     try:
         from anthropic import AsyncAnthropic
     except ImportError:
-        log.debug("anthropic paketi yok")
+        log.debug("anthropic package not installed")
         return None
 
     client = AsyncAnthropic(api_key=api_key)
@@ -82,7 +82,7 @@ async def _try_anthropic(prompt: str) -> LLMResponse | None:
             messages=[{"role": "user", "content": prompt}],
         )
     except Exception as exc:
-        log.warning("Claude API hata: %s", exc)
+        log.warning("Claude API error: %s", exc)
         return None
 
     for block in msg.content:
@@ -98,7 +98,7 @@ async def _try_anthropic(prompt: str) -> LLMResponse | None:
 
 
 async def _try_ollama(prompt: str) -> LLMResponse | None:
-    """Ollama /api/generate endpoint — JSON format=json ile structured output."""
+    """Ollama /api/generate endpoint — structured output via JSON format=json."""
     full_prompt = (
         prompt + "\n\nRespond ONLY with JSON matching this schema:\n"
         + json.dumps(DECISION_SCHEMA, indent=2)
@@ -112,20 +112,20 @@ async def _try_ollama(prompt: str) -> LLMResponse | None:
             r.raise_for_status()
             data = r.json()
     except Exception as exc:
-        log.debug("Ollama yok veya hata: %s", exc)
+        log.debug("Ollama unavailable or error: %s", exc)
         return None
 
     response_text = data.get("response", "")
     try:
         parsed = json.loads(response_text)
     except json.JSONDecodeError:
-        log.warning("Ollama JSON parse edilemedi: %s", response_text[:200])
+        log.warning("Ollama JSON parse failed: %s", response_text[:200])
         return None
 
-    # Şema doğrulama (LLM bazen enum dışı çıkar)
+    # Schema validation (LLM sometimes returns values outside the enum)
     action = parsed.get("action", "log")
     if action not in ("log", "alert", "handoff"):
-        log.warning("Ollama geçersiz action döndü: %s — 'log'a düşürülüyor", action)
+        log.warning("Ollama returned invalid action: %s — downgrading to 'log'", action)
         action = "log"
 
     return LLMResponse(

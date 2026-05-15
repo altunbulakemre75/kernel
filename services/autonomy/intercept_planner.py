@@ -1,8 +1,8 @@
-"""Intercept planlayıcı — track konumundan ileri tahminli buluşma noktası.
+"""Intercept planner — predictive rendezvous point from track position.
 
-Geofence ihlali + operatör onayı eksikliği intercept'i engeller.
-Hedefin mevcut hızını kullanarak lookahead_s saniye sonraki konum
-tahmin edilir ve oraya approach waypoint'i üretilir.
+Geofence violation + missing operator approval block the intercept.
+Uses the target's current velocity to predict its position lookahead_s
+seconds ahead and produces an approach waypoint there.
 """
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ _EARTH_R_M = 6378137.0
 
 
 class InterceptRefused(Exception):
-    """Intercept planı güvenlik nedeniyle üretilemedi."""
+    """Intercept plan could not be generated for safety reasons."""
 
 
 def _offset_latlon(
@@ -32,7 +32,7 @@ def predict_target_position(
     vx_mps: float, vy_mps: float, vz_mps: float,
     lookahead_s: float,
 ) -> Waypoint:
-    """Sabit-hız lookahead. vx=east, vy=north (ENU)."""
+    """Constant-velocity lookahead. vx=east, vy=north (ENU)."""
     east = vx_mps * lookahead_s
     north = vy_mps * lookahead_s
     new_lat, new_lon = _offset_latlon(lat, lon, east, north)
@@ -49,16 +49,16 @@ def plan_intercept(
     lookahead_s: float = 5.0,
     max_approach_m: float = 100.0,
 ) -> InterceptCommand:
-    """Track'tan InterceptCommand üret.
+    """Generate an InterceptCommand from a track.
 
     Raises:
-        InterceptRefused: operatör onayı yoksa veya geofence ihlal ederse
+        InterceptRefused: if operator approval is missing or geofence is violated
     """
     if not operator_approved:
-        raise InterceptRefused("operator_approved=False — intercept reddedildi")
+        raise InterceptRefused("operator_approved=False — intercept refused")
 
     if "latitude" not in track or "longitude" not in track:
-        raise InterceptRefused("track'te lat/lon yok — ENU konumdan planlama desteklenmiyor")
+        raise InterceptRefused("track has no lat/lon — planning from ENU position not supported")
 
     vx = float(track.get("vx", 0.0))
     vy = float(track.get("vy", 0.0))
@@ -73,7 +73,7 @@ def plan_intercept(
     violated = violates_geofence(wp, zones)
     if violated is not None:
         raise InterceptRefused(
-            f"waypoint {violated.zone_id} ({violated.name}) no-fly zone'unu ihlal ediyor"
+            f"waypoint violates {violated.zone_id} ({violated.name}) no-fly zone"
         )
 
     return InterceptCommand(

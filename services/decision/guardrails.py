@@ -1,13 +1,13 @@
-"""Karar katmanı guardrail'leri — LLM veya rule engine kararından SONRA
-çalışır ve güvenlik ihlallerini downgrade eder.
+"""Decision layer guardrails — run AFTER the LLM or rule engine decision
+and downgrade safety violations.
 
-OpenAI Agents guardrail pattern adaptasyonu. Her guardrail:
-  - İsim + açıklama döner
-  - Decision + context'i inceler
-  - Triggered=True dönerse downgrade önerir (LOG/ALERT'e düşür)
+OpenAI Agents guardrail pattern adaptation. Each guardrail:
+  - Returns a name + description
+  - Inspects the Decision + context
+  - If triggered=True, recommends a downgrade (drop to LOG/ALERT)
 
-Kural: guardrail'ler ASLA upgrade yapmaz, sadece downgrade veya pass.
-Bu sayede "false positive" tetiklemesi tehlikeli aksiyon üretmez.
+Rule: guardrails NEVER upgrade, only downgrade or pass.
+This ensures a false-positive trigger never produces a dangerous action.
 """
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from services.decision.schemas import Action, Decision
 
 log = logging.getLogger(__name__)
 
-# Severity sıralama (downgrade için)
+# Severity ordering (for downgrade logic)
 _SEVERITY = {Action.LOG: 0, Action.ALERT: 1, Action.HANDOFF: 2, Action.ENGAGE: 3}
 
 
@@ -34,14 +34,14 @@ class GuardrailResult:
     downgrade_to: Action | None = None
 
 
-# ── Guardrail 1: Input doğrulama ──────────────────────────────────
+# ── Guardrail 1: Input validation ──────────────────────────────────
 
 def input_track_guardrail(track: dict) -> GuardrailResult:
-    """Track bozuksa ALERT/ENGAGE verme — LOG'a düşür.
+    """If the track is malformed, do not issue ALERT/ENGAGE — downgrade to LOG.
 
-    - confidence < 0.1 (belirsiz anomali)
-    - lat/lon 0/0 veya yok (konum geçersiz)
-    - hits < 2 (tek tick, anlık parazit olabilir)
+    - confidence < 0.1 (uncertain anomaly)
+    - lat/lon 0/0 or missing (invalid position)
+    - hits < 2 (single tick, could be momentary noise)
     """
     conf = float(track.get("confidence", 0.0))
     hits = int(track.get("hits", 0))
@@ -51,29 +51,29 @@ def input_track_guardrail(track: dict) -> GuardrailResult:
     if conf < 0.1:
         return GuardrailResult(
             "input-confidence-low", True,
-            f"confidence={conf:.2f} < 0.1 — LOG'a düşürülüyor",
+            f"confidence={conf:.2f} < 0.1 — downgrading to LOG",
             downgrade_to=Action.LOG,
         )
     if hits < 2:
         return GuardrailResult(
             "input-single-tick", True,
-            f"hits={hits} — anlık parazit olabilir",
+            f"hits={hits} — could be momentary noise",
             downgrade_to=Action.LOG,
         )
     if lat == 0.0 and lon == 0.0:
         return GuardrailResult(
             "input-geo-zero", True,
-            "lat/lon = 0/0 — GPS geçersiz",
+            "lat/lon = 0/0 — GPS invalid",
             downgrade_to=Action.LOG,
         )
     return GuardrailResult("input-track", False)
 
 
-# ── Guardrail 2: Dost bölge kontrolü ──────────────────────────────
+# ── Guardrail 2: Friendly zone check ──────────────────────────────
 
 @dataclass
 class FriendlyZone:
-    """Dost üs, kendi drone uçuş alanı, operatör konumu."""
+    """Friendly base, own drone flight area, operator position."""
     zone_id: str
     name: str
     center_lat: float
@@ -95,10 +95,10 @@ DEFAULT_FRIENDLY_ZONES_PATH = Path("config/friendly_zones.yaml")
 def friendly_zone_guardrail(
     track: dict, zones: list[FriendlyZone] | None = None,
 ) -> GuardrailResult:
-    """Track korunan bölge içinde ise ENGAGE/HANDOFF → ALERT'e düşür.
+    """If the track is inside a protected zone, downgrade ENGAGE/HANDOFF → ALERT.
 
-    "Korunan alan içinde fiziksel aksiyon yok" kuralı. Korunan bölgeler
-    friendly_zones.yaml'a kayıtlı olmalı.
+    "No physical action inside a protected area" rule. Protected zones
+    must be registered in friendly_zones.yaml.
     """
     if zones is None:
         zones = _load_friendly_zones_from(DEFAULT_FRIENDLY_ZONES_PATH)
@@ -115,21 +115,21 @@ def friendly_zone_guardrail(
         if dist <= zone.radius_m:
             return GuardrailResult(
                 f"friendly-zone-{zone.zone_id}", True,
-                f"subject {zone.name} korunan bölgede (dist={dist:.0f}m) — ENGAGE yasak",
+                f"subject in {zone.name} protected zone (dist={dist:.0f}m) — ENGAGE prohibited",
                 downgrade_to=Action.ALERT,
             )
     return GuardrailResult("friendly-zone", False)
 
 
-# ── Guardrail 3: Sivil trafik deseni ──────────────────────────────
+# ── Guardrail 3: Civilian traffic pattern ──────────────────────────
 
 def civilian_pattern_guardrail(track: dict) -> GuardrailResult:
-    """Sivil trafik deseni tespit ederse ENGAGE'i iptal et.
+    """Cancel ENGAGE if a civilian traffic pattern is detected.
 
-    Heuristikler:
-    - Bilinen ADS-B transponder kodu varsa (ICAO / squawk)
-    - Hız > 150 m/s (muhtemelen sabit kanat uçak)
-    - Altitude > 3000m (tipik sivil irtifa)
+    Heuristics:
+    - Known ADS-B transponder code present (ICAO / squawk)
+    - Speed > 150 m/s (likely fixed-wing aircraft)
+    - Altitude > 3000m (typical civilian altitude)
     """
     uas_id = str(track.get("uas_id") or "")
     vx = float(track.get("vx", 0.0))
@@ -137,26 +137,26 @@ def civilian_pattern_guardrail(track: dict) -> GuardrailResult:
     speed = (vx * vx + vy * vy) ** 0.5
     alt = float(track.get("altitude", track.get("z", 0.0)) or 0.0)
 
-    # Bilinen sivil transponder prefix'leri
+    # Known civilian transponder prefixes
     civil_prefixes = ("TC-", "N-", "D-", "G-", "F-")  # TR, US, DE, UK, FR
     if uas_id and any(uas_id.upper().startswith(p) for p in civil_prefixes):
         return GuardrailResult(
             "civilian-transponder", True,
-            f"uas_id={uas_id} sivil tescil",
+            f"uas_id={uas_id} civilian registration",
             downgrade_to=Action.ALERT,
         )
 
     if speed > 150.0 and alt > 3000.0:
         return GuardrailResult(
             "civilian-airliner-pattern", True,
-            f"speed={speed:.0f}m/s alt={alt:.0f}m — muhtemelen sivil uçak",
+            f"speed={speed:.0f}m/s alt={alt:.0f}m — likely civilian aircraft",
             downgrade_to=Action.ALERT,
         )
 
     return GuardrailResult("civilian-pattern", False)
 
 
-# ── Orkestratör ───────────────────────────────────────────────────
+# ── Orchestrator ───────────────────────────────────────────────────
 
 ALL_GUARDRAILS = [
     input_track_guardrail,
@@ -169,10 +169,11 @@ def apply_guardrails(
     decision: Decision, track: dict,
     friendly_zones: list[FriendlyZone] | None = None,
 ) -> Decision:
-    """Tüm guardrail'leri çalıştır, tetiklenenleri decision'a ekle ve downgrade uygula.
+    """Run all guardrails, attach triggered ones to the decision, and apply downgrades.
 
-    Downgrade kuralı: mevcut action'dan **daha düşük** severity'e inen
-    guardrail'in downgrade_to'su yeni action olur. Guardrail upgrade YAPMAZ.
+    Downgrade rule: if a guardrail's downgrade_to has **lower** severity
+    than the current action, the downgrade_to becomes the new action.
+    Guardrails NEVER upgrade.
     """
     final_action = decision.action
     triggered_ids: list[str] = []
@@ -196,14 +197,14 @@ def apply_guardrails(
     if not triggered_ids:
         return decision
 
-    # Guardrail açıklamaları ayrı field'da — ana reasoning kırpılmadan korunur
+    # Guardrail explanations in a separate field — main reasoning preserved without truncation
     log.info("guardrails triggered: %s → action %s → %s",
              triggered_ids, decision.action.value, final_action.value)
 
     return decision.model_copy(update={
         "action": final_action,
         "guardrails_triggered": triggered_ids,
-        "guardrail_reasoning": "; ".join(reasons),   # tam metin, kırpma yok
+        "guardrail_reasoning": "; ".join(reasons),   # full text, no truncation
         "requires_operator_approval":
             decision.requires_operator_approval or final_action == Action.ENGAGE,
     })

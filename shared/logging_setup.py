@@ -1,13 +1,13 @@
-"""JSON structured logging — Loki/Promtail için uygun format.
+"""JSON structured logging — format suitable for Loki/Promtail.
 
-Kullanım:
+Usage:
     from shared.logging_setup import setup_logging
     setup_logging("fusion_service")
     logging.getLogger(__name__).info("tick done", extra={"dt_ms": 2.3})
 
-Loki'ye push: Promtail docker konteynerı stdout'u tail eder ve
-json_mode ile field'ları çıkarır (infra/promtail/config.yml).
-Servisler sadece stdout'a yazar, Loki'ye direkt TCP yok.
+Push to Loki: the Promtail docker container tails stdout and extracts
+fields via json_mode (infra/promtail/config.yml).
+Services only write to stdout; no direct TCP connection to Loki.
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 
 
 class JSONFormatter(logging.Formatter):
-    """Her log satırı tek JSON line — Loki/Promtail pipeline_stages için."""
+    """Each log line is a single JSON line — for Loki/Promtail pipeline_stages."""
 
     def __init__(self, service_name: str) -> None:
         super().__init__()
@@ -36,7 +36,7 @@ class JSONFormatter(logging.Formatter):
         if record.exc_info:
             base["exception"] = self.formatException(record.exc_info)
 
-        # extra={"key": value} desteği
+        # extra={"key": value} support
         reserved = {
             "name", "msg", "args", "levelname", "levelno", "pathname",
             "filename", "module", "exc_info", "exc_text", "stack_info",
@@ -51,7 +51,7 @@ class JSONFormatter(logging.Formatter):
 
 
 def setup_logging(service_name: str, level: str | None = None) -> None:
-    """Root logger'ı JSON formatter + stdout'a yönlendir."""
+    """Configure the root logger with JSON formatter + stdout output."""
     lvl = (level or os.getenv("LOG_LEVEL", "INFO")).upper()
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JSONFormatter(service_name))

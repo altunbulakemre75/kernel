@@ -64,7 +64,7 @@ def test_friendly_zone_inside_triggers_alert():
 
 def test_friendly_zone_outside_passes():
     result = friendly_zone_guardrail(
-        {"latitude": 40.0, "longitude": 33.0},  # çok uzakta
+        {"latitude": 40.0, "longitude": 33.0},  # very far away
         zones=[ANKARA_ZONE],
     )
     assert not result.triggered
@@ -96,7 +96,7 @@ def test_slow_low_pattern_passes():
     assert not result.triggered
 
 
-# ── Orkestrator integration ───────────────────────────────────────
+# ── Orchestrator integration ──────────────────────────────────────
 
 def test_apply_guardrails_downgrades_engage_to_alert_in_friendly_zone():
     engage = _decision(Action.ENGAGE)
@@ -108,26 +108,26 @@ def test_apply_guardrails_downgrades_engage_to_alert_in_friendly_zone():
 
 
 def test_apply_guardrails_no_upgrade():
-    """Guardrail'ler ASLA LOG'dan HIGH'a çıkarmamalı."""
+    """Guardrails must NEVER upgrade from LOG to HIGH."""
     log_decision = _decision(Action.LOG)
     result = apply_guardrails(log_decision, {"confidence": 0.9, "hits": 5, "latitude": 39.9, "longitude": 32.8})
-    # LOG zaten en düşük severity; guardrails tetiklenmez veya LOG'da kalır
+    # LOG is already the lowest severity; guardrails don't trigger or stay at LOG
     assert result.action == Action.LOG
 
 
 def test_apply_guardrails_preserves_reasoning_separate_field():
-    """Guardrail açıklaması ayrı field — reasoning dokunulmaz."""
+    """Guardrail explanation is in a separate field — reasoning is untouched."""
     engage = _decision(Action.ENGAGE)
     track = {"confidence": 0.03, "hits": 1, "latitude": 39.9, "longitude": 32.8}
     result = apply_guardrails(engage, track)
-    # Orijinal reasoning aynen korundu, kırpma yok
+    # Original reasoning preserved unchanged, no truncation
     assert result.reasoning == "rule says X"
-    # Guardrail açıklaması guardrail_reasoning field'ında
+    # Guardrail explanation is in the guardrail_reasoning field
     assert result.guardrail_reasoning
 
 
 def test_apply_guardrails_civilian_pattern_downgrades_engage():
-    """ENGAGE + sivil uçak deseni → ALERT'e düşer."""
+    """ENGAGE + civilian aircraft pattern → downgrades to ALERT."""
     engage = _decision(Action.ENGAGE)
     track = {"confidence": 0.9, "hits": 10, "latitude": 50.0, "longitude": 30.0,
              "vx": 200, "vy": 0, "altitude": 10000}  # airliner pattern

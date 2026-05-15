@@ -1,13 +1,13 @@
-"""Canlı WiFi/BT RF dinleyici — scapy + bleak tabanlı (stub).
+"""Live WiFi/BT RF listener — scapy + bleak based (stub).
 
-Donanım gereksinimleri:
-  - WiFi NAN: monitor-mode WiFi adapter (örn. Alfa AWUS036ACS)
+Hardware requirements:
+  - WiFi NAN: monitor-mode WiFi adapter (e.g. Alfa AWUS036ACS)
     + Linux iwconfig monitor-mode
-  - Bluetooth LE: BT 4.0+ chipset + bleak kütüphanesi
+  - Bluetooth LE: BT 4.0+ chipset + bleak library
 
-Windows'ta monitor mode genelde desteklenmiyor — Linux önerilir.
-Bu modül opsiyonel import ile import edilir: scapy/bleak kurulu değilse
-servis mock mode'a düşer.
+Monitor mode is generally not supported on Windows — Linux recommended.
+This module is imported with optional imports: if scapy/bleak are not
+installed, the service falls back to mock mode.
 """
 from __future__ import annotations
 
@@ -35,14 +35,14 @@ def check_bleak_available() -> bool:
 
 
 async def sniff_wifi_probe_requests(iface: str) -> AsyncIterator[tuple[str, int | None, int | None]]:
-    """Monitor-mode iface'den WiFi probe request çerçevelerini yakala.
+    """Capture WiFi probe request frames from a monitor-mode interface.
 
     Yields: (mac, rssi, channel)
     """
     try:
         from scapy.all import sniff, Dot11, RadioTap, Dot11ProbeReq  # noqa: PLC0415
     except ImportError:
-        log.error("scapy kurulu değil — pip install scapy")
+        log.error("scapy not installed — pip install scapy")
         return
 
     queue: asyncio.Queue = asyncio.Queue(maxsize=1000)
@@ -60,7 +60,7 @@ async def sniff_wifi_probe_requests(iface: str) -> AsyncIterator[tuple[str, int 
             channel = getattr(rt, "Channel", None)
         loop.call_soon_threadsafe(queue.put_nowait, (mac, rssi, channel))
 
-    log.info("WiFi sniff başlıyor: iface=%s", iface)
+    log.info("WiFi sniff starting: iface=%s", iface)
 
     def _sniff_thread():
         sniff(iface=iface, prn=_on_packet, store=0)
@@ -74,14 +74,14 @@ async def sniff_wifi_probe_requests(iface: str) -> AsyncIterator[tuple[str, int 
 
 
 async def scan_ble_advertisements() -> AsyncIterator[tuple[str, int | None, bytes]]:
-    """BLE scanner — ODID broadcast için uygun.
+    """BLE scanner — suitable for ODID broadcasts.
 
     Yields: (mac, rssi, raw_data)
     """
     try:
         from bleak import BleakScanner  # noqa: PLC0415
     except ImportError:
-        log.error("bleak kurulu değil — pip install bleak")
+        log.error("bleak not installed — pip install bleak")
         return
 
     queue: asyncio.Queue = asyncio.Queue(maxsize=1000)
@@ -92,7 +92,7 @@ async def scan_ble_advertisements() -> AsyncIterator[tuple[str, int | None, byte
 
     scanner = BleakScanner(detection_callback=_on_detection)
     await scanner.start()
-    log.info("BLE scan başladı")
+    log.info("BLE scan started")
 
     try:
         while True:

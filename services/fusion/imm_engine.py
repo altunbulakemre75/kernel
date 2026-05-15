@@ -1,12 +1,12 @@
-"""IMM (Interacting Multiple Model) filtre — manevra durumlarında daha iyi.
+"""IMM (Interacting Multiple Model) filter — better for manoeuvring states.
 
-3 model paralel çalışır:
-  - CV (constant velocity) — düz uçuş
-  - CA (constant acceleration) — dalış/tırmanış
-  - CT (coordinated turn) — sabit dönüş
+Three models run in parallel:
+  - CV (constant velocity) — straight-line flight
+  - CA (constant acceleration) — dive/climb
+  - CT (coordinated turn) — constant-rate turn
 
-Her tick'te en olası model devreye girer; track KF state seçilir.
-Plan'daki "filterpy.IMMEstimator" satırına karşılık.
+At each tick the most probable model is selected; track KF state follows.
+Corresponds to the "filterpy.IMMEstimator" line in the plan.
 """
 from __future__ import annotations
 
@@ -30,14 +30,14 @@ def _make_ca_filter(x0: float, y0: float, z0: float, sigma_pos: float = 10.0) ->
 
 
 def _set_ca_matrices(kf: KalmanFilter, dt: float) -> None:
-    """F ve Q (CA modeli) matrislerini dt ile güncelle."""
+    """Update F and Q (CA model) matrices for the given dt."""
     F = np.eye(9)
     for i in range(3):
         F[i, i + 3] = dt
         F[i, i + 6] = 0.5 * dt * dt
         F[i + 3, i + 6] = dt
     kf.F = F
-    q = 1.0  # ivme varyansı
+    q = 1.0  # acceleration variance
     Q = np.eye(9) * q
     kf.Q = Q
 
@@ -45,20 +45,21 @@ def _set_ca_matrices(kf: KalmanFilter, dt: float) -> None:
 def make_imm_filter(
     x0: float, y0: float, z0: float, sigma_pos: float = 10.0
 ) -> IMMEstimator:
-    """CV + CA iki-model IMM filtresi (CT opsiyonel, testten sonra eklenebilir).
+    """CV + CA two-model IMM filter (CT optional, can be added after testing).
 
-    filterpy.IMMEstimator aynı state boyutunu ister — CA'nın 9-dim state'ini
-    CV'nin 6-dim'e kırpmak için basit projection gerekli. Bu implementasyon
-    iki CV filtresi farklı process noise seviyelerinde kullanır (pragmatic):
-      - Filter 1: düşük noise (düz uçuş)
-      - Filter 2: yüksek noise (manevra)
+    filterpy.IMMEstimator requires the same state dimension — projecting
+    CA's 9-dim state to CV's 6-dim requires a simple projection. This
+    implementation uses two CV filters at different process noise levels
+    (pragmatic approach):
+      - Filter 1: low noise (straight-line flight)
+      - Filter 2: high noise (manoeuvre)
     """
     kf_cv = make_cv_filter(x0, y0, z0, sigma_pos=sigma_pos, process_noise=0.5)
     kf_maneuver = make_cv_filter(x0, y0, z0, sigma_pos=sigma_pos, process_noise=5.0)
 
-    # Mode olasılıkları (başlangıçta düz uçuş öncelikli)
+    # Mode probabilities (straight-line flight prioritised initially)
     mu = np.array([0.9, 0.1])
-    # Geçiş matrisi (0.95 kalma olasılığı, 0.05 moda geçiş)
+    # Transition matrix (0.95 stay probability, 0.05 mode switch)
     trans_mat = np.array([[0.95, 0.05], [0.05, 0.95]])
 
     imm = IMMEstimator(filters=[kf_cv, kf_maneuver], mu=mu, M=trans_mat)
@@ -66,5 +67,5 @@ def make_imm_filter(
 
 
 def imm_mode_probabilities(imm: IMMEstimator) -> list[float]:
-    """Her modun anlık olasılığı (0..1)."""
+    """Instantaneous probability of each mode (0..1)."""
     return [float(m) for m in imm.mu]

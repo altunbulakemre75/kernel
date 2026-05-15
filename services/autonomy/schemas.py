@@ -1,4 +1,4 @@
-"""Otonom intercept şemaları."""
+"""Autonomous intercept schemas."""
 from __future__ import annotations
 
 from enum import Enum
@@ -8,9 +8,9 @@ from pydantic import BaseModel, Field
 
 class InterceptPhase(str, Enum):
     IDLE = "idle"
-    APPROACH = "approach"       # hedef track'a yaklaş
-    SHADOW = "shadow"           # hedefi yakın takip
-    ABORT = "abort"             # görev iptal
+    APPROACH = "approach"       # approach the target track
+    SHADOW = "shadow"           # close-follow the target
+    ABORT = "abort"             # mission abort
     RTB = "rtb"                 # return-to-base
 
 
@@ -23,18 +23,18 @@ class Waypoint(BaseModel):
 
 
 class InterceptCommand(BaseModel):
-    """Bir intercept drone'una gönderilecek komut."""
+    """Command to be sent to an intercept drone."""
     target_track_id: str
     phase: InterceptPhase
     waypoint: Waypoint
     max_approach_distance_m: float = Field(ge=10.0, default=100.0)
-    operator_approved: bool  # Her zaman zorunlu
+    operator_approved: bool  # always mandatory
     approved_by: str | None = None
     approved_at_iso: str | None = None
 
 
 class InterceptState(BaseModel):
-    """Intercept drone'un mevcut durumu."""
+    """Current state of the intercept drone."""
     drone_id: str
     phase: InterceptPhase
     current_wp: Waypoint | None = None

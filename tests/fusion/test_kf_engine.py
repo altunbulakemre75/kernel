@@ -1,4 +1,4 @@
-"""Kalman engine tests — tahmin, güncelleme, Mahalanobis."""
+"""Kalman engine tests — predict, update, Mahalanobis."""
 from __future__ import annotations
 
 import numpy as np
@@ -32,7 +32,7 @@ def test_update_pulls_state_toward_measurement():
     z = np.array([50.0, 0.0, 0.0])
     update(kf, z, measurement_sigma=1.0)
     assert 0.0 < kf.x[0] <= 50.0
-    assert kf.x[0] > 40.0  # güçlü çekim
+    assert kf.x[0] > 40.0  # strong pull
 
 
 def test_mahalanobis_close_measurement_small():

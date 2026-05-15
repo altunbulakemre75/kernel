@@ -1,11 +1,11 @@
-"""WiFi OUI tespiti — bilinen drone MAC prefix'lerini probe request'lerinden tanı.
+"""WiFi OUI detection — identify known drone MAC prefixes from probe requests.
 
-Bu servis iki modda çalışır:
-  - live    : scapy ile monitor-mode 802.11 capture (Linux + monitor-mode iface)
-  - mock    : stdin'den MAC adresi satırları oku (test/demo)
+This service runs in two modes:
+  - live    : scapy monitor-mode 802.11 capture (Linux + monitor-mode iface)
+  - mock    : read MAC address lines from stdin (test/demo)
 
-Donanım gereksinimi: monitor-mode destekli WiFi adapter (örn. Alfa AWUS036ACS).
-Üretim için Linux önerilir; Windows'ta monitor mode sınırlı.
+Hardware requirement: monitor-mode capable WiFi adapter (e.g. Alfa AWUS036ACS).
+Linux recommended for production; Windows monitor mode is limited.
 """
 from __future__ import annotations
 
@@ -31,27 +31,27 @@ OUI_PATH = Path(__file__).parent / "drone_ouis.json"
 
 _wifi_events_total = Counter(
     "nizam_rf_wifi_events_total",
-    "WiFi OUI eşleşmesi sayısı",
+    "WiFi OUI match count",
     ["sensor_id", "vendor"],
 )
 
 
 def load_oui_table(path: Path | None = None) -> dict[str, str]:
-    """OUI → vendor eşleştirme tablosunu yükle."""
+    """Load the OUI → vendor mapping table."""
     p = path or OUI_PATH
     return json.loads(p.read_text(encoding="utf-8"))
 
 
 def mac_to_oui(mac: str) -> str:
-    """İlk 3 oktet (OUI prefix). 'aa:bb:cc:dd:ee:ff' → 'AA:BB:CC'."""
+    """First 3 octets (OUI prefix). 'aa:bb:cc:dd:ee:ff' → 'AA:BB:CC'."""
     parts = mac.upper().replace("-", ":").split(":")
     if len(parts) < 3:
-        raise ValueError(f"Geçersiz MAC: {mac}")
+        raise ValueError(f"Invalid MAC: {mac}")
     return ":".join(parts[:3])
 
 
 def match_drone(mac: str, oui_table: dict[str, str]) -> str | None:
-    """MAC'ın drone üreticisine ait olup olmadığını döndür."""
+    """Return the drone manufacturer if the MAC belongs to one, else None."""
     try:
         oui = mac_to_oui(mac)
     except ValueError:
@@ -104,7 +104,7 @@ async def run(sensor_id: str, nats_url: str, source: str) -> None:
     nc = await nats.connect(nats_url)
 
     if source != "mock":
-        raise NotImplementedError(f"Kaynak desteklenmiyor: {source} (live scapy henüz yazılmadı)")
+        raise NotImplementedError(f"Source not supported: {source} (live scapy not yet implemented)")
 
     try:
         async for mac in mock_source_from_stdin():

@@ -33,10 +33,10 @@ def test_tentative_becomes_confirmed_after_n_hits():
 
 def test_confirmed_becomes_lost_after_m_misses():
     tm = TrackManager(n_confirm=2, m_lost=3)
-    # Önce confirm
+    # First confirm
     tm.step([_meas(0.0, 0.0)], dt=0.1)
     tm.step([_meas(0.0, 0.0)], dt=0.1)
-    # 3 boş tick
+    # 3 empty ticks
     for _ in range(3):
         tracks = tm.step([], dt=0.1)
     assert tracks[0].state == TrackState.LOST
@@ -45,7 +45,7 @@ def test_confirmed_becomes_lost_after_m_misses():
 def test_tentative_deleted_fast_on_misses():
     tm = TrackManager(n_confirm=5, m_lost=2)
     tm.step([_meas(0.0, 0.0)], dt=0.1)
-    # 2 miss → tentative deleted
+    # 2 misses → tentative deleted
     tm.step([], dt=0.1)
     tracks = tm.step([], dt=0.1)
     assert tracks == []

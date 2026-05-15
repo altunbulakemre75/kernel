@@ -1,4 +1,4 @@
-"""shared.geo tests — pyproj varsa tam, yoksa düz-Earth."""
+"""shared.geo tests — full if pyproj is available, flat-Earth fallback otherwise."""
 from __future__ import annotations
 
 import pytest
@@ -27,12 +27,12 @@ def test_roundtrip_small_distance():
 
 
 def test_roundtrip_mid_distance():
-    # 50 km kuzeydoğu
+    # 50 km northeast
     target_lat = ANKARA[0] + 0.3
     target_lon = ANKARA[1] + 0.4
     e, n, _ = latlon_to_enu(target_lat, target_lon, *ANKARA)
     lat2, lon2, _ = enu_to_latlon(e, n, *ANKARA)
-    # pyproj varsa cm doğruluk, yoksa düz-Earth ~100m hata kabul edilebilir
+    # If pyproj is available, cm accuracy; otherwise flat-Earth ~100m error acceptable
     tol = 1e-5 if has_pyproj() else 2e-3
     assert abs(lat2 - target_lat) < tol
     assert abs(lon2 - target_lon) < tol

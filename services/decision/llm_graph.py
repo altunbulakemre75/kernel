@@ -1,14 +1,14 @@
-"""5-node LangGraph state machine — LLM danışman akışı.
+"""5-node LangGraph state machine — LLM advisor flow.
 
-LangGraph kurulu değilse aynı akışı saf Python ile koşturur (fallback).
-Her iki yol da aynı DecisionTrace döndürür → audit trail.
+Falls back to pure Python sequential execution if LangGraph is not installed.
+Both paths return the same DecisionTrace → audit trail.
 
 Nodes:
-  1. classify     — rule engine + LLM ile anomali sınıflandır
-  2. retrieve_roe — policy RAG ile bağlam çek
-  3. reason       — LLM ile aksiyon önerisi (context + policy)
+  1. classify     — classify the anomaly with rule engine + LLM
+  2. retrieve_roe — pull context via policy RAG
+  3. reason       — LLM action recommendation (context + policy)
   4. guardrail    — guardrails.apply_guardrails() downgrade
-  5. finalize     — Decision oluştur + (varsa) PostgreSQL checkpoint
+  5. finalize     — create Decision + (optional) PostgreSQL checkpoint
 """
 from __future__ import annotations
 
@@ -35,14 +35,14 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class GraphState:
-    """5-node arası taşınan state."""
+    """State carried between the 5 nodes."""
     track: dict
     roe_rules: list[ROERule]
     friendly_zones: list[FriendlyZone]
     inside_protected_zone: bool = False
     heading_toward_zone: bool = False
 
-    # Node çıktıları
+    # Node outputs
     assessment: ThreatAssessment | None = None
     rule_action: Action | None = None
     rule_ref: str | None = None
@@ -86,7 +86,7 @@ async def retrieve_roe(state: GraphState) -> GraphState:
             for r in results
         ]
     except Exception as exc:
-        log.debug("Policy RAG atlandı: %s", exc)
+        log.debug("Policy RAG skipped: %s", exc)
     return state
 
 
@@ -105,11 +105,11 @@ async def reason(state: GraphState) -> GraphState:
     assessment = state.assessment
     assert assessment is not None
 
-    # PROMPT INJECTION DEFENSE — attacker uas_id/class_name alanlarına payload koyamaz
+    # PROMPT INJECTION DEFENSE — attacker cannot place payload in uas_id/class_name fields
     try:
         t = sanitize_track_for_llm(state.track)
     except UnsafeContent as exc:
-        log.warning("Track sanitize başarısız (injection): %s — LLM atlanıyor", exc)
+        log.warning("Track sanitize failed (injection): %s — skipping LLM", exc)
         return state
 
     roe_lines = []
@@ -147,9 +147,9 @@ async def reason(state: GraphState) -> GraphState:
 # ── Node 4: guardrail ─────────────────────────────────────────────
 
 def _reconcile_action(rule_action: Action, llm_response: LLMResponse | None) -> Action:
-    """LLM sadece rule'dan YÜKSEK severity'e upgrade edebilir; asla ENGAGE olamaz.
+    """LLM may only upgrade to HIGHER severity than the rule; never ENGAGE.
 
-    Downgrade (LOG'a düşürme) guardrail'lerin işi.
+    Downgrading (dropping to LOG) is the guardrails' job.
     """
     severity = {Action.LOG: 0, Action.ALERT: 1, Action.HANDOFF: 2, Action.ENGAGE: 3}
     if llm_response is None:
@@ -158,7 +158,7 @@ def _reconcile_action(rule_action: Action, llm_response: LLMResponse | None) -> 
         llm_action = Action(llm_response.action)
     except ValueError:
         return rule_action
-    if llm_action == Action.ENGAGE:          # safety: Claude bile olmaz
+    if llm_action == Action.ENGAGE:          # safety: not even Claude
         return rule_action
     if severity[llm_action] > severity[rule_action]:
         return llm_action
@@ -196,9 +196,9 @@ async def guardrail(state: GraphState) -> GraphState:
 # ── Node 5: finalize (checkpoint) ─────────────────────────────────
 
 async def finalize(state: GraphState) -> GraphState:
-    """PostgreSQL checkpoint — kararı decisions tablosuna yaz.
+    """PostgreSQL checkpoint — write the decision to the decisions table.
 
-    DB bağlantısı yoksa sessizce atlanır; decision yine de dönülür.
+    Silently skipped if no DB connection; the decision is still returned.
     """
     if state.decision is None:
         return state
@@ -247,12 +247,12 @@ async def finalize(state: GraphState) -> GraphState:
         finally:
             await conn.close()
     except Exception as exc:
-        log.warning("decision checkpoint başarısız: %s", exc)
+        log.warning("decision checkpoint failed: %s", exc)
 
     return state
 
 
-# ── Orkestratör ───────────────────────────────────────────────────
+# ── Orchestrator ───────────────────────────────────────────────────
 
 async def run_graph(
     track: dict,
@@ -261,7 +261,7 @@ async def run_graph(
     inside_protected_zone: bool = False,
     heading_toward_zone: bool = False,
 ) -> Decision:
-    """5-node akışı sırayla çalıştır. LangGraph kurulu ise StateGraph kullanır."""
+    """Run the 5-node flow sequentially. Uses StateGraph if LangGraph is installed."""
     state = GraphState(
         track=track, roe_rules=roe_rules,
         friendly_zones=friendly_zones or [],
@@ -289,7 +289,7 @@ async def run_graph(
         return final_state.decision   # type: ignore
 
     except ImportError:
-        # Fallback — saf sequential
+        # Fallback — pure sequential
         state = await classify(state)
         state = await retrieve_roe(state)
         state = await reason(state)

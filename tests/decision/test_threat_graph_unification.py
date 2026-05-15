@@ -1,4 +1,4 @@
-"""threat_graph.decide + decide_full unification test — tek production path."""
+"""threat_graph.decide + decide_full unification test — single production path."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -28,7 +28,7 @@ def _track(**overrides) -> dict:
 
 
 def test_decide_sync_rule_only_no_llm():
-    """decide() LLM çağırmaz, rule-only."""
+    """decide() does not invoke LLM, rule-only."""
     rules = load_roe(CONFIG_PATH)
     _, decision = decide(_track(), rules)
     assert decision.llm_provider is None
@@ -36,13 +36,13 @@ def test_decide_sync_rule_only_no_llm():
 
 
 def test_decide_full_sync_runs_graph():
-    """decide_full() LangGraph 5-node pipeline'ı sync olarak çalıştırır."""
+    """decide_full() runs the LangGraph 5-node pipeline synchronously."""
     rules = load_roe(CONFIG_PATH)
     decision = decide_full(_track(), rules)
     assert decision is not None
     assert decision.track_id == "t-u"
-    # LLM kapalı (NIZAM_DECISION_LLM_ENABLED env yok) → llm_provider None
-    # Guardrails çalıştı → guardrails_triggered liste
+    # LLM disabled (no NIZAM_DECISION_LLM_ENABLED env) -> llm_provider None
+    # Guardrails executed -> guardrails_triggered is list
 
 
 def test_decide_with_guardrails_downgrades_low_conf():
@@ -51,7 +51,7 @@ def test_decide_with_guardrails_downgrades_low_conf():
         _track(confidence=0.05, hits=5),
         rules, apply_guards=True,
     )
-    # Düşük güven guardrail tetiklendi
+    # Low confidence guardrail triggered
     assert any("input" in g for g in decision.guardrails_triggered)
 
 
@@ -61,20 +61,20 @@ def test_decide_full_applies_friendly_zone_guardrail():
         zone_id="OP", name="ops",
         center_lat=40.0, center_lon=33.0, radius_m=500,
     )]
-    track = _track(latitude=40.001, longitude=33.001)  # zone içi
+    track = _track(latitude=40.001, longitude=33.001)  # inside zone
     decision = decide_full(track, rules, friendly_zones=zones,
                            inside_protected_zone=True)
     assert decision.action != Action.ENGAGE
 
 
 def test_guardrail_reasoning_separate_from_reasoning():
-    """Guardrail açıklaması reasoning'i kırpmaz — ayrı field."""
+    """Guardrail explanation does not truncate reasoning — separate field."""
     rules = load_roe(CONFIG_PATH)
     _, decision = decide(
         _track(confidence=0.05, hits=1),  # iki guardrail tetikler
         rules, apply_guards=True,
     )
     if decision.guardrails_triggered:
-        # guardrail_reasoning dolu, reasoning orijinal kaldı
+        # guardrail_reasoning populated, reasoning original kept
         assert decision.guardrail_reasoning
-        assert "guardrails" not in decision.reasoning  # artık reasoning'e append etmiyor
+        assert "guardrails" not in decision.reasoning  # no longer appended to reasoning

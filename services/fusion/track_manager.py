@@ -1,4 +1,4 @@
-"""Track yaşam döngüsü yöneticisi.
+"""Track lifecycle manager.
 
 Lifecycle:
     tentative ──(N_CONFIRM hit)──► confirmed
@@ -7,12 +7,12 @@ Lifecycle:
                                                           │
                                                           └─(K_DELETE miss)─► deleted
 
-Her tick:
-    1. predict() — tüm filtreleri ilerlet
-    2. associate() — ölçümlerle eşleştir
-    3. update() — eşleşenleri güncelle, hit/miss sayaçlarını ayarla
-    4. spawn() — eşleşmeyen ölçümlerden tentative track yarat
-    5. reap() — silinecek track'leri kaldır
+Each tick:
+    1. predict() — advance all filters
+    2. associate() — match with measurements
+    3. update() — update matched tracks, adjust hit/miss counters
+    4. spawn() — create tentative tracks from unmatched measurements
+    5. reap() — remove tracks marked for deletion
 """
 from __future__ import annotations
 
@@ -27,15 +27,15 @@ from services.fusion import kf_engine
 from services.fusion.association import associate
 from services.schemas.track import Measurement, SensorType, Track, TrackState
 
-# Varsayılan lifecycle parametreleri
-N_CONFIRM = 3       # 3 ardışık hit → confirmed
-M_LOST = 3          # 3 ardışık miss → lost
-K_DELETE = 10       # lost'tan sonra 10 miss → deleted
+# Default lifecycle parameters
+N_CONFIRM = 3       # 3 consecutive hits → confirmed
+M_LOST = 3          # 3 consecutive misses → lost
+K_DELETE = 10       # 10 misses after lost → deleted
 
 
 @dataclass
 class _TrackRec:
-    """İç track kaydı — dışa Track pydantic modeli olarak expose edilir."""
+    """Internal track record — exposed externally as a Track pydantic model."""
     track_id: str
     kf: KalmanFilter
     state: TrackState
@@ -68,7 +68,7 @@ class _TrackRec:
 
 
 class TrackManager:
-    """Track yaşam döngüsü yöneticisi."""
+    """Track lifecycle manager."""
 
     def __init__(
         self,
@@ -84,9 +84,9 @@ class TrackManager:
     # ── Public API ───────────────────────────────────────────────
 
     def step(self, measurements: list[Measurement], dt: float) -> list[Track]:
-        """Tek tick — tahmin, ilişkilendir, güncelle, spawn, reap.
+        """Single tick — predict, associate, update, spawn, reap.
 
-        Returns: mevcut (TENTATIVE/CONFIRMED/LOST) track listesi
+        Returns: current (TENTATIVE/CONFIRMED/LOST) track list
         """
         ordered_ids = list(self._tracks.keys())
         kfs = [self._tracks[tid].kf for tid in ordered_ids]

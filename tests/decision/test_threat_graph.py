@@ -1,4 +1,4 @@
-"""End-to-end karar grafiği testleri — safety critical."""
+"""End-to-end decision graph tests — safety critical."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -35,8 +35,8 @@ def test_benign_track_logged():
 
 
 def test_high_threat_outside_zone_alerts_without_approval():
-    """CRITICAL'a çıkmak için spatial tehdit (zone içinde) şart;
-    zone dışında en kötü senaryo HIGH → POL-4 alert."""
+    """Spatial threat (inside zone) is required to escalate to CRITICAL;
+    outside zone worst case scenario is HIGH -> POL-4 alert."""
     rules = load_roe(CONFIG_PATH)
     track = _track(confidence=1.0, vx=100.0)
     assessment, decision = decide(track, rules, inside_protected_zone=False, heading_toward_zone=True)
@@ -47,16 +47,16 @@ def test_high_threat_outside_zone_alerts_without_approval():
 
 
 def test_critical_inside_zone_does_NOT_engage_because_rule_disabled():
-    """En kritik test: default ENGAGE kuralı disabled → asla engage olmaz."""
+    """Most critical test: default ENGAGE rule is disabled -> never engage."""
     rules = load_roe(CONFIG_PATH)
     track = _track(confidence=1.0, vx=100.0)
     _, decision = decide(
         track, rules, inside_protected_zone=True, heading_toward_zone=True
     )
     assert decision.action != Action.ENGAGE, (
-        "GÜVENLİK İHLALİ: CRITICAL inside zone ENGAGE'e dönüştü — POL-5 disabled olmalı"
+        "SECURITY VIOLATION: CRITICAL inside zone escalated to ENGAGE — POL-5 must be disabled"
     )
-    # Fallback: eşleşen kural yok → LOG
+    # Fallback: no matching rule -> LOG
     assert decision.action == Action.LOG
 
 
@@ -92,21 +92,21 @@ def test_decision_has_timestamp_and_track_id():
 
 
 def test_engage_always_requires_operator_approval_even_if_rule_says_no():
-    """Safety check: ENGAGE aksiyonu gelse bile operatör onayı zorla ayarlanır."""
+    """Safety check: even if an ENGAGE action is triggered, operator approval is forced."""
     from services.decision.schemas import ROERule
 
-    # Bozuk bir kural: ENGAGE ama operator_approval=False
+    # Broken rule: ENGAGE but operator_approval=False
     bad_rules = [
         ROERule(
-            rule_id="BAD", description="auto-engage (tehlikeli)",
+            rule_id="BAD", description="auto-engage (dangerous)",
             when_threat_level=ThreatLevel.CRITICAL,
             requires_operator_approval=False, action=Action.ENGAGE, enabled=True,
         ),
     ]
     track = _track(confidence=1.0, vx=100.0)
     _, decision = decide(track, bad_rules, inside_protected_zone=True, heading_toward_zone=True)
-    # Kural ENGAGE çıkardı ama sistem onayı zorladı
+    # Rule triggered ENGAGE but system forced approval
     assert decision.action == Action.ENGAGE
     assert decision.requires_operator_approval is True, (
-        "GÜVENLİK İHLALİ: ENGAGE operatör onayı olmadan yürütülebilir"
+        "SECURITY VIOLATION: ENGAGE can be executed without operator approval"
     )
