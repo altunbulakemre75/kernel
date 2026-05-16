@@ -40,7 +40,18 @@ pytest
 
 ## Architecture
 
-See `docs/architecture.md` (coming soon).
+See [`docs/architecture.md`](docs/architecture.md) for the full design:
+components, data flow, audit chain implementation (Ed25519 + SHA-256
+hash chain), the guardrail downgrade-only invariant, and integration
+points.
+
+## Roadmap
+
+- [ ] ROS2 action sink adapter
+- [ ] MCP server interface
+- [ ] IMM filter as default in TrackManager
+- [ ] OpenAI provider in LLM chain
+- [ ] Internationalization of in-code documentation (Turkish → English)
 
 ## License
 
@@ -48,4 +59,5 @@ Apache 2.0.
 
 ## Contact
 
-Discussion on [ROS Discourse](https://discourse.ros.org) or open an issue.
+Discussion on [Open Robotics Discourse](https://discourse.openrobotics.org/t/the-accountability-gap-in-ros2-where-does-why-did-the-robot-do-that-get-answered/54841)
+or open a GitHub issue.
