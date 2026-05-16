@@ -73,6 +73,8 @@ class Decision(BaseModel):
     prev_hash: str | None = None  # hex SHA-256
     payload_hash: str | None = None
     chain_index: int = 0
+    policy_version_id: str | None = None
+    policy_path: str | None = None
 
 
 class ROERule(BaseModel):

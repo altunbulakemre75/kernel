@@ -99,3 +99,23 @@ def verify_chain(decisions: list[dict[str, Any]], public_key: ed25519.Ed25519Pub
         expected_index += 1
         
     return True, None
+
+def verify_decision_against_policy(decision: dict[str, Any], policy_path: str, public_key: ed25519.Ed25519PublicKey) -> Tuple[bool, str]:
+    from services.decision.policy_loader import load_policy
+    
+    if not verify_decision(decision, public_key):
+        return False, "Invalid decision signature"
+        
+    try:
+        policy = load_policy(policy_path)
+    except Exception as e:
+        return False, f"Failed to load policy: {e}"
+        
+    decision_policy_version = decision.get("policy_version_id")
+    if not decision_policy_version:
+        return False, "Decision does not contain a policy_version_id"
+        
+    if policy.version_id != decision_policy_version:
+        return False, f"Policy version mismatch: decision has {decision_policy_version}, loaded policy has {policy.version_id}"
+        
+    return True, "Match"

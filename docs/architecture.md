@@ -178,7 +178,29 @@ if not is_valid:
 
 ---
 
-## 5. Guardrail Downgrade-Only Invariant
+## 5. Policy Versioning
+
+Every Decision is cryptographically tied to a specific policy version. 
+When the rules are evaluated, a canonical, deterministic SHA-256 hash 
+(`version_id`) of the `default.yaml` policy is computed. This hash 
+is attached to the Decision prior to signing. 
+
+If someone edits the YAML between two decisions, the hash changes, 
+creating an immutable record of the divergence. An external auditor 
+can verify a historical decision against the policy file claimed by 
+its `policy_version_id`:
+
+```python
+from services.decision.audit_chain import verify_decision_against_policy
+
+is_valid, reason = verify_decision_against_policy(decision, "config/policies/default.yaml", public_key)
+if not is_valid:
+    print(f"Verification failed: {reason}")
+```
+
+---
+
+## 6. Guardrail Downgrade-Only Invariant
 
 Guardrails enforce a one-way safety property: they can only reduce the
 severity of a decision, never increase it. This is the
@@ -210,7 +232,7 @@ reconciliation and can only bring it back down.
 
 ---
 
-## 6. Integration Points
+## 7. Integration Points
 
 ### Sensor Adapters (implemented, extensible)
 - **RF/ODID** — ASTM F3411 (OpenDroneID) via NATS. Schema: `ODIDEvent`.

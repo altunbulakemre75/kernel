@@ -50,6 +50,8 @@ class GraphState:
     roe_context: list[dict] = field(default_factory=list)     # {rule_id, excerpt}
     llm_response: LLMResponse | None = None
     decision: Decision | None = None
+    policy_path: str | None = None
+    loaded_policy: Any | None = None
 
 
 # ── Node 1: classify ──────────────────────────────────────────────
@@ -235,7 +237,9 @@ async def finalize(state: GraphState) -> GraphState:
                     signature TEXT,
                     prev_hash TEXT,
                     payload_hash TEXT,
-                    chain_index INTEGER
+                    chain_index INTEGER,
+                    policy_version_id TEXT,
+                    policy_path TEXT
                 )
                 """
             )
@@ -245,6 +249,8 @@ async def finalize(state: GraphState) -> GraphState:
                 await conn.execute("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS prev_hash TEXT")
                 await conn.execute("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS payload_hash TEXT")
                 await conn.execute("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS chain_index INTEGER")
+                await conn.execute("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS policy_version_id TEXT")
+                await conn.execute("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS policy_path TEXT")
             except Exception:
                 pass
 
@@ -254,6 +260,10 @@ async def finalize(state: GraphState) -> GraphState:
                 chain_index = (row["chain_index"] or 0) + 1
         except Exception as exc:
             log.warning("decision DB fetch failed: %s", exc)
+
+    if state.loaded_policy:
+        state.decision.policy_version_id = state.loaded_policy.version_id
+        state.decision.policy_path = state.loaded_policy.path
 
     state.decision.chain_index = chain_index
     state.decision.prev_hash = prev_hash
@@ -273,14 +283,14 @@ async def finalize(state: GraphState) -> GraphState:
                 """INSERT INTO decisions(track_id,action,threat_level,confidence,reasoning,
                    source,roe_reference,requires_operator_approval,timestamp_iso,
                    llm_provider,llm_model,llm_raw_response,guardrails_triggered,
-                   signature,prev_hash,payload_hash,chain_index)
-                   VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10,$11,$12::jsonb,$13,$14,$15,$16,$17)""",
+                   signature,prev_hash,payload_hash,chain_index,policy_version_id,policy_path)
+                   VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10,$11,$12::jsonb,$13,$14,$15,$16,$17,$18,$19)""",
                 d.track_id, d.action.value, d.threat_level.value, d.confidence, d.reasoning,
                 d.source.value, d.roe_reference, d.requires_operator_approval, d.timestamp_iso,
                 d.llm_provider, d.llm_model,
                 __import__("json").dumps(d.llm_raw_response) if d.llm_raw_response else None,
                 d.guardrails_triggered,
-                d.signature, d.prev_hash, d.payload_hash, d.chain_index,
+                d.signature, d.prev_hash, d.payload_hash, d.chain_index, d.policy_version_id, d.policy_path,
             )
         except Exception as exc:
             log.warning("decision checkpoint insert failed: %s", exc)
@@ -298,13 +308,22 @@ async def run_graph(
     friendly_zones: list[FriendlyZone] | None = None,
     inside_protected_zone: bool = False,
     heading_toward_zone: bool = False,
+    policy_path: str | None = None,
 ) -> Decision:
     """Run the 5-node flow sequentially. Uses StateGraph if LangGraph is installed."""
+    
+    loaded_policy = None
+    if policy_path:
+        from services.decision.policy_loader import load_policy
+        loaded_policy = load_policy(policy_path)
+        
     state = GraphState(
         track=track, roe_rules=roe_rules,
         friendly_zones=friendly_zones or [],
         inside_protected_zone=inside_protected_zone,
         heading_toward_zone=heading_toward_zone,
+        policy_path=policy_path,
+        loaded_policy=loaded_policy,
     )
 
     try:

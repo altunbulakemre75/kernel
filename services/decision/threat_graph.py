@@ -82,6 +82,7 @@ def decide_full(
     inside_protected_zone: bool = False,
     heading_toward_zone: bool = False,
     friendly_zones: list[FriendlyZone] | None = None,
+    policy_path: str | None = None,
 ) -> Decision:
     """Sync wrapper over the full LangGraph 5-node production pipeline.
 
@@ -95,4 +96,5 @@ def decide_full(
         friendly_zones=friendly_zones,
         inside_protected_zone=inside_protected_zone,
         heading_toward_zone=heading_toward_zone,
+        policy_path=policy_path,
     ))
