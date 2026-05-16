@@ -61,6 +61,11 @@ Decision summary:
 Audit hash: c1fc5724f6b02970 (verifiable against deployed policy)
 ```
 
+## Integrations
+
+**ROS2 bridge:** publishes signed Decision objects to a ROS2 topic for
+consumption by autonomous systems. See [`docs/integrations/ros2.md`](docs/integrations/ros2.md).
+
 ## Architecture
 
 See [`docs/architecture.md`](docs/architecture.md) for the full design:
@@ -70,7 +75,8 @@ points.
 
 ## Roadmap
 
-- [ ] ROS2 action sink adapter
+- [x] ROS2 publisher (`services/integrations/ros2_bridge.py`)
+- [ ] ROS2 action sink with feedback loop (planned)
 - [ ] MCP server interface
 - [ ] IMM filter as default in TrackManager
 - [ ] OpenAI provider in LLM chain
