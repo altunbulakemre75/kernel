@@ -68,6 +68,12 @@ class Decision(BaseModel):
     guardrails_triggered: list[str] = Field(default_factory=list)
     guardrail_reasoning: str = ""             # guardrail explanations (not truncated into reasoning)
 
+    # Cryptographic Audit Chain
+    signature: str | None = None  # base64 Ed25519
+    prev_hash: str | None = None  # hex SHA-256
+    payload_hash: str | None = None
+    chain_index: int = 0
+
 
 class ROERule(BaseModel):
     """Single decision policy rule (Rules of Engagement schema compatible)."""

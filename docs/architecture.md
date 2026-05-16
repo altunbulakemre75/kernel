@@ -134,9 +134,8 @@ The system processes data through a linear pipeline:
 
 5. **Audit chain** — The finalized `Decision` (including raw LLM
    response, guardrail trace, rule reference, and full reasoning) is
-   persisted. Currently: PostgreSQL via `asyncpg` in the `finalize` node
-   when `KERNEL_DB_DSN` is set. **Cryptographic signing is designed but
-   not yet implemented** — see §4.
+   cryptographically signed and persisted. Currently: PostgreSQL via
+   `asyncpg` in the `finalize` node when `KERNEL_DB_DSN` is set.
 
 6. **Action** — The `Decision` is published for downstream consumption.
    For ENGAGE actions, `requires_operator_approval` is hardcoded to
@@ -164,11 +163,18 @@ feed the same track inputs through the same rule set and guardrails, and
 confirm that the outputs match the signed records.
 
 **Current status:** The `Decision` model stores all fields needed for
-replay. The `finalize` node in `llm_graph.py` persists to PostgreSQL.
-The hash-chain and Ed25519 signing are **designed but not yet
-implemented**. The Pydantic model is structured so that adding signing
-requires only a new field (`signature: str | None`) and a post-persist
-hook — no schema migration needed.
+replay (`signature`, `prev_hash`, `payload_hash`, `chain_index`). 
+The `finalize` node in `llm_graph.py` signs the decision and persists it 
+to PostgreSQL, creating an unbroken Ed25519 hash chain.
+
+Code example:
+```python
+from services.decision.audit_chain import verify_chain
+
+is_valid, broken_idx = verify_chain(decisions, public_key)
+if not is_valid:
+    print(f"Chain tampered at index {broken_idx}")
+```
 
 ---
 

@@ -13,7 +13,7 @@ or court can read, is almost always reconstructed after the fact, by hand.
   human-authored policy. AI advises; rules decide.
 - **Cryptographically signed audit chain.** Every decision is recorded
   with full provenance: which rule fired, which inputs triggered it,
-  which guardrails ran, what was downgraded.
+  which guardrails ran, what was downgraded. Linked via Ed25519 signature.
 - **Guardrail-downgrade-only pattern.** Safety layers can only make
   decisions safer, never more dangerous. Mathematically enforced.
 - **LLM advisor with prompt injection defense.** Models suggest; they

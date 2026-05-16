@@ -203,15 +203,18 @@ async def finalize(state: GraphState) -> GraphState:
     if state.decision is None:
         return state
 
+    from services.decision.audit_chain import load_or_create_keypair, sign_decision
+
     dsn = os.getenv("KERNEL_DB_DSN", os.getenv("NIZAM_DB_DSN"))
-    if not dsn:
-        return state
+    
+    prev_hash = None
+    chain_index = 0
+    conn = None
 
-    try:
-        import asyncpg
-
-        conn = await asyncpg.connect(dsn)
+    if dsn:
         try:
+            import asyncpg
+            conn = await asyncpg.connect(dsn)
             await conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS decisions (
@@ -228,26 +231,61 @@ async def finalize(state: GraphState) -> GraphState:
                     llm_provider TEXT,
                     llm_model TEXT,
                     llm_raw_response JSONB,
-                    guardrails_triggered TEXT[]
+                    guardrails_triggered TEXT[],
+                    signature TEXT,
+                    prev_hash TEXT,
+                    payload_hash TEXT,
+                    chain_index INTEGER
                 )
                 """
             )
+            # Add columns if they don't exist yet (for smooth upgrade)
+            try:
+                await conn.execute("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS signature TEXT")
+                await conn.execute("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS prev_hash TEXT")
+                await conn.execute("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS payload_hash TEXT")
+                await conn.execute("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS chain_index INTEGER")
+            except Exception:
+                pass
+
+            row = await conn.fetchrow("SELECT payload_hash, chain_index FROM decisions ORDER BY id DESC LIMIT 1")
+            if row and row["payload_hash"]:
+                prev_hash = row["payload_hash"]
+                chain_index = (row["chain_index"] or 0) + 1
+        except Exception as exc:
+            log.warning("decision DB fetch failed: %s", exc)
+
+    state.decision.chain_index = chain_index
+    state.decision.prev_hash = prev_hash
+    
+    try:
+        signing_key = load_or_create_keypair()
+        signed_dict = sign_decision(state.decision.model_dump(), prev_hash, signing_key)
+        state.decision.signature = signed_dict["signature"]
+        state.decision.payload_hash = signed_dict["payload_hash"]
+    except Exception as exc:
+        log.warning("decision signing failed: %s", exc)
+
+    if conn:
+        try:
             d = state.decision
             await conn.execute(
                 """INSERT INTO decisions(track_id,action,threat_level,confidence,reasoning,
                    source,roe_reference,requires_operator_approval,timestamp_iso,
-                   llm_provider,llm_model,llm_raw_response,guardrails_triggered)
-                   VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10,$11,$12::jsonb,$13)""",
+                   llm_provider,llm_model,llm_raw_response,guardrails_triggered,
+                   signature,prev_hash,payload_hash,chain_index)
+                   VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10,$11,$12::jsonb,$13,$14,$15,$16,$17)""",
                 d.track_id, d.action.value, d.threat_level.value, d.confidence, d.reasoning,
                 d.source.value, d.roe_reference, d.requires_operator_approval, d.timestamp_iso,
                 d.llm_provider, d.llm_model,
                 __import__("json").dumps(d.llm_raw_response) if d.llm_raw_response else None,
                 d.guardrails_triggered,
+                d.signature, d.prev_hash, d.payload_hash, d.chain_index,
             )
+        except Exception as exc:
+            log.warning("decision checkpoint insert failed: %s", exc)
         finally:
             await conn.close()
-    except Exception as exc:
-        log.warning("decision checkpoint failed: %s", exc)
 
     return state
 
