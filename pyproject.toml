@@ -13,7 +13,7 @@ authors     = [{ name = "Emre Altunbulak" }]
 requires-python = ">=3.10"
 
 [project.scripts]
-kernel-verify = "services.decision.cli_verify:main"
+kernel-verify = "cli.kernel_verify:main"
 
 # Dependencies are maintained in requirements.txt — single source of truth.
 dynamic = ["dependencies"]

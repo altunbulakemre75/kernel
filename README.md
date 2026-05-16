@@ -38,6 +38,29 @@ pip install -r requirements.txt
 pytest
 ```
 
+## Verifying decisions
+
+For auditors and compliance officers, the decision provenance chain can be
+verified offline without writing code:
+
+```bash
+kernel-verify chain.jsonl --policy config/policies/default.yaml --pubkey ~/.kernel/keys/signing.pub
+```
+
+**Output:**
+```
+✓ Chain integrity: VALID (5 decisions, all signed)
+✓ Policy match: c1fc5724f6b02970 (default.yaml @ 2026-05-15 18:30 UTC)
+✓ Signature verification: PASSED (Ed25519)
+
+Decision summary:
+  [0] 14:32:07  action=LOG      rule_id=r_001  guardrails=[]
+  [1] 14:32:09  action=ALERT    rule_id=r_003  guardrails=[geofence]
+  [2] 14:32:15  action=HANDOFF  rule_id=r_001  guardrails=[]
+
+Audit hash: c1fc5724f6b02970 (verifiable against deployed policy)
+```
+
 ## Architecture
 
 See [`docs/architecture.md`](docs/architecture.md) for the full design:
