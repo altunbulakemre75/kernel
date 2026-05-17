@@ -44,6 +44,8 @@ llm = [
 ]
 
 mcp = [
+    # Activate with: pip install -e ".[mcp]"
+    # Required to run the kernel-mcp stdio audit-query server.
     "mcp>=1.0.0",
 ]
 
