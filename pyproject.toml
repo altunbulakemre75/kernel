@@ -24,7 +24,7 @@ dependencies = { file = ["requirements.txt"] }
 
 [tool.setuptools.packages.find]
 where   = ["."]
-include = ["services*"]
+include = ["services*", "kernel*"]
 
 # ── Optional dependency groups ────────────────────────────────────────────────
 [project.optional-dependencies]
@@ -62,3 +62,4 @@ ignore_missing_imports = true
 testpaths    = ["tests"]
 asyncio_mode = "auto"
 addopts      = "-v --tb=short"
+markers      = ["integration: tests requiring external services or env-var gates"]
