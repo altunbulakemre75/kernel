@@ -135,6 +135,13 @@ class AuditChainStore:
                 first_break=None,
                 integrity="UNKNOWN",
             )
+        if not self._events:
+            return ChainVerifyResult(
+                verified_count=0,
+                total_count=0,
+                first_break=None,
+                integrity="UNKNOWN",
+            )
         from services.decision.audit_chain import verify_chain
         start = 0 if start_id is None else start_id
         end = self._events[-1].get("chain_index", 0) if self._events else 0
@@ -152,7 +159,7 @@ class AuditChainStore:
         broken_event = slice_events[broken_idx] if broken_idx is not None else None
         broken_id = broken_event.get("chain_index", broken_idx) if broken_event else None
         return ChainVerifyResult(
-            verified_count=broken_idx or 0,
+            verified_count=broken_idx if broken_idx is not None else 0,
             total_count=len(slice_events),
             first_break={"id": broken_id, "reason": "signature_or_chain_link_invalid"},
             integrity="BROKEN",

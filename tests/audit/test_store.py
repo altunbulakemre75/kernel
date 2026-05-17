@@ -1,3 +1,5 @@
+import os
+import time
 from datetime import datetime, timezone, timedelta
 
 from kernel.audit.store import AuditChainStore
@@ -54,11 +56,6 @@ def test_get_event_unknown_id_returns_none(sample_chain_file):
     store = AuditChainStore(sample_chain_file, verify_on_query=False)
     store.load()
     assert store.get(999) is None
-
-
-import time
-
-import pytest
 
 
 def test_verify_event_clean(sample_chain_file, signing_keypair):
@@ -122,7 +119,6 @@ def test_reload_debounce_skips_within_window(sample_chain_file):
     )
     # Force a fresh mtime
     new_time = (initial_mtime or 0) + 100
-    import os
     os.utime(sample_chain_file, (new_time, new_time))
     # Within debounce window — should NOT reload
     store.reload_if_stale()
@@ -131,7 +127,7 @@ def test_reload_debounce_skips_within_window(sample_chain_file):
 
 def test_reload_debounce_picks_up_changes_after_window(sample_chain_file):
     store = AuditChainStore(
-        sample_chain_file, verify_on_query=False, reload_debounce_seconds=0.05
+        sample_chain_file, verify_on_query=False, reload_debounce_seconds=0.001
     )
     store.load()
     initial_mtime = store._mtime
@@ -140,7 +136,6 @@ def test_reload_debounce_picks_up_changes_after_window(sample_chain_file):
         + '{"chain_index": 99, "action": "allow"}\n',
         encoding="utf-8",
     )
-    import os
     os.utime(sample_chain_file, ((initial_mtime or 0) + 100, (initial_mtime or 0) + 100))
     time.sleep(0.1)
     store.reload_if_stale()
