@@ -15,6 +15,7 @@ requires-python = ">=3.10"
 [project.scripts]
 kernel-verify = "cli.kernel_verify:main"
 kernel-report = "cli.kernel_report:main"
+kernel-mcp = "kernel.mcp.server:run"
 
 # Dependencies are maintained in requirements.txt — single source of truth.
 dynamic = ["dependencies"]
@@ -40,6 +41,10 @@ llm = [
     # Required when KERNEL_DECISION_LLM_ENABLED=true
     "langgraph>=0.2.0",
     "anthropic>=0.40.0",
+]
+
+mcp = [
+    "mcp>=1.0.0",
 ]
 
 # ── Ruff ──────────────────────────────────────────────────────────────────────
