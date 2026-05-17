@@ -6,6 +6,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 
 @dataclass
@@ -164,3 +165,34 @@ class AuditChainStore:
             first_break={"id": broken_id, "reason": "signature_or_chain_link_invalid"},
             integrity="BROKEN",
         )
+
+    def search(self, query: str, limit: int = 50) -> list[SearchHit]:
+        q = query.lower()
+        results: list[SearchHit] = []
+        for ev in self._events:
+            flat = _flatten_value(ev).lower()
+            idx = flat.find(q)
+            if idx == -1:
+                continue
+            half = 100
+            start = max(0, idx - half)
+            end = min(len(flat), idx + len(q) + half)
+            snippet = flat[start:end]
+            results.append(SearchHit(
+                event_id=ev.get("chain_index", -1),
+                timestamp_iso=ev.get("timestamp_iso", ""),
+                action=ev.get("action", ""),
+                sig_valid=self.verify_event(ev.get("chain_index", -1)),
+                snippet=snippet,
+            ))
+            if len(results) >= limit:
+                break
+        return results
+
+
+def _flatten_value(obj: Any) -> str:
+    if isinstance(obj, dict):
+        return " ".join(_flatten_value(v) for v in obj.values())
+    if isinstance(obj, (list, tuple, set)):
+        return " ".join(_flatten_value(v) for v in obj)
+    return str(obj)

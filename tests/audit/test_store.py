@@ -140,3 +140,40 @@ def test_reload_debounce_picks_up_changes_after_window(sample_chain_file):
     time.sleep(0.1)
     store.reload_if_stale()
     assert len(store.events()) == 5
+
+
+def test_search_top_level_field(sample_chain_file):
+    store = AuditChainStore(sample_chain_file, verify_on_query=False)
+    store.load()
+    hits = store.search("block")
+    assert any(h.event_id == 1 for h in hits)
+
+
+def test_search_nested_field(sample_chain_file):
+    """Recursive flatten must find values in nested dicts."""
+    store = AuditChainStore(sample_chain_file, verify_on_query=False)
+    store.load()
+    hits = store.search("10.0.0.7")
+    assert any(h.event_id == 2 for h in hits)
+
+
+def test_search_case_insensitive(sample_chain_file):
+    store = AuditChainStore(sample_chain_file, verify_on_query=False)
+    store.load()
+    hits_lower = store.search("block")
+    hits_upper = store.search("BLOCK")
+    assert {h.event_id for h in hits_lower} == {h.event_id for h in hits_upper}
+
+
+def test_search_limit(sample_chain_file):
+    store = AuditChainStore(sample_chain_file, verify_on_query=False)
+    store.load()
+    hits = store.search("allow", limit=1)
+    assert len(hits) == 1
+
+
+def test_search_snippet_contains_query(sample_chain_file):
+    store = AuditChainStore(sample_chain_file, verify_on_query=False)
+    store.load()
+    hits = store.search("10.0.0.7")
+    assert "10.0.0.7" in hits[0].snippet
