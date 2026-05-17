@@ -113,3 +113,47 @@ class AuditChainStore:
             results.append(ev)
         results.sort(key=lambda e: e.get("chain_index", 0), reverse=True)
         return results[:limit]
+
+    def verify_event(self, event_id: int) -> bool | None:
+        if self._public_key is None or not self._verify_on_query:
+            return None
+        from services.decision.audit_chain import verify_decision
+        ev = self.get(event_id)
+        if ev is None:
+            return None
+        return verify_decision(ev, self._public_key)
+
+    def verify_chain_range(
+        self,
+        start_id: int | None,
+        end_id: int | None,
+    ) -> ChainVerifyResult:
+        if self._public_key is None or not self._verify_on_query:
+            return ChainVerifyResult(
+                verified_count=0,
+                total_count=len(self._events),
+                first_break=None,
+                integrity="UNKNOWN",
+            )
+        from services.decision.audit_chain import verify_chain
+        start = 0 if start_id is None else start_id
+        end = self._events[-1].get("chain_index", 0) if self._events else 0
+        if end_id is not None:
+            end = end_id
+        slice_events = [e for e in self._events if start <= e.get("chain_index", -1) <= end]
+        ok, broken_idx = verify_chain(slice_events, self._public_key)
+        if ok:
+            return ChainVerifyResult(
+                verified_count=len(slice_events),
+                total_count=len(slice_events),
+                first_break=None,
+                integrity="OK",
+            )
+        broken_event = slice_events[broken_idx] if broken_idx is not None else None
+        broken_id = broken_event.get("chain_index", broken_idx) if broken_event else None
+        return ChainVerifyResult(
+            verified_count=broken_idx or 0,
+            total_count=len(slice_events),
+            first_break={"id": broken_id, "reason": "signature_or_chain_link_invalid"},
+            integrity="BROKEN",
+        )
