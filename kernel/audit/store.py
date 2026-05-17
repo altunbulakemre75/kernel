@@ -6,7 +6,6 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 
 @dataclass
@@ -76,6 +75,11 @@ class AuditChainStore:
             self.load()
 
     def events(self) -> list[dict]:
+        """Return a shallow copy of the event list.
+
+        The list spine is fresh — callers cannot add or remove events from
+        the store. The inner dicts are shared; treat them as read-only.
+        """
         return list(self._events)
 
     def get(self, event_id: int) -> dict | None:
