@@ -1,29 +1,50 @@
 # EU AI Act Compliance — kernel Mapping
 
-## Article 12 — Automatic Logging
+> Source: Regulation (EU) 2024/1689, Official Journal of the European Union, 12 July 2024
 
-Article 12 of the EU AI Act requires that high-risk AI systems
-automatically generate logs sufficient to enable ex-post accountability.
-Specifically, systems must record:
+## Article 12 — Record-keeping
 
-- the period of operation of the system
-- the reference database against which input data has been checked
-- input data that led to a given output, where practicable
-- the identity of the persons involved in verification
+### Article 12(2) — General logging requirements for high-risk AI systems
 
-**How kernel satisfies Article 12:**
+Article 12(2) requires that high-risk AI systems automatically generate
+logs sufficient to enable three specific accountability purposes:
+
+- **(a)** ensuring the system can be used for the purpose of identifying
+  risks at national level under Article 79(1)
+- **(b)** ensuring post-market monitoring under Article 72
+- **(c)** ensuring the monitoring under Article 26(5) (deployer
+  operational obligations)
+
+**How kernel satisfies Article 12(2):**
 
 | Requirement | kernel mechanism |
 |---|---|
+| Art.12(2)(a) — Risk identification logging (Art.79(1)) | Each decision records `threat_level`, `roe_reference`, and full `guardrails_triggered` trace; the signed chain is the national-level risk evidence record |
+| Art.12(2)(b) — Post-market monitoring support (Art.72) | All decisions are auto-logged with `policy_version_id` (SHA-256 of the policy file), enabling retrospective analysis against any deployed rule version |
+| Art.12(2)(c) — Operation monitoring (Art.26(5)) | `action`, `timestamp_iso`, `roe_reference`, `requires_operator_approval`, and `guardrail_reasoning` are recorded per decision; deployers can replay the full operational picture |
 | Automatic log generation | Every call to `sign_decision()` appends a tamper-evident record to the audit chain without human action |
-| Event traceability | Each decision stores `roe_reference` (rule that fired), `timestamp_iso`, `threat_level`, `action`, and `guardrails_triggered` |
-| Standardised timestamps | All timestamps are ISO 8601 UTC |
 | Tamper-evident storage | Ed25519 signature + SHA-256 hash chain — any modification breaks the chain and is detected by `kernel-verify` |
-| Policy traceability | `policy_version_id` (SHA-256 of policy file) is embedded in every decision, so the exact rule set is reconstructable |
+| Standardised timestamps | All timestamps are ISO 8601 UTC |
 
 Retention of the chain files (10-year requirement for high-risk systems)
 is the responsibility of the deployment operator. kernel does not manage
 storage lifetime.
+
+### Article 12(3) — Remote biometric identification (out of scope for kernel, included for reference)
+
+Article 12(3) imposes *additional* logging requirements that apply
+**only** to remote biometric identification systems listed in Annex III,
+paragraph 1(a). kernel is a decision-provenance layer for autonomous
+systems (robots, vehicles, effectors) — not a remote biometric
+identification system. Article 12(3) is reproduced here for reference
+only and is not part of kernel's compliance scope.
+
+The Article 12(3) requirements (biometric ID systems only) are:
+
+- the period of use of the system
+- the reference database against which input data has been checked
+- the input data that led to a given output, where practicable
+- the identity of the natural persons involved in the verification
 
 ## Article 14 — Human Oversight
 

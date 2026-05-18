@@ -115,6 +115,28 @@ def test_report_contains_all_sections(workspace):
         assert header in text, f"Missing section: {header!r}"
 
 
+def test_report_article12_uses_correct_regulation(workspace):
+    import pypdf
+    out = workspace["tmp"] / "report.pdf"
+    _run(
+        str(workspace["chain_path"]),
+        "--policy", str(workspace["policy_path"]),
+        "--pubkey", str(workspace["pub_path"]),
+        "--output", str(out),
+    )
+    reader = pypdf.PdfReader(str(out))
+    text = "".join(page.extract_text() or "" for page in reader.pages)
+    assert "Article 12(2)" in text, "PDF must cite Article 12(2)"
+    assert "Regulation (EU) 2024/1689" in text, "PDF must cite Regulation (EU) 2024/1689"
+    # "reference database" must only appear in the Art.12(3) out-of-scope note,
+    # not as a main-mapping requirement row
+    assert "reference database" in text, "Art.12(3) out-of-scope note must mention reference database"
+    # Verify 12(3) requirements are not in the main compliance table rows
+    art12_table_headers = ["Art.12(2)(a)", "Art.12(2)(b)", "Art.12(2)(c)"]
+    for header in art12_table_headers:
+        assert header in text, f"Main Article 12(2) row missing: {header!r}"
+
+
 def test_report_action_distribution_correct(workspace):
     from cli.kernel_report import compute_action_distribution
     dist = compute_action_distribution(workspace["chain"])

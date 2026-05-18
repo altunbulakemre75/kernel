@@ -240,24 +240,36 @@ def generate_pdf(
         else f"Chain broken at index {broken_idx}"
     )
     art12_rows = [
-        ["Automatic log generation",
-         "✓ PASS", f"All {n} decisions auto-logged"],
-        ["Event traceability",
-         "✓ PASS", "Every decision records rule_id and timestamp"],
-        ["Timestamps in standardised format",
-         "✓ PASS", "ISO 8601 UTC throughout"],
+        ["Art.12(2)(a) — Risk identification logging (Art.79(1))",
+         "✓ PASS",
+         "threat_level, roe_reference, and guardrails_triggered recorded per decision"],
+        ["Art.12(2)(b) — Post-market monitoring support (Art.72)",
+         "✓ PASS",
+         f"All {n} decisions auto-logged; policy_version_id links each record to the "
+         "exact rule set in force"],
+        ["Art.12(2)(c) — Operation monitoring (Art.26(5))",
+         "✓ PASS",
+         "action, timestamp_iso, requires_operator_approval, and guardrail_reasoning "
+         "recorded per decision"],
+        ["Automatic log generation (no human action required)",
+         "✓ PASS",
+         f"sign_decision() called automatically; {n} records appended to chain"],
         ["Tamper-evident storage",
          integrity_status, integrity_evidence],
+        ["Timestamps in standardised format",
+         "✓ PASS", "ISO 8601 UTC throughout"],
         ["Retention period (10 years, high-risk)",
          "INFO", "Storage layer: external to kernel"],
     ]
     story += [
-        Paragraph("EU AI Act Article 12 — Automatic Logging", s["h2"]),
+        Paragraph("EU AI Act Article 12 — Record-keeping", s["h2"]),
         _hr(),
         Paragraph(
-            "Article 12 requires high-risk AI systems to automatically generate "
-            "logs enabling ex-post accountability. The table below maps each "
-            "requirement to observable evidence in this decision chain.",
+            "Article 12(2) requires high-risk AI systems to automatically generate "
+            "logs enabling risk identification (Art.79(1)), post-market monitoring "
+            "(Art.72), and operation monitoring (Art.26(5)). The table below maps "
+            "each Article 12(2) sub-requirement to observable evidence in this "
+            "decision chain.",
             s["body"],
         ),
         Spacer(1, 0.3 * cm),
@@ -268,7 +280,18 @@ def generate_pdf(
         ),
         Spacer(1, 0.4 * cm),
         Paragraph(
-            "Annex IV reference: Section 7 (post-market monitoring logging).",
+            "<b>Article 12(3) — out of scope for kernel:</b> Art.12(3) imposes "
+            "additional logging requirements (period of use, reference database, "
+            "input data per identification, persons involved in verification) that "
+            "apply exclusively to remote biometric identification systems "
+            "(Annex III §1(a)). kernel is an autonomous-systems decision layer — "
+            "not a remote biometric identification system.",
+            s["small"],
+        ),
+        Spacer(1, 0.2 * cm),
+        Paragraph(
+            "Reference: Regulation (EU) 2024/1689, Official Journal of the "
+            "European Union, 12 July 2024.",
             s["small"],
         ),
         PageBreak(),
