@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 # ── Project metadata ──────────────────────────────────────────────────────────
 [project]
@@ -11,14 +11,13 @@ readme      = "README.md"
 license     = { text = "Apache-2.0" }
 authors     = [{ name = "Emre Altunbulak" }]
 requires-python = ">=3.10"
+# Dependencies are maintained in requirements.txt — single source of truth.
+dynamic = ["dependencies"]
 
 [project.scripts]
 kernel-verify = "cli.kernel_verify:main"
 kernel-report = "cli.kernel_report:main"
 kernel-mcp = "kernel.mcp.server:run"
-
-# Dependencies are maintained in requirements.txt — single source of truth.
-dynamic = ["dependencies"]
 
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements.txt"] }
