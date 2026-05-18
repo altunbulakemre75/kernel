@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "kernel": {
+      "command": "kernel-mcp",
+      "args": [
+        "--chain-file", "/absolute/path/to/chain.jsonl",
+        "--pubkey", "/absolute/path/to/signing.pub",
+        "--policy", "/absolute/path/to/policies/default.yaml"
+      ]
+    }
+  }
+}

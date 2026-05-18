@@ -81,6 +81,33 @@ distribution, per-requirement attestation tables for Articles 12 and 14,
 policy version timeline, and a cryptographic fingerprint of the report
 content. See [`docs/compliance/eu_ai_act.md`](docs/compliance/eu_ai_act.md).
 
+## MCP server (Claude Desktop)
+
+Plug kernel into Claude Desktop in ~30 seconds and ask questions like
+*"what did my autonomous system do in the last hour?"*:
+
+```bash
+pip install kernel[mcp]
+```
+
+Then add to your Claude Desktop config:
+
+```json
+{
+  "mcpServers": {
+    "kernel": {
+      "command": "kernel-mcp",
+      "args": ["--chain-file", "/path/to/chain.jsonl", "--pubkey", "/path/to/signing.pub"]
+    }
+  }
+}
+```
+
+Five read-only tools (`query_events`, `get_event`, `get_stats`,
+`verify_chain`, `search_events`) and four resources cover signed audit
+query, chain verification, and active-policy metadata. See
+[`docs/integrations/mcp.md`](docs/integrations/mcp.md).
+
 ## Integrations
 
 **ROS2 bridge:** publishes signed Decision objects to a ROS2 topic for
@@ -98,7 +125,7 @@ points.
 - [x] EU AI Act Article 12 &amp; 14 compliance report generator (`cli/kernel_report.py`)
 - [x] ROS2 publisher (`services/integrations/ros2_bridge.py`)
 - [ ] ROS2 action sink with feedback loop (planned)
-- [ ] MCP server interface
+- [x] MCP server interface (`kernel/mcp/`, `kernel-mcp`)
 - [ ] IMM filter as default in TrackManager
 - [ ] OpenAI provider in LLM chain
 - [ ] Internationalization of in-code documentation (Turkish → English)
