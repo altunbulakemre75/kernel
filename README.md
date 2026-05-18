@@ -120,6 +120,18 @@ components, data flow, audit chain implementation (Ed25519 + SHA-256
 hash chain), the guardrail downgrade-only invariant, and integration
 points.
 
+## Security
+
+kernel defends against two primary threats: insider post-hoc tampering of
+decision history (Ed25519 + SHA-256 hash chain) and AI-induced unsafe
+escalation (LLM advisory ceiling + guardrail downgrade-only invariant).
+
+It does not defend against signing key compromise, sensor-level deception,
+runtime intrusion, or network attacks — those are operator responsibilities.
+
+See [`docs/threat-model.md`](docs/threat-model.md) for the full threat model,
+including explicit non-defenses and what this means for compliance claims.
+
 ## Roadmap
 
 - [x] EU AI Act Article 12 &amp; 14 compliance report generator (`cli/kernel_report.py`)
