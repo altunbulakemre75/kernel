@@ -71,7 +71,7 @@ class AuditChainStore:
             current_mtime = self._chain_file.stat().st_mtime
         except FileNotFoundError:
             from kernel.mcp.errors import KernelMCPError
-            raise KernelMCPError(f"chain file not found at {self._chain_file}")
+            raise KernelMCPError(f"chain file not found at {self._chain_file}") from None
         if self._mtime is None or current_mtime != self._mtime:
             self.load()
 

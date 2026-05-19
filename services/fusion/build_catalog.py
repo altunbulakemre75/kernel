@@ -20,11 +20,10 @@ import numpy as np
 
 def extract_embedding(image_path: Path, model_name: str = "yolov8n.pt", dim: int = 16) -> list[float]:
     """YOLO backbone → global-pooled → random projection to dim dimensions."""
-    from ultralytics import YOLO
     import cv2
-    import torch
+    from ultralytics import YOLO
 
-    model = YOLO(model_name)
+    YOLO(model_name)
     img = cv2.imread(str(image_path))
     if img is None:
         raise ValueError(f"Could not load image: {image_path}")
@@ -49,7 +48,7 @@ def main() -> None:
 
     entries: list[dict] = []
     labels = args.labels or [f"unknown-{i}|unknown" for i in range(len(args.images))]
-    for img_path_str, label in zip(args.images, labels):
+    for img_path_str, label in zip(args.images, labels, strict=False):
         img_path = Path(img_path_str)
         name, mfg = label.split("|", 1) if "|" in label else (label, "unknown")
         emb = extract_embedding(img_path, dim=args.dim)

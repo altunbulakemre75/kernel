@@ -8,8 +8,8 @@ from kernel.audit import AuditChainStore
 
 # Re-export tests/audit fixtures
 from tests.audit.conftest import (  # noqa: F401
-    signing_keypair,
     sample_chain_file,
+    signing_keypair,
     tampered_chain_file,
 )
 
@@ -30,7 +30,7 @@ def freeze_tools_now():
 
 
 @pytest.fixture
-def store(sample_chain_file, signing_keypair):
+def store(sample_chain_file, signing_keypair):  # noqa: F811
     _, _, pub_path = signing_keypair
     s = AuditChainStore(sample_chain_file, public_key_path=pub_path)
     s.load()
@@ -38,14 +38,14 @@ def store(sample_chain_file, signing_keypair):
 
 
 @pytest.fixture
-def store_unverified(sample_chain_file):
+def store_unverified(sample_chain_file):  # noqa: F811
     s = AuditChainStore(sample_chain_file, verify_on_query=False)
     s.load()
     return s
 
 
 @pytest.fixture
-def store_tampered(tampered_chain_file, signing_keypair):
+def store_tampered(tampered_chain_file, signing_keypair):  # noqa: F811
     _, _, pub_path = signing_keypair
     s = AuditChainStore(tampered_chain_file, public_key_path=pub_path)
     s.load()

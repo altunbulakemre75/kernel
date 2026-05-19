@@ -1,5 +1,5 @@
-import copy
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from services.decision.audit_chain import sign_decision
-from services.decision.policy_loader import load_policy, clear_policy_cache
+from services.decision.policy_loader import clear_policy_cache, load_policy
 
 
 @pytest.fixture
@@ -92,7 +92,6 @@ def run_cli(*args):
     result = subprocess.run(cmd, capture_output=True, text=True, env=env)
     return result
 
-import os
 
 def test_verify_valid_chain_returns_zero(temp_workspace):
     res = run_cli(

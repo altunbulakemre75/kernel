@@ -98,7 +98,7 @@ def test_get_stats_window_all(store):
 
 def test_get_stats_invalid_window(store):
     app = _make_app(store)
-    with pytest.raises(Exception):  # Pydantic ValidationError wrapped
+    with pytest.raises(Exception, match="not-a-window|window|invalid"):  # noqa: B017
         _call_tool(app, "get_stats", window="not-a-window")
 
 

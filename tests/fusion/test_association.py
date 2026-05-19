@@ -9,7 +9,9 @@ from services.fusion.kf_engine import make_cv_filter
 
 def test_empty_tracks_and_measurements():
     matches, u_t, u_m = associate([], [])
-    assert matches == [] and u_t == [] and u_m == []
+    assert matches == []
+    assert u_t == []
+    assert u_m == []
 
 
 def test_no_tracks_all_measurements_unmatched():
@@ -24,7 +26,8 @@ def test_one_track_one_close_measurement_matches():
     kf = make_cv_filter(0.0, 0.0, 0.0, sigma_pos=5.0)
     matches, u_t, u_m = associate([kf], [np.array([1.0, 1.0, 0.0])])
     assert matches == [(0, 0)]
-    assert u_t == [] and u_m == []
+    assert u_t == []
+    assert u_m == []
 
 
 def test_far_measurement_outside_gate_unmatched():
@@ -46,4 +49,5 @@ def test_optimal_two_two_assignment():
     matches, u_t, u_m = associate([kf1, kf2], measurements)
     matches_set = {(t, m) for t, m in matches}
     assert matches_set == {(0, 1), (1, 0)}
-    assert u_t == [] and u_m == []
+    assert u_t == []
+    assert u_m == []

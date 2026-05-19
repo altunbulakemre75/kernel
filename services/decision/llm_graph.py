@@ -16,6 +16,7 @@ import logging
 import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from typing import Any
 
 from services.decision.guardrails import FriendlyZone, apply_guardrails
 from services.decision.llm_client import LLMResponse, query_llm
@@ -27,7 +28,6 @@ from services.decision.schemas import (
     DecisionSource,
     ROERule,
     ThreatAssessment,
-    ThreatLevel,
 )
 
 log = logging.getLogger(__name__)
@@ -327,7 +327,7 @@ async def run_graph(
     )
 
     try:
-        from langgraph.graph import StateGraph, END   # type: ignore
+        from langgraph.graph import END, StateGraph  # type: ignore
 
         workflow = StateGraph(GraphState)
         workflow.add_node("classify", classify)

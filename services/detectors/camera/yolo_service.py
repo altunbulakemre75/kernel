@@ -12,9 +12,9 @@ import time
 from typing import TYPE_CHECKING
 
 from prometheus_client import Counter, Gauge, Histogram, start_http_server
-from shared.clock import get_clock
 
 from services.schemas.detection import BoundingBox, CameraDetectionEvent, Detection
+from shared.clock import get_clock
 
 if TYPE_CHECKING:
     import nats
@@ -44,7 +44,7 @@ class NATSSubject:
 # ── Pure functions (testable) ─────────────────────────────────────
 
 def build_detection_event(
-    result: "Results",
+    result: Results,
     sensor_id: str,
     frame_id: int,
     inference_ms: float,
@@ -58,6 +58,7 @@ def build_detection_event(
             result.boxes.xyxy.tolist(),
             result.boxes.conf.tolist(),
             result.boxes.cls.tolist(),
+            strict=False,
         ):
             detections.append(
                 Detection(
@@ -79,7 +80,7 @@ def build_detection_event(
     )
 
 
-async def publish_event(nc: "nats.aio.client.Client", event: CameraDetectionEvent) -> None:
+async def publish_event(nc: nats.aio.client.Client, event: CameraDetectionEvent) -> None:
     """Publish a CameraDetectionEvent to NATS."""
     subject = NATSSubject.camera(event.sensor_id)
     payload = event.model_dump_json().encode()
@@ -103,6 +104,7 @@ async def run(
     The loop exits when the shutdown event is set; camera + NATS are closed cleanly.
     """
     import logging as _lg
+
     import cv2
     import nats
     from ultralytics import YOLO

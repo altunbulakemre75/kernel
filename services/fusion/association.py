@@ -10,7 +10,6 @@ from scipy.optimize import linear_sum_assignment
 
 from services.fusion.kf_engine import mahalanobis_distance
 
-
 # 99.7% gate for 3-DOF measurements (chi-square, df=3) ≈ sqrt(14.16)
 DEFAULT_GATE = 3.77
 UNASSIGNED = -1
@@ -45,7 +44,7 @@ def associate(
     matches: list[tuple[int, int]] = []
     matched_tracks: set[int] = set()
     matched_meas: set[int] = set()
-    for r, c in zip(row_ind, col_ind):
+    for r, c in zip(row_ind, col_ind, strict=False):
         if cost[r, c] < LARGE:
             matches.append((int(r), int(c)))
             matched_tracks.add(int(r))

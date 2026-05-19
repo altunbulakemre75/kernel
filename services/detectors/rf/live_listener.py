@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 log = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ async def sniff_wifi_probe_requests(iface: str) -> AsyncIterator[tuple[str, int 
     Yields: (mac, rssi, channel)
     """
     try:
-        from scapy.all import sniff, Dot11, RadioTap, Dot11ProbeReq  # noqa: PLC0415
+        from scapy.all import Dot11, Dot11ProbeReq, RadioTap, sniff  # noqa: PLC0415, F401
     except ImportError:
         log.error("scapy not installed — pip install scapy")
         return

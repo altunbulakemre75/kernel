@@ -1,21 +1,16 @@
-import json
-from pathlib import Path
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from services.decision.audit_chain import (
-    load_or_create_keypair,
     sign_decision,
     verify_decision_against_policy,
 )
 from services.decision.policy_loader import (
-    canonical_policy_bytes,
     clear_policy_cache,
     load_policy,
     policy_hash,
 )
-from services.decision.roe import ROERule, ThreatLevel, Action
 
 
 @pytest.fixture
@@ -122,8 +117,8 @@ def test_verify_decision_against_policy_match(temp_policy_file):
 
 
 def test_verify_decision_against_wrong_policy_fails(temp_policy_file):
-    policy = load_policy(str(temp_policy_file))
-    
+    load_policy(str(temp_policy_file))
+
     decision = {
         "track_id": "test",
         "policy_version_id": "wrong_hash",

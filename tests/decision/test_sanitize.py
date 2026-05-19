@@ -5,14 +5,12 @@ import pytest
 
 from services.decision.sanitize import (
     ALLOWED_CLASSES,
-    ALLOWED_SOURCES,
     UnsafeContent,
     safe_enum_field,
     safe_free_text,
     safe_id_field,
     sanitize_track_for_llm,
 )
-
 
 # ── Injection pattern detection ──────────────────────────────────────
 
@@ -55,7 +53,8 @@ def test_strip_control_chars():
 
 def test_newlines_replaced():
     result = safe_free_text("line1\nline2\rline3", reject_injection=False)
-    assert "\n" not in result and "\r" not in result
+    assert "\n" not in result
+    assert "\r" not in result
 
 
 # ── ID field sanitization ─────────────────────────────────────────
