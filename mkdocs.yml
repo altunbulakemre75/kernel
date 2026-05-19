@@ -26,6 +26,7 @@ nav:
   - Patterns:
       - Dual-LLM Sandwich: patterns/dual_llm_sandwich.md
   - Roadmap: roadmap.md
+  - Pilots: pilots.md
 
 markdown_extensions:
   - pymdownx.highlight
