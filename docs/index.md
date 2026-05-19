@@ -1,0 +1,146 @@
+# kernel
+
+[![Build](https://img.shields.io/github/actions/workflow/status/altunbulakemre75/kernel/ci.yml?branch=main&label=build)](https://github.com/altunbulakemre75/kernel/actions) [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/altunbulakemre75/kernel/blob/main/LICENSE) [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](#verifying-decisions) [![Tests](https://img.shields.io/badge/tests-194%20passing-brightgreen)](#verifying-decisions) [![Status](https://img.shields.io/badge/status-alpha-orange)](#status) [![EU AI Act](https://img.shields.io/badge/EU%20AI%20Act-Article%2012%20%7C%2014-blue)](compliance/eu_ai_act.md)
+
+Decision provenance and accountability infrastructure for autonomous systems.
+
+When an autonomous system makes a consequential decision — a robot stops
+mid-motion, a vehicle reroutes, an actuator fires — *what* happened is
+usually loggable. *Why* it happened, in a form a safety officer, regulator,
+or court can read, is almost always reconstructed after the fact, by hand.
+
+`kernel` is the missing layer:
+
+- **Rule-first decision engine.** Every action traces back to a
+  human-authored policy. AI advises; rules decide.
+- **Cryptographically signed audit chain.** Every decision is recorded
+  with full provenance: which rule fired, which inputs triggered it,
+  which guardrails ran, what was downgraded. Linked via Ed25519 signature.
+- **Guardrail-downgrade-only pattern.** Safety layers can only make
+  decisions safer, never more dangerous. Mathematically enforced.
+- **LLM advisor with prompt injection defense.** Models suggest; they
+  do not act. Adversarial inputs are sanitized before reaching the
+  decision boundary.
+- **Air-gap deployable.** Runs fully offline with local model fallback.
+  No data leaves the deployment environment.
+
+## Status
+
+Pre-1.0. Core engine and audit chain are battle-tested in a private
+deployment (separate codebase). This repository is the generalized,
+domain-neutral open-core extraction.
+
+Active areas: ROS2 adapter, MCP server interface, EU AI Act Article 12
+compliance reporting.
+
+## Verifying decisions
+
+For auditors and compliance officers, the decision provenance chain can be
+verified offline without writing code:
+
+```bash
+kernel-verify chain.jsonl --policy config/policies/default.yaml --pubkey ~/.kernel/keys/signing.pub
+```
+
+**Output:**
+
+```text
+✓ Chain integrity: VALID (5 decisions, all signed)
+✓ Policy match: c1fc5724f6b02970 (default.yaml @ 2026-05-15 18:30 UTC)
+✓ Signature verification: PASSED (Ed25519)
+
+Decision summary:
+  [0] 14:32:07  action=LOG      rule_id=r_001  guardrails=[]
+  [1] 14:32:09  action=ALERT    rule_id=r_003  guardrails=[geofence]
+  [2] 14:32:15  action=HANDOFF  rule_id=r_001  guardrails=[]
+
+Audit hash: c1fc5724f6b02970 (verifiable against deployed policy)
+```
+
+## EU AI Act Compliance Reports
+
+Generate a regulator-ready PDF with Article 12 (logging) and Article 14
+(human oversight) compliance evidence from any signed decision chain:
+
+```bash
+kernel-report chain.jsonl \
+    --policy config/policies/default.yaml \
+    --pubkey ~/.kernel/keys/signing.pub \
+    --output report.pdf \
+    --system-id "AMR-Fleet-A" \
+    --operator "Operations Team"
+```
+
+The PDF covers: chain integrity verification, action and threat-level
+distribution, per-requirement attestation tables for Articles 12 and 14,
+policy version timeline, and a cryptographic fingerprint of the report
+content. See [EU AI Act compliance](compliance/eu_ai_act.md).
+
+## MCP server (Claude Desktop)
+
+Plug kernel into Claude Desktop in ~30 seconds and ask questions like
+*"what did my autonomous system do in the last hour?"*:
+
+```bash
+pip install kernel[mcp]
+```
+
+Then add to your Claude Desktop config:
+
+```json
+{
+  "mcpServers": {
+    "kernel": {
+      "command": "kernel-mcp",
+      "args": ["--chain-file", "/path/to/chain.jsonl", "--pubkey", "/path/to/signing.pub"]
+    }
+  }
+}
+```
+
+Five read-only tools (`query_events`, `get_event`, `get_stats`,
+`verify_chain`, `search_events`) and four resources cover signed audit
+query, chain verification, and active-policy metadata. See [MCP integration](integrations/mcp.md).
+
+## Integrations
+
+**ROS2 bridge:** publishes signed Decision objects to a ROS2 topic for
+consumption by autonomous systems. See [ROS2 integration](integrations/ros2.md).
+
+## Architecture
+
+See [Architecture](architecture.md) for the full design:
+components, data flow, audit chain implementation (Ed25519 + SHA-256
+hash chain), the guardrail downgrade-only invariant, and integration
+points.
+
+## Security
+
+kernel defends against two primary threats: insider post-hoc tampering of
+decision history (Ed25519 + SHA-256 hash chain) and AI-induced unsafe
+escalation (LLM advisory ceiling + guardrail downgrade-only invariant).
+
+It does not defend against signing key compromise, sensor-level deception,
+runtime intrusion, or network attacks — those are operator responsibilities.
+
+See [Threat Model](threat-model.md) for the full threat model,
+including explicit non-defenses and what this means for compliance claims.
+
+## Roadmap
+
+- [x] EU AI Act Article 12 & 14 compliance report generator (`cli/kernel_report.py`)
+- [x] ROS2 publisher (`services/integrations/ros2_bridge.py`)
+- [ ] ROS2 action sink with feedback loop (planned)
+- [x] MCP server interface (`kernel/mcp/`, `kernel-mcp`)
+- [ ] IMM filter as default in TrackManager
+- [ ] OpenAI provider in LLM chain
+- [ ] Internationalization of in-code documentation (Turkish → English)
+
+## License
+
+Apache 2.0.
+
+## Contact
+
+Discussion on [Open Robotics Discourse](https://discourse.openrobotics.org/t/the-accountability-gap-in-ros2-where-does-why-did-the-robot-do-that-get-answered/54841)
+or open a GitHub issue.

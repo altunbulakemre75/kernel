@@ -1,0 +1,35 @@
+site_name: kernel
+site_url: https://altunbulakemre75.github.io/kernel
+repo_url: https://github.com/altunbulakemre75/kernel
+repo_name: altunbulakemre75/kernel
+
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: indigo
+    accent: indigo
+  features:
+    - navigation.sections
+    - navigation.expand
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - Threat Model: threat-model.md
+  - Compliance:
+      - EU AI Act: compliance/eu_ai_act.md
+  - Integrations:
+      - ROS2: integrations/ros2.md
+      - MCP: integrations/mcp.md
+  - Patterns:
+      - Dual-LLM Sandwich: patterns/dual_llm_sandwich.md
+  - Roadmap: roadmap.md
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - admonition
+  - toc:
+      permalink: true

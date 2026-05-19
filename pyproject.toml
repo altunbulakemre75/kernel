@@ -48,6 +48,12 @@ mcp = [
     "mcp>=1.0.0",
 ]
 
+docs = [
+    # Activate with: pip install -e ".[docs]"
+    "mkdocs>=1.5",
+    "mkdocs-material>=9.5",
+]
+
 # ── Ruff ──────────────────────────────────────────────────────────────────────
 [tool.ruff]
 line-length    = 100
