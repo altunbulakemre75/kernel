@@ -75,6 +75,11 @@ def sign_decision(decision: dict[str, Any], prev_hash: str | None, signing_key: 
     return signed_decision
 
 def verify_decision(decision: dict[str, Any], public_key: ed25519.Ed25519PublicKey) -> bool:
+    """Verify an audit chain entry's signature.
+
+    Polymorphic: works for Decision dicts AND RuntimeEvent dicts. Type-agnostic;
+    only checks payload_hash and Ed25519 signature against the canonical JSON.
+    """
     try:
         signature = decision.get("signature")
         if not signature:
@@ -91,6 +96,17 @@ def verify_decision(decision: dict[str, Any], public_key: ed25519.Ed25519PublicK
         return False
 
 def verify_chain(decisions: list[dict[str, Any]], public_key: ed25519.Ed25519PublicKey) -> tuple[bool, int | None]:
+    """Verify a contiguous slice of the audit chain.
+
+    Handles mixed Decision + RuntimeEvent chains. `chain_index` is a single
+    monotonically increasing counter shared across both record types — this
+    function walks it linearly and verifies each entry's signature + hash-link.
+
+    Returns:
+        (True, None) if all entries verify.
+        (False, first_bad_index) if any entry fails verification or breaks the
+        prev_hash chain or chain_index sequence.
+    """
     if not decisions:
         return True, None
         
@@ -191,3 +207,10 @@ def append_runtime_event(
         f.flush()
 
     return RuntimeEvent(**signed_dict)
+
+
+def verify_runtime_event(event: dict[str, Any], public_key: ed25519.Ed25519PublicKey) -> bool:
+    """Verify a RuntimeEvent's signature. Thin alias over verify_decision
+    (which is already type-agnostic) — exists so calling code can express
+    intent explicitly."""
+    return verify_decision(event, public_key)

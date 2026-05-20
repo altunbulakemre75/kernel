@@ -21,6 +21,51 @@ def public_key(signing_key):
     return signing_key.public_key()
 
 
+def _append_decision_directly(
+    chain_path: Path,
+    decision: dict,
+    signing_key,
+) -> dict:
+    """Test helper: sign a Decision-like dict and append to chain.
+    Uses the same primitives as append_runtime_event for chain continuity."""
+    from services.decision.audit_chain import _read_last_entry, sign_decision
+
+    last = _read_last_entry(chain_path)
+    if last is None:
+        prev_hash = None
+        next_index = 0
+    else:
+        prev_hash = last.get("payload_hash")
+        next_index = int(last.get("chain_index", -1)) + 1
+
+    payload_dict = dict(decision)
+    payload_dict["chain_index"] = next_index
+    payload_dict["prev_hash"] = prev_hash
+    payload_dict.pop("signature", None)
+    payload_dict.pop("payload_hash", None)
+
+    signed = sign_decision(
+        decision=payload_dict,
+        prev_hash=prev_hash,
+        signing_key=signing_key,
+    )
+
+    with open(chain_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(signed, separators=(",", ":")) + "\n")
+
+    return signed
+
+
+def _decision_dict(timestamp_iso: str, action: str = "allow") -> dict:
+    return {
+        "timestamp_iso": timestamp_iso,
+        "action": action,
+        "threat_level": "low",
+        "policy_version_id": "p_test",
+        "metadata": {"rule_id": "r_001"},
+    }
+
+
 def _valid_event_kwargs() -> dict:
     return {
         "event_type": "sensor_anomaly",
@@ -161,3 +206,123 @@ def test_caller_provided_chain_fields_are_overwritten(
     # And the signed line on disk verifies correctly
     on_disk = json.loads(chain_path.read_text(encoding="utf-8").strip())
     assert verify_decision(on_disk, public_key) is True
+
+
+def test_mixed_chain_decision_then_runtime(
+    tmp_path: Path, signing_key, public_key
+):
+    from services.decision.audit_chain import (
+        append_runtime_event,
+        verify_chain,
+    )
+
+    chain_path = tmp_path / "chain.jsonl"
+
+    # idx=0: Decision
+    _append_decision_directly(
+        chain_path,
+        _decision_dict("2026-05-20T12:00:00+00:00", "allow"),
+        signing_key,
+    )
+
+    # idx=1: RuntimeEvent
+    ev1 = RuntimeEvent(**_valid_event_kwargs())
+    append_runtime_event(ev1, chain_path, signing_key, "p_test")
+
+    # idx=2: Decision
+    _append_decision_directly(
+        chain_path,
+        _decision_dict("2026-05-20T12:00:02+00:00", "block"),
+        signing_key,
+    )
+
+    # Read the full chain and verify integrity
+    lines = chain_path.read_text(encoding="utf-8").strip().splitlines()
+    entries = [json.loads(line) for line in lines]
+    assert len(entries) == 3
+
+    # Chain indices are a single shared sequence: 0, 1, 2
+    assert [e["chain_index"] for e in entries] == [0, 1, 2]
+
+    # verify_chain returns (True, None) for the whole mixed chain
+    ok, broken_idx = verify_chain(entries, public_key)
+    assert ok is True
+    assert broken_idx is None
+
+
+def test_prev_hash_integrity_mixed(
+    tmp_path: Path, signing_key, public_key
+):
+    """Each entry's prev_hash must equal the previous entry's payload_hash,
+    regardless of record_type. This is the explicit single-monotonic-chain rule."""
+    from services.decision.audit_chain import append_runtime_event
+
+    chain_path = tmp_path / "chain.jsonl"
+
+    # idx=0: RuntimeEvent (genesis)
+    ev0 = RuntimeEvent(**(_valid_event_kwargs() | {"event_type": "boot"}))
+    append_runtime_event(ev0, chain_path, signing_key, "p_test")
+
+    # idx=1: Decision
+    _append_decision_directly(
+        chain_path,
+        _decision_dict("2026-05-20T12:00:01+00:00", "allow"),
+        signing_key,
+    )
+
+    # idx=2: RuntimeEvent
+    ev2 = RuntimeEvent(**(_valid_event_kwargs() | {"event_type": "shutdown"}))
+    append_runtime_event(ev2, chain_path, signing_key, "p_test")
+
+    entries = [
+        json.loads(line)
+        for line in chain_path.read_text(encoding="utf-8").strip().splitlines()
+    ]
+
+    # Walk the chain: each prev_hash matches the previous payload_hash
+    assert entries[0]["prev_hash"] is None  # genesis
+    assert entries[1]["prev_hash"] == entries[0]["payload_hash"]
+    assert entries[2]["prev_hash"] == entries[1]["payload_hash"]
+
+    # And the record types are interleaved as expected
+    types = [e.get("record_type", "decision") for e in entries]
+    assert types == ["runtime_event", "decision", "runtime_event"]
+
+
+def test_payload_tampering_detected(
+    tmp_path: Path, signing_key, public_key
+):
+    from services.decision.audit_chain import (
+        append_runtime_event,
+        verify_decision,
+    )
+
+    chain_path = tmp_path / "chain.jsonl"
+    ev = RuntimeEvent(**_valid_event_kwargs())
+    append_runtime_event(ev, chain_path, signing_key, "p_test")
+
+    # Read the signed line, tamper with payload, write it back
+    line = chain_path.read_text(encoding="utf-8").strip()
+    entry = json.loads(line)
+    assert verify_decision(entry, public_key) is True  # baseline
+
+    entry["payload"]["object_class"] = "pedestrian"  # was "vehicle" — tamper
+    chain_path.write_text(json.dumps(entry, separators=(",", ":")) + "\n", encoding="utf-8")
+
+    # Re-read and verify — signature must no longer match
+    tampered = json.loads(chain_path.read_text(encoding="utf-8").strip())
+    assert verify_decision(tampered, public_key) is False
+
+
+def test_verify_runtime_event_alias(tmp_path: Path, signing_key, public_key):
+    from services.decision.audit_chain import (
+        append_runtime_event,
+        verify_runtime_event,
+    )
+
+    chain_path = tmp_path / "chain.jsonl"
+    ev = RuntimeEvent(**_valid_event_kwargs())
+    append_runtime_event(ev, chain_path, signing_key, "p_test")
+
+    entry = json.loads(chain_path.read_text(encoding="utf-8").strip())
+    assert verify_runtime_event(entry, public_key) is True
