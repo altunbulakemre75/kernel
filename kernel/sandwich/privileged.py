@@ -5,7 +5,8 @@ Untrusted inputs live in a ReferenceStore accessible only to the Q-LLM caller.
 """
 import re
 import time
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from pydantic import BaseModel
 

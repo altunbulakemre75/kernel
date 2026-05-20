@@ -1,6 +1,7 @@
 from enum import Enum
+from typing import Any
+
 from pydantic import BaseModel
-from typing import Dict, Any
 
 
 class AgentName(str, Enum):
@@ -9,14 +10,14 @@ class AgentName(str, Enum):
 
 class TaskRequest(BaseModel):
     action: str
-    payload: Dict[str, Any] = {}
+    payload: dict[str, Any] = {}
 
 
 class AgentResult(BaseModel):
     ok: bool
     agent: AgentName
     action: str
-    data: Dict[str, Any]
+    data: dict[str, Any]
     error: str = ""
 
 

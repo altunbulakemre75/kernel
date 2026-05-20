@@ -19,9 +19,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from prometheus_client import Counter, start_http_server
-from shared.clock import get_clock
 
-from services.detectors.rf.odid_service import NATSSubject, publish_event
+from services.detectors.rf.odid_service import publish_event
 from services.schemas.rf import (
     ODIDBasicID,
     ODIDEvent,
@@ -29,9 +28,10 @@ from services.schemas.rf import (
     ODIDLocation,
     ODIDUAType,
 )
+from shared.clock import get_clock
 
 if TYPE_CHECKING:
-    import nats
+    pass
 
 log = logging.getLogger(__name__)
 

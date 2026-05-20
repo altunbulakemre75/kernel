@@ -27,17 +27,12 @@ from services.decision.schemas import (
 
 log = logging.getLogger(__name__)
 
-LLMDecisionDict = TypedDict(
-    "LLMDecisionDict",
-    {
-        "threat_level": Literal["low", "medium", "high", "critical"],
-        "action": Literal["log", "alert", "engage", "handoff"],
-        "confidence": float,
-        "reasoning": str,
-        "roe_reference": str,
-    },
-    total=False,
-)
+class LLMDecisionDict(TypedDict, total=False):
+    threat_level: Literal["low", "medium", "high", "critical"]
+    action: Literal["log", "alert", "engage", "handoff"]
+    confidence: float
+    reasoning: str
+    roe_reference: str
 
 
 def is_llm_enabled() -> bool:

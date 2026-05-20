@@ -32,7 +32,7 @@ class QLLMCaller:
                 f"Content:\n{content}\n\nTask: {extraction_prompt}"
             )},
         ]
-        last_error: "str | None" = None
+        last_error: str | None = None
 
         for attempt in range(self._max_retries + 1):
             if attempt > 0 and last_error:

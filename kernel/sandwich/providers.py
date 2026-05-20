@@ -45,7 +45,7 @@ class InMemoryAuditStore:
     def __init__(self, signing_key: Any = None) -> None:
         self.events: list[dict] = []
         self._signing_key = signing_key
-        self._prev_hash: "str | None" = None
+        self._prev_hash: str | None = None
 
     def log(self, event_type: str, data: dict) -> dict:
         from services.decision.audit_chain import sign_decision

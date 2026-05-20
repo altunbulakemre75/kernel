@@ -1,5 +1,4 @@
 import os
-from typing import Any
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric import ed25519
@@ -15,9 +14,7 @@ from kernel.sandwich import (
     SandwichSchemaError,
     SandwichToolMisuseError,
 )
-from kernel.sandwich.references import ReferenceStore
 from kernel.sandwich.schemas import ToolInvocation
-
 
 # ── Shared schema ─────────────────────────────────────────────────────────────
 

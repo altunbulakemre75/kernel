@@ -17,7 +17,7 @@ from pathlib import Path
 
 import yaml
 
-from services.autonomy.geofence import NoFlyZone, haversine_m
+from services.autonomy.geofence import haversine_m
 from services.decision.schemas import Action, Decision
 
 log = logging.getLogger(__name__)

@@ -17,7 +17,6 @@ from pathlib import Path
 
 import yaml
 
-
 CONFIG_DIR = Path("config/cameras")
 
 

@@ -13,7 +13,7 @@ import os
 import time
 from typing import Any
 
-import jwt   # PyJWT (requirements.txt)
+import jwt  # PyJWT (requirements.txt)
 
 JWT_ALG = "HS256"
 DEFAULT_TTL_S = 3600

@@ -10,7 +10,6 @@ from services.fusion.fusion_service import (
     odid_to_measurement,
 )
 
-
 ANKARA = (39.9334, 32.8597)
 
 

@@ -14,10 +14,10 @@ from __future__ import annotations
 import argparse
 import asyncio
 import sys
-from typing import TYPE_CHECKING, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING
 
 from prometheus_client import Counter, start_http_server
-from shared.clock import get_clock
 
 from services.detectors.rf.odid_parser import parse_message
 from services.schemas.rf import (
@@ -26,6 +26,7 @@ from services.schemas.rf import (
     ODIDLocation,
     ODIDMessageType,
 )
+from shared.clock import get_clock
 
 if TYPE_CHECKING:
     import nats
@@ -89,7 +90,7 @@ def build_odid_event(
     )
 
 
-async def publish_event(nc: "nats.aio.client.Client", event: ODIDEvent) -> None:
+async def publish_event(nc: nats.aio.client.Client, event: ODIDEvent) -> None:
     subject = NATSSubject.odid(event.sensor_id)
     await nc.publish(subject, event.model_dump_json().encode())
 

@@ -1,7 +1,6 @@
 """LangGraph 5-node state machine tests (fallback path, LLM disabled)."""
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
 
 import pytest
@@ -9,8 +8,7 @@ import pytest
 from services.decision.guardrails import FriendlyZone
 from services.decision.llm_graph import run_graph
 from services.decision.roe import load_roe
-from services.decision.schemas import Action, ThreatLevel
-
+from services.decision.schemas import Action
 
 CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "policies" / "default.yaml"
 

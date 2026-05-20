@@ -1,10 +1,7 @@
 """shared.geo tests — full if pyproj is available, flat-Earth fallback otherwise."""
 from __future__ import annotations
 
-import pytest
-
 from shared.geo import enu_to_latlon, has_pyproj, haversine_m, latlon_to_enu
-
 
 ANKARA = (39.9334, 32.8597)
 

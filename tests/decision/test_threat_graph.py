@@ -7,7 +7,6 @@ from services.decision.roe import load_roe
 from services.decision.schemas import Action, DecisionSource, ThreatLevel
 from services.decision.threat_graph import decide
 
-
 CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "policies" / "default.yaml"
 
 

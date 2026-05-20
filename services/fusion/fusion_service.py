@@ -32,8 +32,7 @@ from shared.geo import latlon_to_enu as _geo_latlon_to_enu
 from shared.rate_limit import QueueCircuitBreaker, SlidingWindowLimiter
 
 if TYPE_CHECKING:
-    import nats
-    import nats.aio.msg
+    pass
 
 log = logging.getLogger(__name__)
 
@@ -94,7 +93,8 @@ def camera_to_measurements(
     → lat/lon projection is used. Otherwise falls back to fixed nominal range.
     """
     from services.detectors.camera.calibration import (
-        load_calibration, project_bbox_to_position,
+        load_calibration,
+        project_bbox_to_position,
     )
 
     measurements: list[Measurement] = []

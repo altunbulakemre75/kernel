@@ -11,15 +11,14 @@ Covers:
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Generator
 from datetime import datetime, timezone
-from typing import Generator
 
 import pytest
 
 from services.decision.schemas import Action, ROERule, ThreatLevel
 from services.fusion.track_manager import TrackManager
 from services.schemas.track import Measurement, SensorType
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 

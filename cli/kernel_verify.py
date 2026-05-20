@@ -33,7 +33,7 @@ def format_time(ts: str) -> str:
 def load_jsonl(path: str) -> list[dict[str, Any]]:
     decisions = []
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             for line_no, line in enumerate(f, start=1):
                 line = line.strip()
                 if line:

@@ -13,7 +13,7 @@ _EARTH_R_M = 6378137.0
 
 
 try:
-    from pyproj import Transformer, CRS   # noqa: PLC0415
+    from pyproj import CRS, Transformer  # noqa: PLC0415
     _HAS_PYPROJ = True
 except ImportError:
     _HAS_PYPROJ = False

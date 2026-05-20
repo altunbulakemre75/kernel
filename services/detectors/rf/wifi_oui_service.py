@@ -14,13 +14,14 @@ import asyncio
 import json
 import logging
 import sys
+from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import TYPE_CHECKING, AsyncIterator
+from typing import TYPE_CHECKING
 
 from prometheus_client import Counter, start_http_server
-from shared.clock import get_clock
 
 from services.schemas.rf import WiFiOUIEvent
+from shared.clock import get_clock
 
 if TYPE_CHECKING:
     import nats
@@ -82,7 +83,7 @@ class NATSSubject:
         return f"kernel.raw.rf.wifi.{sensor_id}"
 
 
-async def publish_event(nc: "nats.aio.client.Client", event: WiFiOUIEvent) -> None:
+async def publish_event(nc: nats.aio.client.Client, event: WiFiOUIEvent) -> None:
     await nc.publish(NATSSubject.wifi(event.sensor_id), event.model_dump_json().encode())
 
 

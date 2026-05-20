@@ -21,11 +21,11 @@ from dataclasses import dataclass, field
 
 import numpy as np
 from filterpy.kalman import KalmanFilter
-from shared.clock import get_clock
 
 from services.fusion import kf_engine
 from services.fusion.association import associate
 from services.schemas.track import Measurement, SensorType, Track, TrackState
+from shared.clock import get_clock
 
 # Default lifecycle parameters
 N_CONFIRM = 3       # 3 consecutive hits → confirmed

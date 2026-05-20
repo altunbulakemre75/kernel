@@ -3,13 +3,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from services.decision.guardrails import FriendlyZone
 from services.decision.roe import load_roe
 from services.decision.schemas import Action
 from services.decision.threat_graph import decide, decide_full
-
 
 CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "policies" / "default.yaml"
 

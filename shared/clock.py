@@ -44,7 +44,6 @@ import time
 from datetime import datetime, timezone
 from typing import Protocol, runtime_checkable
 
-
 # ── Clock protocol ────────────────────────────────────────────────────────────
 
 @runtime_checkable

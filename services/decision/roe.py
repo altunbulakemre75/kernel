@@ -13,7 +13,6 @@ from pydantic import TypeAdapter
 
 from services.decision.schemas import Action, ROERule, ThreatLevel
 
-
 _rule_list_adapter = TypeAdapter(list[ROERule])
 
 

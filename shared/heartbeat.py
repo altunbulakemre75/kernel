@@ -22,10 +22,9 @@ from __future__ import annotations
 
 import json
 import threading
-import time
 import urllib.error
 import urllib.request
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class Heartbeat:
@@ -33,7 +32,7 @@ class Heartbeat:
         self,
         name: str,
         orchestrator_url: str = "http://127.0.0.1:8200",
-        capabilities: Optional[List[str]] = None,
+        capabilities: list[str] | None = None,
         interval_s: float = 5.0,
         timeout_s: float = 2.0,
     ) -> None:
@@ -42,10 +41,10 @@ class Heartbeat:
         self.capabilities = capabilities or []
         self.interval_s = interval_s
         self.timeout_s = timeout_s
-        self._metrics: Dict[str, Any] = {}
+        self._metrics: dict[str, Any] = {}
         self._metrics_lock = threading.Lock()
         self._stop_event = threading.Event()
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -73,7 +72,7 @@ class Heartbeat:
     # Internal
     # ------------------------------------------------------------------
 
-    def _post(self, path: str, body: Dict[str, Any]) -> bool:
+    def _post(self, path: str, body: dict[str, Any]) -> bool:
         data = json.dumps(body, ensure_ascii=False).encode()
         req = urllib.request.Request(
             self.base_url + path,

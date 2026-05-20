@@ -2,11 +2,12 @@ import base64
 import hashlib
 import json
 import os
-from typing import Any, Tuple
+from typing import Any
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
+
 
 def load_or_create_keypair() -> ed25519.Ed25519PrivateKey:
     keys_dir = os.path.expanduser("~/.kernel/keys")
@@ -78,7 +79,7 @@ def verify_decision(decision: dict[str, Any], public_key: ed25519.Ed25519PublicK
     except (InvalidSignature, ValueError, TypeError):
         return False
 
-def verify_chain(decisions: list[dict[str, Any]], public_key: ed25519.Ed25519PublicKey) -> Tuple[bool, int | None]:
+def verify_chain(decisions: list[dict[str, Any]], public_key: ed25519.Ed25519PublicKey) -> tuple[bool, int | None]:
     if not decisions:
         return True, None
         
@@ -100,7 +101,7 @@ def verify_chain(decisions: list[dict[str, Any]], public_key: ed25519.Ed25519Pub
         
     return True, None
 
-def verify_decision_against_policy(decision: dict[str, Any], policy_path: str, public_key: ed25519.Ed25519PublicKey) -> Tuple[bool, str]:
+def verify_decision_against_policy(decision: dict[str, Any], policy_path: str, public_key: ed25519.Ed25519PublicKey) -> tuple[bool, str]:
     from services.decision.policy_loader import load_policy
     
     if not verify_decision(decision, public_key):

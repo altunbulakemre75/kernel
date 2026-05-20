@@ -18,7 +18,6 @@ class AnthropicProvider:
         self._model = model
 
     def complete(self, messages, response_format=None):
-        import anthropic
         system = next((m["content"] for m in messages if m["role"] == "system"), "")
         user_msgs = [m for m in messages if m["role"] != "system"]
         resp = self._client.messages.create(
