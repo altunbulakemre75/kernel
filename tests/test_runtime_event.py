@@ -326,3 +326,81 @@ def test_verify_runtime_event_alias(tmp_path: Path, signing_key, public_key):
 
     entry = json.loads(chain_path.read_text(encoding="utf-8").strip())
     assert verify_runtime_event(entry, public_key) is True
+
+
+def test_mcp_query_events_filters_by_event_type(
+    tmp_path: Path, signing_key, public_key
+):
+    """End-to-end: MCP query_events with event_type filter returns only
+    matching RuntimeEvents from a mixed chain; action filter returns only Decisions."""
+    from cryptography.hazmat.primitives import serialization
+    from mcp.server.fastmcp import FastMCP
+
+    from kernel.audit.store import AuditChainStore
+    from kernel.mcp.tools import register_tools
+    from services.decision.audit_chain import append_runtime_event
+
+    chain_path = tmp_path / "chain.jsonl"
+    pub_path = tmp_path / "signing.pub"
+    pub_path.write_bytes(
+        public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+    )
+
+    # idx=0: Decision (allow)
+    _append_decision_directly(
+        chain_path,
+        _decision_dict("2026-05-20T12:00:00+00:00", "allow"),
+        signing_key,
+    )
+
+    # idx=1: RuntimeEvent (sensor_anomaly)
+    append_runtime_event(
+        RuntimeEvent(**(_valid_event_kwargs() | {"event_type": "sensor_anomaly"})),
+        chain_path, signing_key, "p_test",
+    )
+
+    # idx=2: RuntimeEvent (guardrail_downgrade)
+    append_runtime_event(
+        RuntimeEvent(**(_valid_event_kwargs() | {
+            "event_type": "guardrail_downgrade",
+            "source": "kinematic_guard",
+        })),
+        chain_path, signing_key, "p_test",
+    )
+
+    # idx=3: Decision (block)
+    _append_decision_directly(
+        chain_path,
+        _decision_dict("2026-05-20T12:00:03+00:00", "block"),
+        signing_key,
+    )
+
+    store = AuditChainStore(chain_path, public_key_path=pub_path)
+    store.load()
+    app = FastMCP("test-runtime-event")
+    register_tools(app, store)
+
+    # Use the canonical access pattern from tests/mcp/test_tools.py
+    def _call_tool(name, **kwargs):
+        return app._tool_manager.get_tool(name).fn(**kwargs)
+
+    # event_type filter -> only that RuntimeEvent
+    results = _call_tool("query_events", event_type="sensor_anomaly", limit=100)
+    assert len(results) == 1
+    assert results[0]["event_type"] == "sensor_anomaly"
+    assert results[0]["record_type"] == "runtime_event"
+
+    # action filter -> only Decisions
+    results = _call_tool("query_events", action="allow", limit=100)
+    assert len(results) == 1
+    assert results[0]["action"] == "allow"
+    assert results[0]["record_type"] == "decision"
+
+    # No filter -> all 4 entries, mixed record_types present
+    results = _call_tool("query_events", limit=100)
+    types = {r["record_type"] for r in results}
+    assert types == {"decision", "runtime_event"}
+    assert len(results) == 4

@@ -13,7 +13,10 @@ from typing import Any
 class SearchHit:
     event_id: int
     timestamp_iso: str
-    action: str
+    record_type: str
+    action: str | None
+    event_type: str | None
+    source: str | None
     sig_valid: bool | None
     snippet: str
 
@@ -200,10 +203,14 @@ class AuditChainStore:
             start = max(0, idx - half)
             end = min(len(flat), idx + len(q) + half)
             snippet = flat[start:end]
+            record_type = ev.get("record_type", "decision")
             results.append(SearchHit(
                 event_id=ev.get("chain_index", -1),
                 timestamp_iso=ev.get("timestamp_iso", ""),
-                action=ev.get("action", ""),
+                record_type=record_type,
+                action=ev.get("action") if record_type == "decision" else None,
+                event_type=ev.get("event_type") if record_type == "runtime_event" else None,
+                source=ev.get("source") if record_type == "runtime_event" else None,
                 sig_valid=self.verify_event(ev.get("chain_index", -1)),
                 snippet=snippet,
             ))
