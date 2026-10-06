@@ -8,6 +8,7 @@ from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 
 from kernel.audit import AuditChainStore
+from kernel.mcp.tools import _distributions, _summary
 
 
 def _today_bounds() -> tuple[datetime, datetime]:
@@ -29,13 +30,7 @@ def register_resources(
         store.reload_if_stale()
         events = store.filter(limit=100)
         payload = [
-            {
-                "id": ev.get("chain_index", -1),
-                "timestamp_iso": ev.get("timestamp_iso", ""),
-                "action": ev.get("action", ""),
-                "threat_level": ev.get("threat_level"),
-                "sig_valid": store.verify_event(ev.get("chain_index", -1)),
-            }
+            _summary(ev, store.verify_event(ev.get("chain_index", -1)))
             for ev in events
         ]
         return json.dumps(payload)
@@ -55,19 +50,9 @@ def register_resources(
             end_time=end.astimezone(timezone.utc),
             limit=10_000,
         )
-        action_dist: dict[str, int] = {}
-        threat_dist: dict[str, int] = {}
-        for ev in events:
-            action_dist[ev.get("action", "unknown")] = (
-                action_dist.get(ev.get("action", "unknown"), 0) + 1
-            )
-            tl = ev.get("threat_level")
-            if tl:
-                threat_dist[tl] = threat_dist.get(tl, 0) + 1
         chain = store.verify_chain_range(None, None)
         payload = {
-            "action_distribution": action_dist,
-            "threat_distribution": threat_dist,
+            **_distributions(events),
             "chain_status": {
                 "verified": chain.verified_count,
                 "total": chain.total_count,

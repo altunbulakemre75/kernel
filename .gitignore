@@ -12,6 +12,7 @@ build/
 .ruff_cache/
 htmlcov/
 .coverage
+site/
 *.pt
 recordings/
 data/

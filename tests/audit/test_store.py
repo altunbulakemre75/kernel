@@ -177,3 +177,53 @@ def test_search_snippet_contains_query(sample_chain_file):
     store.load()
     hits = store.search("10.0.0.7")
     assert "10.0.0.7" in hits[0].snippet
+
+
+def test_filter_action_only_returns_decisions(mixed_chain_file, signing_keypair):
+    """action filter must return ONLY Decision entries; RuntimeEvents (which
+    have no action field) are excluded."""
+    _, _, pub_path = signing_keypair
+    store = AuditChainStore(mixed_chain_file, public_key_path=pub_path)
+    store.load()
+
+    results = store.filter(action="allow", limit=100)
+    assert len(results) > 0
+    for ev in results:
+        assert ev.get("action") == "allow"
+        assert ev.get("record_type", "decision") == "decision"
+
+
+def test_filter_event_type_only_returns_runtime_events(mixed_chain_file, signing_keypair):
+    """event_type filter must return ONLY RuntimeEvent entries."""
+    _, _, pub_path = signing_keypair
+    store = AuditChainStore(mixed_chain_file, public_key_path=pub_path)
+    store.load()
+
+    results = store.filter(event_type="sensor_anomaly", limit=100)
+    assert len(results) == 1
+    assert results[0]["event_type"] == "sensor_anomaly"
+    assert results[0]["record_type"] == "runtime_event"
+
+
+def test_filter_source_only_returns_runtime_events(mixed_chain_file, signing_keypair):
+    """source filter must return ONLY RuntimeEvent entries."""
+    _, _, pub_path = signing_keypair
+    store = AuditChainStore(mixed_chain_file, public_key_path=pub_path)
+    store.load()
+
+    results = store.filter(source="kinematic_guard", limit=100)
+    assert len(results) == 1
+    assert results[0]["source"] == "kinematic_guard"
+    assert results[0]["record_type"] == "runtime_event"
+
+
+def test_filter_no_filters_returns_all(mixed_chain_file, signing_keypair):
+    """No filters -> all entries (both Decisions and RuntimeEvents)."""
+    _, _, pub_path = signing_keypair
+    store = AuditChainStore(mixed_chain_file, public_key_path=pub_path)
+    store.load()
+
+    results = store.filter(limit=100)
+    types = {ev.get("record_type", "decision") for ev in results}
+    assert types == {"decision", "runtime_event"}
+    assert len(results) == 4  # 2 Decisions + 2 RuntimeEvents

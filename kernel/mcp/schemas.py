@@ -38,8 +38,11 @@ class SearchEventsInput(BaseModel):
 class EventSummary(BaseModel):
     id: int
     timestamp_iso: str
-    action: str
+    record_type: Literal["decision", "runtime_event"] = "decision"
+    action: str | None = None
     threat_level: str | None = None
+    event_type: str | None = None
+    source: str | None = None
     sig_valid: bool | None = None
 
 
@@ -56,8 +59,10 @@ class ChainStatusSummary(BaseModel):
 
 
 class StatsResponse(BaseModel):
-    action_distribution: dict[str, int]
-    threat_distribution: dict[str, int]
+    action_distribution: dict[str, int]  # Decision records only
+    threat_distribution: dict[str, int]  # Decision records only
+    by_record_type: dict[str, int] = Field(default_factory=dict)
+    by_event_type: dict[str, int] = Field(default_factory=dict)  # RuntimeEvent records only
     chain_status: ChainStatusSummary
     period: dict[str, str]
 
@@ -72,6 +77,9 @@ class VerifyChainResponse(BaseModel):
 class SearchHitOut(BaseModel):
     event_id: int
     timestamp_iso: str
-    action: str
+    record_type: Literal["decision", "runtime_event"] = "decision"
+    action: str | None = None
+    event_type: str | None = None
+    source: str | None = None
     sig_valid: bool | None
     snippet: str

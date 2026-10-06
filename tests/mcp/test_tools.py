@@ -96,6 +96,25 @@ def test_get_stats_window_all(store):
     assert sum(result["action_distribution"].values()) == 4
 
 
+def test_get_stats_mixed_chain_counts_by_record_type(store_mixed):
+    app = _make_app(store_mixed)
+    result = _call_tool(app, "get_stats", window="all")
+    # Action/threat counts cover Decisions only — no "unknown" bucket for RuntimeEvents
+    assert result["action_distribution"] == {"allow": 1, "block": 1}
+    assert "unknown" not in result["action_distribution"]
+    assert result["threat_distribution"] == {"low": 1, "high": 1}
+    assert result["by_record_type"] == {"decision": 2, "runtime_event": 2}
+    assert result["by_event_type"] == {"sensor_anomaly": 1, "guardrail_downgrade": 1}
+    assert result["chain_status"]["integrity"] == "OK"
+
+
+def test_get_stats_decision_only_chain_has_new_keys(store):
+    app = _make_app(store)
+    result = _call_tool(app, "get_stats", window="all")
+    assert result["by_record_type"] == {"decision": 4}
+    assert result["by_event_type"] == {}
+
+
 def test_get_stats_invalid_window(store):
     app = _make_app(store)
     with pytest.raises(Exception, match="not-a-window|window|invalid"):  # noqa: B017

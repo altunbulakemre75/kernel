@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- RuntimeEvent schema for upstream evidence events (sensor monitors, guard
+  middleware, external adapters); signed verbatim into the audit chain
+  alongside Decisions
+- `append_runtime_event()` function for adding upstream events to the chain
+- Mixed-entry chain verification (Decision + RuntimeEvent), single shared
+  `chain_index` counter, polymorphic `verify_chain()`
+- MCP `query_events` field-aware filters: `event_type`/`source` return only
+  RuntimeEvents; `action`/`threat_level` return only Decisions
+- `PayloadTooLargeError` (64KB RuntimeEvent payload limit — asymmetric
+  protection vs Decision, since upstream sources are less controlled)
+- `verify_runtime_event()` thin alias over `verify_decision()`
+
+### Changed
+- MCP `EventSummary` (`query_events`) and `SearchHit` (`search_events`)
+  output: `action` is now nullable and, like `threat_level`, is `null` for
+  RuntimeEvent records; new fields `record_type`, `event_type`, `source`
+- MCP `get_stats` and `kernel://stats/today`: new `by_record_type` and
+  `by_event_type` fields; `action_distribution` and `threat_distribution`
+  now count Decision records only
+- `kernel://audit/recent`: entries now include `record_type`, `event_type`
+  and `source` (same shape as `query_events`); `action` is `null` instead
+  of `""` for RuntimeEvent records
+
 ## [0.2.0] — 2026-05-26
 
 ### Added

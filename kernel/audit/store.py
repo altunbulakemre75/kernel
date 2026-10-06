@@ -13,7 +13,10 @@ from typing import Any
 class SearchHit:
     event_id: int
     timestamp_iso: str
-    action: str
+    record_type: str
+    action: str | None
+    event_type: str | None
+    source: str | None
     sig_valid: bool | None
     snippet: str
 
@@ -96,14 +99,34 @@ class AuditChainStore:
         end_time: datetime | None = None,
         action: str | None = None,
         threat_level: str | None = None,
+        event_type: str | None = None,
+        source: str | None = None,
         limit: int = 100,
     ) -> list[dict]:
+        # Determine which record types the filters target.
+        decision_filter_active = action is not None or threat_level is not None
+        runtime_filter_active = event_type is not None or source is not None
+
         results = []
         for ev in self._events:
+            record_type = ev.get("record_type", "decision")
+
+            # Field-aware exclusion: a Decision-only filter excludes
+            # RuntimeEvents (and vice versa).
+            if decision_filter_active and record_type != "decision":
+                continue
+            if runtime_filter_active and record_type != "runtime_event":
+                continue
+
             if action is not None and ev.get("action") != action:
                 continue
             if threat_level is not None and ev.get("threat_level") != threat_level:
                 continue
+            if event_type is not None and ev.get("event_type") != event_type:
+                continue
+            if source is not None and ev.get("source") != source:
+                continue
+
             ts = ev.get("timestamp_iso")
             if start_time is not None and ts is not None:
                 if datetime.fromisoformat(ts.replace("Z", "+00:00")) < start_time:
@@ -111,7 +134,9 @@ class AuditChainStore:
             if end_time is not None and ts is not None:
                 if datetime.fromisoformat(ts.replace("Z", "+00:00")) > end_time:
                     continue
+
             results.append(ev)
+
         results.sort(key=lambda e: e.get("chain_index", 0), reverse=True)
         return results[:limit]
 
@@ -178,10 +203,14 @@ class AuditChainStore:
             start = max(0, idx - half)
             end = min(len(flat), idx + len(q) + half)
             snippet = flat[start:end]
+            record_type = ev.get("record_type", "decision")
             results.append(SearchHit(
                 event_id=ev.get("chain_index", -1),
                 timestamp_iso=ev.get("timestamp_iso", ""),
-                action=ev.get("action", ""),
+                record_type=record_type,
+                action=ev.get("action") if record_type == "decision" else None,
+                event_type=ev.get("event_type") if record_type == "runtime_event" else None,
+                source=ev.get("source") if record_type == "runtime_event" else None,
                 sig_valid=self.verify_event(ev.get("chain_index", -1)),
                 snippet=snippet,
             ))

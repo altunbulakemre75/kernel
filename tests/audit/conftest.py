@@ -91,3 +91,37 @@ def tampered_chain_file(tmp_path: Path, signing_keypair) -> Path:
     raw[1] = json.dumps(ev1)
     chain_file.write_text("\n".join(raw) + "\n", encoding="utf-8")
     return chain_file
+
+
+@pytest.fixture
+def mixed_chain_file(tmp_path: Path, signing_keypair) -> Path:
+    """A chain with 4 entries: 2 Decisions then 2 RuntimeEvents (interleaved-by-time)."""
+    from services.decision.audit_chain import append_runtime_event
+    from shared.schemas import RuntimeEvent
+
+    sk, _, _ = signing_keypair
+    chain_file = tmp_path / "mixed.jsonl"
+
+    # Two Decisions via existing helper (chain_index 0, 1)
+    _write_chain(chain_file, _raw_events()[:2], sk)
+
+    # Two RuntimeEvents on top (chain_index 2, 3)
+    ev0 = RuntimeEvent(
+        event_type="sensor_anomaly",
+        source="lidar_monitor",
+        source_id="lidar-front-01",
+        timestamp_iso=(_BASE_TS + timedelta(seconds=5)).isoformat(),
+        payload={"distance_m": 4.2},
+    )
+    append_runtime_event(ev0, chain_file, sk, "p_test")
+
+    ev1 = RuntimeEvent(
+        event_type="guardrail_downgrade",
+        source="kinematic_guard",
+        source_id="kg-main",
+        timestamp_iso=(_BASE_TS + timedelta(seconds=15)).isoformat(),
+        payload={"reason": "speed_exceeded"},
+    )
+    append_runtime_event(ev1, chain_file, sk, "p_test")
+
+    return chain_file
