@@ -8,6 +8,7 @@ from kernel.audit import AuditChainStore
 
 # Re-export tests/audit fixtures
 from tests.audit.conftest import (  # noqa: F401
+    mixed_chain_file,
     sample_chain_file,
     signing_keypair,
     tampered_chain_file,
@@ -33,6 +34,16 @@ def freeze_tools_now():
 def store(sample_chain_file, signing_keypair):  # noqa: F811
     _, _, pub_path = signing_keypair
     s = AuditChainStore(sample_chain_file, public_key_path=pub_path)
+    s.load()
+    return s
+
+
+@pytest.fixture
+def store_mixed(mixed_chain_file, signing_keypair):  # noqa: F811
+    """2 Decisions (allow/low, block/high) + 2 RuntimeEvents
+    (sensor_anomaly, guardrail_downgrade), all on 2026-05-18."""
+    _, _, pub_path = signing_keypair
+    s = AuditChainStore(mixed_chain_file, public_key_path=pub_path)
     s.load()
     return s
 

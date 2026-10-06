@@ -1,6 +1,7 @@
 """kernel.mcp.tools — register the 5 read-only tools on a FastMCP app."""
 from __future__ import annotations
 
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -33,6 +34,29 @@ def _summary(ev: dict, sig_valid: bool | None) -> dict:
         "event_type": ev.get("event_type") if record_type == "runtime_event" else None,
         "source": ev.get("source") if record_type == "runtime_event" else None,
         "sig_valid": sig_valid,
+    }
+
+
+def _distributions(events: list[dict]) -> dict[str, dict[str, int]]:
+    """Action/threat counts cover Decisions only; RuntimeEvents are counted by event_type."""
+    actions: Counter[str] = Counter()
+    threats: Counter[str] = Counter()
+    record_types: Counter[str] = Counter()
+    event_types: Counter[str] = Counter()
+    for ev in events:
+        record_type = ev.get("record_type", "decision")
+        record_types[record_type] += 1
+        if record_type == "decision":
+            actions[ev.get("action", "unknown")] += 1
+            if ev.get("threat_level"):
+                threats[ev["threat_level"]] += 1
+        elif record_type == "runtime_event":
+            event_types[ev.get("event_type", "unknown")] += 1
+    return {
+        "action_distribution": dict(actions),
+        "threat_distribution": dict(threats),
+        "by_record_type": dict(record_types),
+        "by_event_type": dict(event_types),
     }
 
 
@@ -114,19 +138,9 @@ def register_tools(
         now = datetime.now(timezone.utc)
         start = _window_to_start(window, now)
         events = store.filter(start_time=start, end_time=now if window != "all" else None, limit=10_000)
-        action_dist: dict[str, int] = {}
-        threat_dist: dict[str, int] = {}
-        for ev in events:
-            action_dist[ev.get("action", "unknown")] = (
-                action_dist.get(ev.get("action", "unknown"), 0) + 1
-            )
-            tl = ev.get("threat_level")
-            if tl:
-                threat_dist[tl] = threat_dist.get(tl, 0) + 1
         chain_result = store.verify_chain_range(None, None)
         return {
-            "action_distribution": action_dist,
-            "threat_distribution": threat_dist,
+            **_distributions(events),
             "chain_status": {
                 "verified": chain_result.verified_count,
                 "total": chain_result.total_count,

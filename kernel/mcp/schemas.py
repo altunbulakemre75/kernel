@@ -59,8 +59,10 @@ class ChainStatusSummary(BaseModel):
 
 
 class StatsResponse(BaseModel):
-    action_distribution: dict[str, int]
-    threat_distribution: dict[str, int]
+    action_distribution: dict[str, int]  # Decision records only
+    threat_distribution: dict[str, int]  # Decision records only
+    by_record_type: dict[str, int] = Field(default_factory=dict)
+    by_event_type: dict[str, int] = Field(default_factory=dict)  # RuntimeEvent records only
     chain_status: ChainStatusSummary
     period: dict[str, str]
 
