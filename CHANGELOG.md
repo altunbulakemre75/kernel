@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- RuntimeEvent schema for upstream evidence events (sensor monitors, guard
+  middleware, external adapters); signed verbatim into the audit chain
+  alongside Decisions
+- `append_runtime_event()` function for adding upstream events to the chain
+- Mixed-entry chain verification (Decision + RuntimeEvent), single shared
+  `chain_index` counter, polymorphic `verify_chain()`
+- MCP `query_events` field-aware filters: `event_type`/`source` return only
+  RuntimeEvents; `action`/`threat_level` return only Decisions
+- `PayloadTooLargeError` (64KB RuntimeEvent payload limit — asymmetric
+  protection vs Decision, since upstream sources are less controlled)
+- `verify_runtime_event()` thin alias over `verify_decision()`
+
 ## [0.2.0] — 2026-05-26
 
 ### Added

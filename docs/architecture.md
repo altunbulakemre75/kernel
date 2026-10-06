@@ -176,6 +176,9 @@ if not is_valid:
     print(f"Chain tampered at index {broken_idx}")
 ```
 
+The same chain also carries signed evidence events from external
+systems (`RuntimeEvent`) — see §8.
+
 ---
 
 ## 5. Policy Versioning
@@ -271,6 +274,63 @@ reconciliation and can only bring it back down.
 - **Structured logging** — via `shared/logging_setup.py`.
 - **Heartbeat** — `shared/heartbeat.py` provides orchestrator health
   registration.
+
+---
+
+## 8. Upstream Evidence Events
+
+`RuntimeEvent` is a typed record for signing evidence events from
+**external systems** (sensor monitors, guard middleware, external policy
+adapters) into the audit chain. How it differs from a `Decision`:
+
+- A **Decision** comes out of kernel's own decision graph ("I did
+  this") — controlled.
+- A **RuntimeEvent** comes from an external source ("I observed
+  this") — uncontrolled.
+
+Both are written to the same JSONL audit chain file with **the same
+Ed25519 signature scheme, the same SHA-256 hash link, and the same
+`chain_index` counter**. RuntimeEvent records carry a
+`record_type: "runtime_event"` discriminator field; Decisions do not
+have this field (backward compatibility — a record without
+`record_type` is read as a Decision).
+
+**Use cases:**
+- Sensor anomaly reports (e.g. `event_type="sensor_anomaly"`,
+  `source="lidar_monitor"`)
+- Downgrades by external guard middleware
+  (`event_type="guardrail_downgrade"`, `source="kinematic_guard"`)
+- Violation reports from policy adapters
+  (`event_type="policy_violation"`)
+
+**Mixed-chain verification:** `verify_chain()` is type-agnostic; it
+verifies a chain of interleaved RuntimeEvents and Decisions in a single
+linear scan. `chain_index` forms **one monotonic sequence** across both
+record types — there are no separate counters.
+
+**Asymmetric protection:** Because a RuntimeEvent comes from an external
+system, its `payload` is capped at 64 KB (`PayloadTooLargeError`).
+Decisions have no such limit, since they are produced by kernel's own
+controlled policy engine.
+
+**API:**
+```python
+from shared.schemas import RuntimeEvent
+from services.decision.audit_chain import append_runtime_event
+
+event = RuntimeEvent(
+    event_type="sensor_anomaly",
+    source="lidar_monitor",
+    source_id="lidar-front-01",
+    timestamp_iso="2026-05-20T12:00:00+00:00",
+    payload={"distance_m": 4.2, "object_class": "vehicle"},
+)
+signed = append_runtime_event(event, chain_path, signing_key, policy_version_id="p_v1")
+```
+
+The MCP `query_events` tool filters RuntimeEvents via its `event_type`
+and `source` parameters; its `action` and `threat_level` parameters
+filter Decisions.
 
 ---
 
