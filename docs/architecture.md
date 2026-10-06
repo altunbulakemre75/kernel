@@ -30,7 +30,7 @@ that execute in a fixed order:
 |-----------|-----------|------|
 | **Rule engine** | `rules.py` (`assess_threat`), `roe.py` (`evaluate_roe`) | Deterministic, weighted-score assessment. Factors: zone proximity, transponder presence, speed, heading, confidence. Thresholds map to `ThreatLevel` enum (LOW/MEDIUM/HIGH/CRITICAL). Policy rules are loaded from YAML (`config/policies/default.yaml`) via the `ROERule` Pydantic model. First matching enabled rule wins. |
 | **LLM advisor** | `llm_client.py` (`query_llm`), `llm_advisor.py`, `llm_graph.py` | Optional. Queries an LLM for an independent assessment. Provider fallback chain: Anthropic Claude → Ollama (local) → None. The advisor **cannot** recommend ENGAGE — only LOG, ALERT, or HANDOFF. Prompt injection defense is handled by `sanitize.py` (`sanitize_track_for_llm`), which applies allowlist filtering, control-char stripping, and injection-pattern detection before any track data reaches the LLM prompt. |
-| **Guardrails** | `guardrails.py` (`apply_guardrails`) | Post-decision safety filters. Three implemented guardrails: `input_track_guardrail` (rejects low-confidence or single-tick tracks), `friendly_zone_guardrail` (blocks action inside protected areas), `civilian_pattern_guardrail` (detects civil transponder codes and airliner flight profiles). Guardrails can only **downgrade** — see §5. |
+| **Guardrails** | `guardrails.py` (`apply_guardrails`) | Post-decision safety filters. Three implemented guardrails: `input_track_guardrail` (rejects low-confidence or single-tick tracks), `friendly_zone_guardrail` (blocks action inside protected areas), `civilian_pattern_guardrail` (detects civil transponder codes and airliner flight profiles). Guardrails can only **downgrade** — see §6. |
 
 The full pipeline is orchestrated by a 5-node state machine in
 `llm_graph.py` (`run_graph`): classify → retrieve_roe → reason →
@@ -129,7 +129,7 @@ The system processes data through a linear pipeline:
 
 4. **Guardrails** — `apply_guardrails` runs all registered guardrail
    functions against the pre-decision. Any triggered guardrail can only
-   **downgrade** the action severity (see §5). Guardrail IDs and
+   **downgrade** the action severity (see §6). Guardrail IDs and
    reasoning are appended to the `Decision` object without truncation.
 
 5. **Audit chain** — The finalized `Decision` (including raw LLM
@@ -140,7 +140,7 @@ The system processes data through a linear pipeline:
 6. **Action** — The `Decision` is published for downstream consumption.
    For ENGAGE actions, `requires_operator_approval` is hardcoded to
    `true` regardless of policy configuration. Action sinks are planned
-   (see §6).
+   (see §7).
 
 ---
 
@@ -260,12 +260,16 @@ reconciliation and can only bring it back down.
 ### Action Sinks (planned)
 - **ROS2** — Planned adapter for publishing `Decision` as ROS2 messages.
   Not yet implemented.
-- **MCP (Model Context Protocol)** — Planned server interface for
-  exposing kernel's decision API to MCP-compatible AI agents. Not yet
-  implemented.
 - **Custom** — The `Decision` Pydantic model serializes to JSON. Any
   system that can consume JSON over NATS, HTTP, or direct import can act
   as a sink today.
+
+### Audit Query Interface (implemented)
+- **MCP (Model Context Protocol)** — `kernel-mcp` (`kernel/mcp/`) is a
+  read-only stdio MCP server that lets MCP-compatible AI agents query the
+  JSONL audit chain: 5 tools (`query_events`, `get_event`, `get_stats`,
+  `verify_chain`, `search_events`) and 4 `kernel://` resources. It covers
+  both Decisions and upstream RuntimeEvents — see §8.
 
 ### Observability (implemented)
 - **Prometheus** — `FusionService` exports
