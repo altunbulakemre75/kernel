@@ -50,7 +50,8 @@ def _read_tail(path: Path) -> tuple[bytes | None, bool]:
         return (stripped or None), ends_with_newline
 
 
-def _last_entry(path: Path) -> dict[str, Any] | None:
+def last_entry(path: Path) -> dict[str, Any] | None:
+    """The last chain entry, None for an empty or missing chain; AuditWriteError if the tail is corrupt."""
     line, ends_with_newline = _read_tail(path)
     if line is None:
         return None
@@ -115,7 +116,7 @@ class ChainWriter:
             raise AuditWriteError(f"could not append to {self._chain_path}: {exc}") from exc
 
     def _append_locked(self, record: dict[str, Any]) -> dict[str, Any]:
-        last = _last_entry(self._chain_path)
+        last = last_entry(self._chain_path)
         entry = {k: v for k, v in record.items() if k not in _CHAIN_FIELDS}
         entry["chain_index"] = 0 if last is None else last["chain_index"] + 1
         prev_hash = None if last is None else last["payload_hash"]
