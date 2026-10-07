@@ -24,10 +24,29 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -e ".[dev,llm,mcp]"
+        run: pip install -e ".[dev,fusion,llm,mcp]"
 
       - name: Lint (ruff)
         run: ruff check .
 
       - name: Test (pytest)
         run: pytest tests/ -v --tb=short
+
+  core-install:
+    name: Core install (no extras)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the core only
+        run: |
+          python -m venv /tmp/core
+          /tmp/core/bin/pip install .
+
+      - name: Smoke test from outside the checkout
+        working-directory: /tmp
+        run: /tmp/core/bin/python "$GITHUB_WORKSPACE/scripts/smoke_core_install.py"
