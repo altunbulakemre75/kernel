@@ -134,8 +134,14 @@ The system processes data through a linear pipeline:
 
 5. **Audit chain** — The finalized `Decision` (including raw LLM
    response, guardrail trace, rule reference, and full reasoning) is
-   cryptographically signed and persisted. Currently: PostgreSQL via
-   `asyncpg` in the `finalize` node when `KYVERN_DB_DSN` is set.
+   signed and appended to the JSONL audit chain by `ChainWriter`
+   (`services/decision/chain_writer.py`): under an inter-process file
+   lock it reads the last entry, links and signs the new one, writes it
+   and fsyncs. The chain file is `run_graph(chain_path=...)`, else
+   `$KYVERN_CHAIN_PATH`, else `~/.kyvern/chain.jsonl` — the same file
+   `kyvern-verify`, `kyvern-report` and `kyvern-mcp` read. If the
+   decision cannot be recorded, `run_graph()` raises `AuditWriteError`
+   and returns nothing.
 
 6. **Action** — The `Decision` is published for downstream consumption.
    For ENGAGE actions, `requires_operator_approval` is hardcoded to
@@ -162,18 +168,23 @@ that point forward. A verifier can replay the entire decision sequence:
 feed the same track inputs through the same rule set and guardrails, and
 confirm that the outputs match the signed records.
 
-**Current status:** The `Decision` model stores all fields needed for
-replay (`signature`, `prev_hash`, `payload_hash`, `chain_index`). 
-The `finalize` node in `llm_graph.py` signs the decision and persists it 
-to PostgreSQL, creating an unbroken Ed25519 hash chain.
+**Current status:** Every entry carries `signature`, `prev_hash`,
+`payload_hash`, `chain_index` and `key_id` (the first 16 hex chars of
+SHA-256 over the raw public key, covered by the signature). Decisions
+from `run_graph()` and RuntimeEvents from `append_runtime_event()` are
+both appended through `ChainWriter`, so they share one chain and one
+`chain_index` sequence. Several processes on one host can append
+safely; several hosts writing one chain is not supported.
 
 Code example:
 ```python
-from services.decision.audit_chain import verify_chain
+from services.decision.audit_chain import Keyring, describe_chain_failure, verify_chain
 
-is_valid, broken_idx = verify_chain(decisions, public_key)
+keys = Keyring.from_pem_files(["signing.pub", "signing-<old key id>.pub"])
+is_valid, broken_idx = verify_chain(decisions, keys)
 if not is_valid:
-    print(f"Chain tampered at index {broken_idx}")
+    print(f"Chain broken at index {broken_idx}: "
+          f"{describe_chain_failure(decisions, broken_idx, keys)}")
 ```
 
 The same chain also carries signed evidence events from external
