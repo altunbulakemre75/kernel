@@ -36,6 +36,7 @@ class RuntimeEvent(BaseModel):
     signature: str | None = None
     prev_hash: str | None = None
     payload_hash: str | None = None
+    key_id: str | None = None
     chain_index: int = 0
     policy_version_id: str | None = None
 

@@ -227,3 +227,12 @@ def test_filter_no_filters_returns_all(mixed_chain_file, signing_keypair):
     types = {ev.get("record_type", "decision") for ev in results}
     assert types == {"decision", "runtime_event"}
     assert len(results) == 4  # 2 Decisions + 2 RuntimeEvents
+
+
+def test_verify_chain_range_reports_the_reason(tampered_chain_file, signing_keypair):
+    _, _, pub_path = signing_keypair
+    store = AuditChainStore(tampered_chain_file, public_key_paths=[pub_path])
+    store.load()
+    result = store.verify_chain_range(None, None)
+    assert result.integrity == "BROKEN"
+    assert result.first_break == {"id": 1, "reason": "bad signature"}

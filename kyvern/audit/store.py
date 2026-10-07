@@ -36,22 +36,21 @@ class AuditChainStore:
         public_key_path: Path | None = None,
         verify_on_query: bool = True,
         reload_debounce_seconds: float = 1.0,
+        public_key_paths: list[Path] | None = None,
     ) -> None:
         self._chain_file = Path(chain_file)
-        self._public_key_path = Path(public_key_path) if public_key_path else None
         self._verify_on_query = verify_on_query
         self._reload_debounce = reload_debounce_seconds
         self._events: list[dict] = []
         self._mtime: float | None = None
         self._last_check_monotonic: float = 0.0
-        self._public_key = None
-        if self._public_key_path is not None:
-            self._public_key = self._load_public_key(self._public_key_path)
-
-    @staticmethod
-    def _load_public_key(path: Path):
-        from cryptography.hazmat.primitives import serialization
-        return serialization.load_pem_public_key(path.read_bytes())
+        key_paths = [Path(p) for p in (public_key_paths or [])]
+        if public_key_path is not None:
+            key_paths.append(Path(public_key_path))
+        self._keyring = None
+        if key_paths:
+            from services.decision.audit_chain import Keyring
+            self._keyring = Keyring.from_pem_files(key_paths)
 
     def load(self) -> None:
         if not self._chain_file.exists():
@@ -141,20 +140,20 @@ class AuditChainStore:
         return results[:limit]
 
     def verify_event(self, event_id: int) -> bool | None:
-        if self._public_key is None or not self._verify_on_query:
+        if self._keyring is None or not self._verify_on_query:
             return None
         from services.decision.audit_chain import verify_decision
         ev = self.get(event_id)
         if ev is None:
             return None
-        return verify_decision(ev, self._public_key)
+        return verify_decision(ev, self._keyring)
 
     def verify_chain_range(
         self,
         start_id: int | None,
         end_id: int | None,
     ) -> ChainVerifyResult:
-        if self._public_key is None or not self._verify_on_query:
+        if self._keyring is None or not self._verify_on_query:
             return ChainVerifyResult(
                 verified_count=0,
                 total_count=len(self._events),
@@ -168,13 +167,13 @@ class AuditChainStore:
                 first_break=None,
                 integrity="UNKNOWN",
             )
-        from services.decision.audit_chain import verify_chain
+        from services.decision.audit_chain import describe_chain_failure, verify_chain
         start = 0 if start_id is None else start_id
         end = self._events[-1].get("chain_index", 0) if self._events else 0
         if end_id is not None:
             end = end_id
         slice_events = [e for e in self._events if start <= e.get("chain_index", -1) <= end]
-        ok, broken_idx = verify_chain(slice_events, self._public_key)
+        ok, broken_idx = verify_chain(slice_events, self._keyring)
         if ok:
             return ChainVerifyResult(
                 verified_count=len(slice_events),
@@ -187,7 +186,10 @@ class AuditChainStore:
         return ChainVerifyResult(
             verified_count=broken_idx if broken_idx is not None else 0,
             total_count=len(slice_events),
-            first_break={"id": broken_id, "reason": "signature_or_chain_link_invalid"},
+            first_break={
+                "id": broken_id,
+                "reason": describe_chain_failure(slice_events, broken_idx, self._keyring),
+            },
             integrity="BROKEN",
         )
 

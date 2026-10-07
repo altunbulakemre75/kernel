@@ -10,7 +10,7 @@ def test_parse_args_defaults(monkeypatch, tmp_path):
     monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
     ns = parse_args([])
     assert Path(ns.chain_file) == tmp_path / ".kyvern" / "chain.jsonl"
-    assert Path(ns.pubkey) == tmp_path / ".kyvern" / "keys" / "signing.pub"
+    assert [Path(p) for p in ns.pubkey] == [tmp_path / ".kyvern" / "keys" / "signing.pub"]
     assert ns.verify_on_query is True
 
 
@@ -79,5 +79,36 @@ def test_build_app_pubkey_missing_with_no_verify_ok(tmp_path, sample_chain_file)
         pubkey=tmp_path / "no-such-key.pub",
         policy=None,
         verify_on_query=False,
+    )
+    assert app is not None
+
+
+def test_parse_args_accepts_several_pubkeys():
+    ns = parse_args(["--pubkey", "a.pub", "--pubkey", "b.pub"])
+    assert ns.pubkey == ["a.pub", "b.pub"]
+
+
+def test_chain_default_matches_the_writer(tmp_path, monkeypatch):
+    from services.decision.chain_writer import ChainWriter
+
+    target = tmp_path / "shared.jsonl"
+    monkeypatch.setenv("KYVERN_CHAIN_PATH", str(target))
+    ChainWriter.open().append({"n": 1})
+    assert Path(parse_args([]).chain_file) == target
+
+
+def test_build_app_with_two_pubkeys(sample_chain_file, signing_keypair, tmp_path):
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import ed25519
+
+    _, _, pub_path = signing_keypair
+    other = tmp_path / "other.pub"
+    other.write_bytes(ed25519.Ed25519PrivateKey.generate().public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ))
+    app = build_app(
+        chain_file=sample_chain_file, pubkey=[pub_path, other],
+        policy=None, verify_on_query=True,
     )
     assert app is not None

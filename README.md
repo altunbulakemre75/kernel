@@ -50,6 +50,9 @@ verified offline without writing code:
 kyvern-verify chain.jsonl --policy config/policies/default.yaml --pubkey ~/.kyvern/keys/signing.pub
 ```
 
+Repeat `--pubkey` to verify a chain signed by more than one key (for example
+after a key rotation); every entry records which key signed it.
+
 **Output:**
 
 ```text
@@ -135,6 +138,11 @@ event = RuntimeEvent(
 )
 append_runtime_event(event, chain_path, signing_key, policy_version_id="p_v1")
 ```
+
+Decisions from `run_graph()` are appended to the same chain automatically
+(`~/.kyvern/chain.jsonl` by default; override with `chain_path=` or
+`KYVERN_CHAIN_PATH`). If a decision cannot be recorded, `run_graph()` raises
+`AuditWriteError` instead of returning it.
 
 See [`docs/architecture.md` §8](docs/architecture.md) for chain semantics.
 

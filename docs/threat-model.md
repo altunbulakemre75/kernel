@@ -1,6 +1,6 @@
 # Kyvern Threat Model
 
-> Last updated: 2026-05-19 · Status: pre-1.0
+> Last updated: 2026-10-07 · Status: pre-1.0
 
 ## Scope
 
@@ -80,6 +80,53 @@ sensor inputs.
 **Result.** AI is structurally an advisor; the rule engine is the decider. A
 compromised, manipulated, or simply wrong LLM cannot cause the system to take
 an action more aggressive than the rule engine would have taken without it.
+
+---
+
+## Recording Guarantees
+
+- **No unrecorded decision.** `run_graph()` returns a decision only after it
+  has been appended to the chain and fsynced. If that fails — disk error,
+  lock timeout, corrupt chain tail, missing signing key for an existing
+  chain — it raises `AuditWriteError` and returns nothing; the caller decides
+  how to fail safe.
+- **One chain per host.** Decisions and RuntimeEvents from several processes
+  on the same host append through one inter-process lock, so the chain does
+  not fork. Several hosts writing one chain is not supported.
+- **Every entry names its key.** `key_id` is part of the signed payload.
+  A verifier given the wrong key reports "signed by unknown key <id>" instead
+  of a generic failure, and the signing key is never silently re-created
+  next to a non-empty chain.
+- **Still open: the keyholder.** Whoever holds the signing key can rewrite
+  the chain from any point and re-sign it forward; nothing inside the chain
+  proves that did not happen. Periodic external anchoring of the chain head
+  (RFC 3161 timestamping, v0.3.0 part B) is the planned defense.
+
+### Rotating the signing key
+
+1. Stop every process that appends to the chain.
+2. Note the current key id:
+   `python -c "from pathlib import Path; from cryptography.hazmat.primitives import serialization; from services.decision.audit_chain import key_id; print(key_id(serialization.load_pem_public_key((Path.home()/'.kyvern'/'keys'/'signing.pub').read_bytes())))"`
+3. Copy `~/.kyvern/keys/signing.pub` to `~/.kyvern/keys/signing-<old key id>.pub`
+   and move `signing.key` to offline storage.
+4. Create the new pair:
+
+   ```python
+   from pathlib import Path
+   from cryptography.hazmat.primitives import serialization
+   from cryptography.hazmat.primitives.asymmetric import ed25519
+
+   keys = Path.home() / ".kyvern" / "keys"
+   key = ed25519.Ed25519PrivateKey.generate()
+   (keys / "signing.key").write_bytes(key.private_bytes(
+       serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
+       serialization.NoEncryption()))
+   (keys / "signing.pub").write_bytes(key.public_key().public_bytes(
+       serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo))
+   ```
+
+5. Restart the writers, then verify with both keys:
+   `kyvern-verify chain.jsonl --policy <policy> --pubkey ~/.kyvern/keys/signing-<old key id>.pub --pubkey ~/.kyvern/keys/signing.pub`
 
 ---
 

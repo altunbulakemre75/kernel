@@ -22,8 +22,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Startup check that stops with a clear error when only the pre-rename
   `~/.kernel` directory exists, instead of silently generating a new
   signing key
+- `ChainWriter`: one inter-process-locked, fsynced append path for Decisions
+  and RuntimeEvents; refuses to append after a corrupt chain tail
+- Signed `key_id` on every chain entry; `Keyring` and repeatable `--pubkey`
+  in `kyvern-verify`, `kyvern-report` and `kyvern-mcp` for chains signed by
+  several keys; verification failures name their reason
+- `run_graph(chain_path=...)` / `decide_full(chain_path=...)` and
+  `KYVERN_CHAIN_PATH`
 
 ### Changed
+- **Decisions are now recorded in the JSONL audit chain**
+  (`~/.kyvern/chain.jsonl` by default), the same file the verifiers read.
+  Breaking:
+  - `run_graph()` / `decide_full()` raise `AuditWriteError` when a decision
+    cannot be recorded, instead of returning it
+  - Postgres recording, `KYVERN_DB_DSN` and the `asyncpg` dependency are removed
+  - the signing key is no longer auto-created next to a non-empty chain
+  - chains containing `key_id` need this version to verify
 - **Renamed the project from `kernel` to Kyvern** (the PyPI name `kernel`
   belongs to an unrelated package). Breaking for source checkouts:
   - package and import name `kyvern` (was `kernel`)

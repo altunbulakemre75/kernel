@@ -29,7 +29,7 @@ from reportlab.platypus import (
 )
 from reportlab.platypus.flowables import HRFlowable
 
-from services.decision.audit_chain import verify_chain
+from services.decision.audit_chain import Keyring, verify_chain
 from services.decision.policy_loader import load_policy
 
 VERSION = "0.1.0"
@@ -54,10 +54,6 @@ def compute_period(decisions: list[dict[str, Any]]) -> str:
     if not timestamps:
         return "Unknown"
     return f"{timestamps[0][:10]}/{timestamps[-1][:10]}"
-
-
-def compute_pubkey_fingerprint(pub_path: str) -> str:
-    return hashlib.sha256(Path(pub_path).read_bytes()).hexdigest()[:16]
 
 
 def compute_report_fingerprint(
@@ -376,7 +372,7 @@ def generate_pdf(
         Paragraph("Signature algorithm: <b>Ed25519</b>", s["body"]),
         Paragraph("Hash chain algorithm: <b>SHA-256</b>", s["body"]),
         Paragraph(
-            f"Public key fingerprint (SHA-256, first 16 hex chars): "
+            f"Signing key ID(s) (SHA-256 of the raw public key, first 16 hex chars): "
             f"<font name='Courier'>{pubkey_fingerprint}</font>",
             s["body"],
         ),
@@ -472,7 +468,8 @@ def main() -> None:
     )
     parser.add_argument("chain_file", help="path to JSONL file with signed decisions")
     parser.add_argument("--policy",    required=True, help="path to policy YAML")
-    parser.add_argument("--pubkey",    required=True, help="path to Ed25519 public key PEM")
+    parser.add_argument("--pubkey",    required=True, action="append",
+                        help="path to an Ed25519 public key PEM; repeat for chains signed by several keys")
     parser.add_argument("--output",    required=True, help="output PDF path")
     parser.add_argument("--system-id", default="",   help="system identifier")
     parser.add_argument("--operator",  default="",   help="responsible operator name")
@@ -487,7 +484,7 @@ def main() -> None:
         print("Error: no decisions found in chain file.", file=sys.stderr)
         sys.exit(1)
 
-    public_key = _load_pubkey(args.pubkey)
+    public_key = Keyring([_load_pubkey(p) for p in args.pubkey])
 
     try:
         policy_obj = load_policy(args.policy)
@@ -498,7 +495,7 @@ def main() -> None:
 
     chain_valid, broken_idx = verify_chain(decisions, public_key)
     period = args.period or compute_period(decisions)
-    pubkey_fp = compute_pubkey_fingerprint(args.pubkey)
+    pubkey_fp = ", ".join(public_key.ids())
     generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
     signing_key = None
