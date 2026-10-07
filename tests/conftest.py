@@ -3,7 +3,6 @@ tests/conftest.py — Shared pytest fixtures for the Kyvern test suite.
 
 Covers:
   * Decision engine  — clean in-memory state (ROERule list + bare track dict)
-  * Fusion engine    — sample Measurement objects representing multi-sensor input
   * pytest-asyncio   — async_mode = "auto" is declared in pyproject.toml;
                        this file keeps the async event-loop fixture explicit for
                        tests that need manual control.
@@ -11,21 +10,11 @@ Covers:
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Generator
-from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
 
 from services.decision.schemas import Action, ROERule, ThreatLevel
-from services.fusion.track_manager import TrackManager
-from services.schemas.track import Measurement, SensorType
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
-def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Isolation from the developer's real home directory
@@ -116,87 +105,6 @@ def high_threat_track() -> dict:
         # No uas_id → unknown_transponder
         "confidence": 0.92,  # > 0.80 → confidence_exceeds_threshold
     }
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# Fusion engine fixtures
-# ══════════════════════════════════════════════════════════════════════════════
-
-@pytest.fixture
-def fresh_track_manager() -> Generator[TrackManager, None, None]:
-    """A brand-new TrackManager with no prior state.
-
-    Yielded so teardown (clearing internal dicts) is guaranteed even if the
-    test fails mid-way.
-    """
-    manager = TrackManager()
-    yield manager
-    # Teardown — reset internal track registry
-    manager._tracks.clear()  # type: ignore[attr-defined]
-
-
-@pytest.fixture
-def radar_measurement() -> Measurement:
-    """Single radar measurement in ENU coordinates (east=200 m, north=500 m)."""
-    return Measurement(
-        sensor_id="radar-01",
-        sensor_type=SensorType.RADAR,
-        timestamp_iso=_now_iso(),
-        x=200.0,   # east  metres
-        y=500.0,   # north metres
-        z=120.0,   # alt   metres
-        sigma_x=5.0,
-        sigma_y=5.0,
-        sigma_z=10.0,
-        class_name="drone",
-        class_conf=0.88,
-    )
-
-
-@pytest.fixture
-def rf_odid_measurement() -> Measurement:
-    """RF/ODID measurement slightly offset from the radar hit (same drone)."""
-    return Measurement(
-        sensor_id="rf-01",
-        sensor_type=SensorType.RF_ODID,
-        timestamp_iso=_now_iso(),
-        x=203.0,
-        y=497.0,
-        z=118.0,
-        sigma_x=3.0,
-        sigma_y=3.0,
-        sigma_z=8.0,
-        uas_id="FA-HOSTILE-001",
-        rssi_dbm=-72.5,
-    )
-
-
-@pytest.fixture
-def camera_measurement() -> Measurement:
-    """Camera measurement for the same target (higher position uncertainty)."""
-    return Measurement(
-        sensor_id="cam-01",
-        sensor_type=SensorType.CAMERA,
-        timestamp_iso=_now_iso(),
-        x=198.0,
-        y=505.0,
-        z=125.0,
-        sigma_x=30.0,
-        sigma_y=30.0,
-        sigma_z=50.0,
-        class_name="drone",
-        class_conf=0.75,
-    )
-
-
-@pytest.fixture
-def multi_sensor_batch(
-    radar_measurement: Measurement,
-    rf_odid_measurement: Measurement,
-    camera_measurement: Measurement,
-) -> list[Measurement]:
-    """Combined batch of all three sensor hits for one fusion tick."""
-    return [radar_measurement, rf_odid_measurement, camera_measurement]
 
 
 # ══════════════════════════════════════════════════════════════════════════════

@@ -1,6 +1,10 @@
 """TrackManager lifecycle tests — tentative → confirmed → lost → deleted."""
 from __future__ import annotations
 
+import pytest
+
+pytest.importorskip("filterpy")  # the fusion extra
+
 from services.fusion.track_manager import TrackManager
 from services.schemas.track import Measurement, SensorType, TrackState
 

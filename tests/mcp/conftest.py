@@ -4,6 +4,8 @@ from unittest.mock import patch
 
 import pytest
 
+pytest.importorskip("mcp")  # every test here needs the mcp extra
+
 from kyvern.audit import AuditChainStore
 
 # Re-export tests/audit fixtures
