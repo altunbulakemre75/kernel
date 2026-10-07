@@ -1,6 +1,6 @@
-# kernel
+# Kyvern
 
-[![Build](https://img.shields.io/github/actions/workflow/status/altunbulakemre75/kernel/ci.yml?branch=main&label=build)](https://github.com/altunbulakemre75/kernel/actions) [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE) [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](#quick-start) [![Tests](https://img.shields.io/badge/tests-215%20passing-brightgreen)](#quick-start) [![Status](https://img.shields.io/badge/status-alpha-orange)](#status) [![EU AI Act](https://img.shields.io/badge/EU%20AI%20Act-Article%2012%20%7C%2014-blue)](#eu-ai-act-compliance-reports)
+[![Build](https://img.shields.io/github/actions/workflow/status/altunbulakemre75/kyvern/ci.yml?branch=main&label=build)](https://github.com/altunbulakemre75/kyvern/actions) [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE) [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](#quick-start) [![Tests](https://img.shields.io/badge/tests-221%20passing-brightgreen)](#quick-start) [![Status](https://img.shields.io/badge/status-alpha-orange)](#status) [![EU AI Act](https://img.shields.io/badge/EU%20AI%20Act-Article%2012%20%7C%2014-blue)](#eu-ai-act-compliance-reports)
 
 Decision provenance and accountability infrastructure for autonomous systems.
 
@@ -9,7 +9,7 @@ mid-motion, a vehicle reroutes, an actuator fires — *what* happened is
 usually loggable. *Why* it happened, in a form a safety officer, regulator,
 or court can read, is almost always reconstructed after the fact, by hand.
 
-`kernel` is the missing layer:
+Kyvern is the missing layer:
 
 - **Rule-first decision engine.** Every action traces back to a
   human-authored policy. AI advises; rules decide.
@@ -47,7 +47,7 @@ For auditors and compliance officers, the decision provenance chain can be
 verified offline without writing code:
 
 ```bash
-kernel-verify chain.jsonl --policy config/policies/default.yaml --pubkey ~/.kernel/keys/signing.pub
+kyvern-verify chain.jsonl --policy config/policies/default.yaml --pubkey ~/.kyvern/keys/signing.pub
 ```
 
 **Output:**
@@ -71,9 +71,9 @@ Generate a regulator-ready PDF with Article 12 (logging) and Article 14
 (human oversight) compliance evidence from any signed decision chain:
 
 ```bash
-kernel-report chain.jsonl \
+kyvern-report chain.jsonl \
     --policy config/policies/default.yaml \
-    --pubkey ~/.kernel/keys/signing.pub \
+    --pubkey ~/.kyvern/keys/signing.pub \
     --output report.pdf \
     --system-id "AMR-Fleet-A" \
     --operator "Operations Team"
@@ -86,15 +86,14 @@ content. See [`docs/compliance/eu_ai_act.md`](docs/compliance/eu_ai_act.md).
 
 ## MCP server (Claude Desktop)
 
-Plug kernel into Claude Desktop in ~30 seconds and ask questions like
+Plug Kyvern into Claude Desktop in ~30 seconds and ask questions like
 *"what did my autonomous system do in the last hour?"*:
 
-kernel is not published on PyPI yet (the `kernel` package there is an
-unrelated project), so install from source:
+Kyvern is not published on PyPI yet, so install from source:
 
 ```bash
-git clone https://github.com/altunbulakemre75/kernel.git
-cd kernel
+git clone https://github.com/altunbulakemre75/kyvern.git
+cd kyvern
 pip install -e ".[mcp]"
 ```
 
@@ -103,8 +102,8 @@ Then add to your Claude Desktop config:
 ```json
 {
   "mcpServers": {
-    "kernel": {
-      "command": "kernel-mcp",
+    "kyvern": {
+      "command": "kyvern-mcp",
       "args": ["--chain-file", "/path/to/chain.jsonl", "--pubkey", "/path/to/signing.pub"]
     }
   }
@@ -118,9 +117,9 @@ query, chain verification, and active-policy metadata. See
 
 ## Recording events from your existing stack
 
-You do not have to adopt kernel's decision engine to get a signed record.
+You do not have to adopt Kyvern's decision engine to get a signed record.
 `RuntimeEvent` lets sensor monitors, guard middleware, or other upstream
-components append their own evidence to the same signed chain as kernel
+components append their own evidence to the same signed chain as Kyvern
 Decisions:
 
 ```python
@@ -153,7 +152,7 @@ points.
 
 ## Security
 
-kernel defends against two primary threats: insider post-hoc tampering of
+Kyvern defends against two primary threats: insider post-hoc tampering of
 decision history (Ed25519 + SHA-256 hash chain) and AI-induced unsafe
 escalation (LLM advisory ceiling + guardrail downgrade-only invariant).
 
@@ -165,10 +164,10 @@ including explicit non-defenses and what this means for compliance claims.
 
 ## Roadmap
 
-- [x] EU AI Act Article 12 &amp; 14 compliance report generator (`cli/kernel_report.py`)
+- [x] EU AI Act Article 12 &amp; 14 compliance report generator (`cli/kyvern_report.py`)
 - [x] ROS2 publisher (`services/integrations/ros2_bridge.py`)
 - [ ] ROS2 action sink with feedback loop (planned)
-- [x] MCP server interface (`kernel/mcp/`, `kernel-mcp`)
+- [x] MCP server interface (`kyvern/mcp/`, `kyvern-mcp`)
 - [x] Upstream evidence events in the audit chain (`RuntimeEvent`)
 - [ ] v0.3.0: fail-closed audit path, verbatim chain storage, key IDs,
       external chain-head anchoring

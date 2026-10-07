@@ -3,7 +3,7 @@ import os
 
 from pydantic import BaseModel
 
-from kernel.sandwich import InMemoryAuditStore, Sandwich
+from kyvern.sandwich import InMemoryAuditStore, Sandwich
 
 
 class EmailSummary(BaseModel):

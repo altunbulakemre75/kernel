@@ -1,7 +1,7 @@
 {
   "mcpServers": {
-    "kernel": {
-      "command": "kernel-mcp",
+    "kyvern": {
+      "command": "kyvern-mcp",
       "args": [
         "--chain-file", "/absolute/path/to/chain.jsonl",
         "--pubkey", "/absolute/path/to/signing.pub",

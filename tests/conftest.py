@@ -1,5 +1,5 @@
 """
-tests/conftest.py — Shared pytest fixtures for the kernel test suite.
+tests/conftest.py — Shared pytest fixtures for the Kyvern test suite.
 
 Covers:
   * Decision engine  — clean in-memory state (ROERule list + bare track dict)

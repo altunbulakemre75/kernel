@@ -1,1 +1,1 @@
-"""kernel.services — Decision & Fusion service packages."""
+"""kyvern.services — Decision & Fusion service packages."""

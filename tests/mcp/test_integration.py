@@ -1,4 +1,4 @@
-"""End-to-end MCP client/server handshake — env-gated by KERNEL_MCP_E2E=1."""
+"""End-to-end MCP client/server handshake — env-gated by KYVERN_MCP_E2E=1."""
 import asyncio
 import os
 import sys
@@ -8,8 +8,8 @@ import pytest
 
 @pytest.mark.integration
 def test_integration_with_real_mcp_client(sample_chain_file, signing_keypair, tmp_path):
-    if not os.environ.get("KERNEL_MCP_E2E"):
-        pytest.skip("Set KERNEL_MCP_E2E=1 to run integration tests")
+    if not os.environ.get("KYVERN_MCP_E2E"):
+        pytest.skip("Set KYVERN_MCP_E2E=1 to run integration tests")
 
     _, _, pub_path = signing_keypair
 
@@ -19,7 +19,7 @@ def test_integration_with_real_mcp_client(sample_chain_file, signing_keypair, tm
     params = StdioServerParameters(
         command=sys.executable,
         args=[
-            "-m", "kernel.mcp.server",
+            "-m", "kyvern.mcp.server",
             "--chain-file", str(sample_chain_file),
             "--pubkey", str(pub_path),
             "--no-verify-on-query",

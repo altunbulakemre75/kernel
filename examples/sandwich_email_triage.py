@@ -1,7 +1,7 @@
 """Mock-provider email triage example. No API keys needed."""
 from pydantic import BaseModel
 
-from kernel.sandwich import (
+from kyvern.sandwich import (
     InMemoryAuditStore,
     MockLLMProvider,
     QLLMInstruction,

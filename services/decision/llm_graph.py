@@ -95,7 +95,7 @@ async def retrieve_roe(state: GraphState) -> GraphState:
 # ── Node 3: reason (LLM advisor) ──────────────────────────────────
 
 def _is_llm_enabled() -> bool:
-    return os.getenv("KERNEL_DECISION_LLM_ENABLED", os.getenv("NIZAM_DECISION_LLM_ENABLED", "false")).lower() == "true"
+    return os.getenv("KYVERN_DECISION_LLM_ENABLED", os.getenv("NIZAM_DECISION_LLM_ENABLED", "false")).lower() == "true"
 
 
 async def reason(state: GraphState) -> GraphState:
@@ -207,7 +207,7 @@ async def finalize(state: GraphState) -> GraphState:
 
     from services.decision.audit_chain import load_or_create_keypair, sign_decision
 
-    dsn = os.getenv("KERNEL_DB_DSN", os.getenv("NIZAM_DB_DSN"))
+    dsn = os.getenv("KYVERN_DB_DSN", os.getenv("NIZAM_DB_DSN"))
     
     prev_hash = None
     chain_index = 0

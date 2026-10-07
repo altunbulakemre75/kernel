@@ -1,4 +1,4 @@
-# EU AI Act Compliance — kernel Mapping
+# EU AI Act Compliance — Kyvern Mapping
 
 > Source: Regulation (EU) 2024/1689, Official Journal of the European Union, 12 July 2024
 
@@ -15,29 +15,29 @@ logs sufficient to enable three specific accountability purposes:
 - **(c)** ensuring the monitoring under Article 26(5) (deployer
   operational obligations)
 
-**How kernel satisfies Article 12(2):**
+**How Kyvern satisfies Article 12(2):**
 
-| Requirement | kernel mechanism |
+| Requirement | Kyvern mechanism |
 |---|---|
 | Art.12(2)(a) — Risk identification logging (Art.79(1)) | Each decision records `threat_level`, `roe_reference`, and full `guardrails_triggered` trace; the signed chain is the national-level risk evidence record |
 | Art.12(2)(b) — Post-market monitoring support (Art.72) | All decisions are auto-logged with `policy_version_id` (SHA-256 of the policy file), enabling retrospective analysis against any deployed rule version |
 | Art.12(2)(c) — Operation monitoring (Art.26(5)) | `action`, `timestamp_iso`, `roe_reference`, `requires_operator_approval`, and `guardrail_reasoning` are recorded per decision; deployers can replay the full operational picture |
 | Automatic log generation | Every call to `sign_decision()` appends a tamper-evident record to the audit chain without human action |
-| Tamper-evident storage | Ed25519 signature + SHA-256 hash chain — any modification breaks the chain and is detected by `kernel-verify` |
+| Tamper-evident storage | Ed25519 signature + SHA-256 hash chain — any modification breaks the chain and is detected by `kyvern-verify` |
 | Standardised timestamps | All timestamps are ISO 8601 UTC |
 
 Retention of the chain files (10-year requirement for high-risk systems)
-is the responsibility of the deployment operator. kernel does not manage
+is the responsibility of the deployment operator. Kyvern does not manage
 storage lifetime.
 
-### Article 12(3) — Remote biometric identification (out of scope for kernel, included for reference)
+### Article 12(3) — Remote biometric identification (out of scope for Kyvern, included for reference)
 
 Article 12(3) imposes *additional* logging requirements that apply
 **only** to remote biometric identification systems listed in Annex III,
-paragraph 1(a). kernel is a decision-provenance layer for autonomous
+paragraph 1(a). Kyvern is a decision-provenance layer for autonomous
 systems (robots, vehicles, effectors) — not a remote biometric
 identification system. Article 12(3) is reproduced here for reference
-only and is not part of kernel's compliance scope.
+only and is not part of Kyvern's compliance scope.
 
 The Article 12(3) requirements (biometric ID systems only) are:
 
@@ -56,16 +56,16 @@ persons to effectively oversee operation, including the ability to:
 - override or interrupt the system
 - take informed decisions based on system output
 
-**How kernel satisfies Article 14:**
+**How Kyvern satisfies Article 14:**
 
-| Requirement | kernel mechanism |
+| Requirement | Kyvern mechanism |
 |---|---|
 | Human approval gate | Decisions with `requires_operator_approval: true` block escalation until a human authorises |
 | Override capability | Guardrail-downgrade-only pattern ensures the system can only make decisions safer; operator can always intervene |
 | Audit trail of interventions | `guardrails_triggered` and `guardrail_reasoning` are signed into every decision |
 | Policy transparency | Policies are human-authored YAML; every deployed version is SHA-256 identified |
 
-## When to use `kernel-report`
+## When to use `kyvern-report`
 
 | Scenario | Action |
 |---|---|
@@ -81,9 +81,9 @@ persons to effectively oversee operation, including the ability to:
 python scripts/generate_demo_chain.py
 
 # Produce compliance report
-kernel-report /tmp/kernel-demo/chain.jsonl \
+kyvern-report /tmp/kyvern-demo/chain.jsonl \
     --policy config/policies/default.yaml \
-    --pubkey /tmp/kernel-demo/signing.pub \
+    --pubkey /tmp/kyvern-demo/signing.pub \
     --output compliance_report.pdf \
     --system-id "AMR-Fleet-A" \
     --operator "Operations Team" \

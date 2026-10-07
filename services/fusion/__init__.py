@@ -1,1 +1,1 @@
-"""kernel.services.fusion — Multi-sensor track fusion (Kalman / IMM)."""
+"""kyvern.services.fusion — Multi-sensor track fusion (Kalman / IMM)."""

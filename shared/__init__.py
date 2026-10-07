@@ -1,1 +1,1 @@
-﻿"""kernel.shared - Shared utilities (geo, clock, rate_limit, lifecycle)."""
+﻿"""kyvern.shared - Shared utilities (geo, clock, rate_limit, lifecycle)."""

@@ -81,7 +81,7 @@ def _run(*args):
     env = os.environ.copy()
     env["PYTHONPATH"] = str(REPO_ROOT)
     return subprocess.run(
-        [sys.executable, "-m", "cli.kernel_report", *args],
+        [sys.executable, "-m", "cli.kyvern_report", *args],
         capture_output=True, text=True, env=env,
     )
 
@@ -138,7 +138,7 @@ def test_report_article12_uses_correct_regulation(workspace):
 
 
 def test_report_action_distribution_correct(workspace):
-    from cli.kernel_report import compute_action_distribution
+    from cli.kyvern_report import compute_action_distribution
     dist = compute_action_distribution(workspace["chain"])
     assert dist.get("LOG") == 3
     assert dist.get("ALERT") == 1

@@ -1,12 +1,12 @@
 import pytest
 from mcp.server.fastmcp import FastMCP
 
-from kernel.mcp.errors import KernelMCPError
-from kernel.mcp.tools import register_tools
+from kyvern.mcp.errors import KyvernMCPError
+from kyvern.mcp.tools import register_tools
 
 
 def _make_app(store, policy_path=None):
-    app = FastMCP("kernel-test")
+    app = FastMCP("kyvern-test")
     register_tools(app, store, policy_path=policy_path)
     return app
 
@@ -46,13 +46,13 @@ def test_query_events_filter_by_time_range(store):
 
 def test_query_events_invalid_time_format(store):
     app = _make_app(store)
-    with pytest.raises(KernelMCPError, match="invalid time format"):
+    with pytest.raises(KyvernMCPError, match="invalid time format"):
         _call_tool(app, "query_events", start_time="not-iso")
 
 
 def test_query_events_limit_out_of_range(store):
     app = _make_app(store)
-    with pytest.raises(KernelMCPError, match="limit must be between"):
+    with pytest.raises(KyvernMCPError, match="limit must be between"):
         _call_tool(app, "query_events", limit=0)
 
 

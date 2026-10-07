@@ -13,7 +13,7 @@ produced by `services/decision/`. It includes:
 These are illustrative integration targets. They are implemented and unit
 tested, but are NOT integration tested against real hardware in this
 repository, and they are NOT required for the core decision/audit
-pipeline. Most users of kernel will not touch this module — the typical
+pipeline. Most users of Kyvern will not touch this module — the typical
 deployment writes its own action sink (ROS2 publisher, custom HTTP
 webhook, MQTT bridge) and consumes `Decision` objects directly.
 

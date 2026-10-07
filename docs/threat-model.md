@@ -1,12 +1,12 @@
-# kernel Threat Model
+# Kyvern Threat Model
 
 > Last updated: 2026-05-19 · Status: pre-1.0
 
 ## Scope
 
-kernel is accountability infrastructure for autonomous systems. It provides
+Kyvern is accountability infrastructure for autonomous systems. It provides
 cryptographically signed, append-only decision audit chains and AI advisory
-fail-safes. This document defines what kernel does — and does not — defend
+fail-safes. This document defines what Kyvern does — and does not — defend
 against.
 
 Knowing what a system does *not* defend against is at least as important as
@@ -15,7 +15,7 @@ written to avoid it.
 
 ---
 
-## Primary Threats kernel Defends Against
+## Primary Threats Kyvern Defends Against
 
 ### Threat 1: Insider/operator post-hoc tampering of decision history
 
@@ -28,10 +28,10 @@ liability avoidance.
 predecessor. The signing and linking happen at write time inside
 `sign_decision()` in `services/decision/audit_chain.py`. Any subsequent
 mutation — of payload, action, timestamp, or any other field — breaks chain
-verification. The break is detectable at `kernel-verify` time:
+verification. The break is detectable at `kyvern-verify` time:
 
 ```bash
-kernel-verify chain.jsonl --policy config/policies/default.yaml \
+kyvern-verify chain.jsonl --policy config/policies/default.yaml \
     --pubkey signing.pub
 # → ✗ Chain broken at index 3 (if tampered)
 ```
@@ -83,7 +83,7 @@ an action more aggressive than the rule engine would have taken without it.
 
 ---
 
-## Threats kernel Explicitly Does NOT Defend Against
+## Threats Kyvern Explicitly Does NOT Defend Against
 
 These are deployment-operator responsibilities. We list them to avoid
 overclaiming in due diligence, interviews, or compliance assessments.
@@ -91,22 +91,22 @@ overclaiming in due diligence, interviews, or compliance assessments.
 ### Signing key compromise
 
 If an attacker obtains the signing private key, they can produce arbitrary
-"valid" chains that pass `kernel-verify`. kernel does not perform key
+"valid" chains that pass `kyvern-verify`. Kyvern does not perform key
 management. Operators must use an HSM, KMS, or equivalent hardware-backed key
-store, with the private key never materialized on the host running kernel.
+store, with the private key never materialized on the host running Kyvern.
 
 ### Wholesale chain replacement
 
 If an attacker replaces the entire chain file with one signed by a key they
 control, and the public-key trust anchor itself is compromised or unverified,
-`kernel-verify` will report the replacement chain as valid. Trust anchor
+`kyvern-verify` will report the replacement chain as valid. Trust anchor
 verification — how a verifier obtains and trusts the public key — is the
-operator's responsibility. kernel provides the verification mechanism; it
+operator's responsibility. Kyvern provides the verification mechanism; it
 cannot solve the key-distribution problem.
 
 ### Sensor-level truth
 
-kernel trusts its inputs. If a sensor lies, or upstream data is poisoned
+Kyvern trusts its inputs. If a sensor lies, or upstream data is poisoned
 before reaching `FusionService`, the resulting decision will be logged
 faithfully — including the full provenance of why that decision was made.
 The logged record is cryptographically correct; the underlying premises are
@@ -116,17 +116,17 @@ are out of scope.
 ### Runtime intrusion and process isolation
 
 Container escapes, privilege escalation, or direct compromise of the host
-process running kernel are not kernel's responsibility. Standard host
+process running Kyvern are not Kyvern's responsibility. Standard host
 hardening, OS-level security, and container isolation policies apply. If the
 process itself is compromised, the signing key in memory is compromised too.
 
 ### Network-level attacks
 
-The MCP server (`kernel-mcp`) is stdio-only in v1 — there is no network
+The MCP server (`kyvern-mcp`) is stdio-only in v1 — there is no network
 listener and therefore no network attack surface. This is a deliberate design
 choice that limits exposure, not an active network defense mechanism. Future
 SSE/HTTP transport (Phase 2) will require TLS, authentication, and
-rate-limiting; those are deployment concerns, not kernel guarantees. See
+rate-limiting; those are deployment concerns, not Kyvern guarantees. See
 [`docs/integrations/mcp.md`](integrations/mcp.md) for the MCP threat model
 note.
 
@@ -134,7 +134,7 @@ note.
 
 ## Honest One-Line Summary
 
-kernel defends against insider post-hoc tampering of decision history and
+Kyvern defends against insider post-hoc tampering of decision history and
 AI-induced unsafe escalation. It does not defend against signing key
 compromise, sensor-level deception, runtime intrusion, or network attacks —
 those are operator responsibilities.
@@ -143,13 +143,13 @@ those are operator responsibilities.
 
 ## What This Means for Compliance Claims
 
-kernel produces tamper-evident decision audit trails suitable for the
+Kyvern produces tamper-evident decision audit trails suitable for the
 Article 12(2) general logging requirements under Regulation (EU) 2024/1689
 (risk identification per Art.79(1), post-market monitoring per Art.72,
 operation monitoring per Art.26(5)). See
 [`docs/compliance/eu_ai_act.md`](compliance/eu_ai_act.md).
 
-kernel is **not** a substitute for:
+Kyvern is **not** a substitute for:
 
 - Key management policy (HSM, KMS, key rotation procedures)
 - Sensor calibration auditing or input-source authentication

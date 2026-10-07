@@ -1,4 +1,4 @@
-# kernel — Default Decision Policy — DEMO/DEVELOPMENT ONLY
+# Kyvern — Default Decision Policy — DEMO/DEVELOPMENT ONLY
 #
 # Üretim deploymentinde bu dosya MUTLAKA saha operasyonu tarafından
 # güncellenmeli. Üretim güvenlik sertifikaları ve operatör onayı olmadan

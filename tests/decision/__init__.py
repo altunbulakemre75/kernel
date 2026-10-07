@@ -1,1 +1,1 @@
-"""kernel.tests.decision — Tests for the rule-based decision engine."""
+"""kyvern.tests.decision — Tests for the rule-based decision engine."""

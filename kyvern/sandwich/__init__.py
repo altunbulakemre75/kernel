@@ -1,6 +1,6 @@
-from kernel.sandwich.privileged import Sandwich
-from kernel.sandwich.providers import InMemoryAuditStore, LLMProvider, MockLLMProvider
-from kernel.sandwich.schemas import (
+from kyvern.sandwich.privileged import Sandwich
+from kyvern.sandwich.providers import InMemoryAuditStore, LLMProvider, MockLLMProvider
+from kyvern.sandwich.schemas import (
     QLLMInstruction,
     SandwichDecision,
     SandwichPlan,

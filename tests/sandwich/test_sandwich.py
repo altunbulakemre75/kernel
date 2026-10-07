@@ -4,7 +4,7 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from pydantic import BaseModel
 
-from kernel.sandwich import (
+from kyvern.sandwich import (
     InMemoryAuditStore,
     MockLLMProvider,
     QLLMInstruction,
@@ -14,7 +14,7 @@ from kernel.sandwich import (
     SandwichSchemaError,
     SandwichToolMisuseError,
 )
-from kernel.sandwich.schemas import ToolInvocation
+from kyvern.sandwich.schemas import ToolInvocation
 
 # ── Shared schema ─────────────────────────────────────────────────────────────
 
@@ -237,9 +237,9 @@ def test_mock_provider():
 
 @pytest.mark.integration
 def test_integration_real_llm():
-    """End-to-end with real Anthropic API. Requires KERNEL_SANDWICH_E2E=1."""
-    if not os.environ.get("KERNEL_SANDWICH_E2E"):
-        pytest.skip("Set KERNEL_SANDWICH_E2E=1 to run integration tests")
+    """End-to-end with real Anthropic API. Requires KYVERN_SANDWICH_E2E=1."""
+    if not os.environ.get("KYVERN_SANDWICH_E2E"):
+        pytest.skip("Set KYVERN_SANDWICH_E2E=1 to run integration tests")
     try:
         import anthropic
     except ImportError:

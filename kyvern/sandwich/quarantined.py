@@ -6,7 +6,7 @@ Raises SandwichSchemaError after all retries exhausted.
 """
 from pydantic import BaseModel, ValidationError
 
-from kernel.sandwich.schemas import SandwichSchemaError
+from kyvern.sandwich.schemas import SandwichSchemaError
 
 
 class QLLMCaller:

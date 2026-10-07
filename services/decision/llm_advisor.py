@@ -1,6 +1,6 @@
 """LLM advisor — optional, runs ALONGSIDE the rule engine, does not override.
 
-Activation: KERNEL_DECISION_LLM_ENABLED=true env var (NIZAM_DECISION_LLM_ENABLED also works).
+Activation: KYVERN_DECISION_LLM_ENABLED=true env var (NIZAM_DECISION_LLM_ENABLED also works).
 Packages: pip install "langgraph>=0.2" "anthropic>=0.40" "llama-index>=0.12"
 
 Behaviour:
@@ -36,7 +36,7 @@ class LLMDecisionDict(TypedDict, total=False):
 
 
 def is_llm_enabled() -> bool:
-    return os.getenv("KERNEL_DECISION_LLM_ENABLED", os.getenv("NIZAM_DECISION_LLM_ENABLED", "false")).lower() == "true"
+    return os.getenv("KYVERN_DECISION_LLM_ENABLED", os.getenv("NIZAM_DECISION_LLM_ENABLED", "false")).lower() == "true"
 
 
 async def query_llm_advisor(

@@ -17,12 +17,12 @@ from collections import deque
 from prometheus_client import Counter, Gauge
 
 _rate_dropped = Counter(
-    "kernel_rate_limit_dropped_total",
+    "kyvern_rate_limit_dropped_total",
     "Messages dropped by rate limit or circuit breaker",
     ["sensor_id", "reason"],
 )
 _queue_depth = Gauge(
-    "kernel_queue_depth_ratio",
+    "kyvern_queue_depth_ratio",
     "Downstream queue fill ratio (0..1)",
     ["component"],
 )

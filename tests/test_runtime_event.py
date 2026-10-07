@@ -336,8 +336,8 @@ def test_mcp_query_events_filters_by_event_type(
     from cryptography.hazmat.primitives import serialization
     from mcp.server.fastmcp import FastMCP
 
-    from kernel.audit.store import AuditChainStore
-    from kernel.mcp.tools import register_tools
+    from kyvern.audit.store import AuditChainStore
+    from kyvern.mcp.tools import register_tools
     from services.decision.audit_chain import append_runtime_event
 
     chain_path = tmp_path / "chain.jsonl"

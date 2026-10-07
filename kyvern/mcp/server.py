@@ -1,32 +1,32 @@
-"""kernel-mcp — stdio MCP server entry point."""
+"""kyvern-mcp — stdio MCP server entry point."""
 from __future__ import annotations
 
 import argparse
-import os
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
-from kernel.audit import AuditChainStore
-from kernel.mcp.errors import KernelMCPError
-from kernel.mcp.resources import register_resources
-from kernel.mcp.tools import register_tools
+from kyvern.audit import AuditChainStore
+from kyvern.mcp.errors import KyvernMCPError
+from kyvern.mcp.resources import register_resources
+from kyvern.mcp.tools import register_tools
+from shared.paths import kyvern_home
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        prog="kernel-mcp",
-        description="kernel — read-only MCP server for audit chain query.",
+        prog="kyvern-mcp",
+        description="Kyvern — read-only MCP server for audit chain query.",
     )
     parser.add_argument(
         "--chain-file",
         dest="chain_file",
-        default=os.path.expanduser("~/.kernel/chain.jsonl"),
+        default=str(kyvern_home() / "chain.jsonl"),
     )
     parser.add_argument(
         "--pubkey",
         dest="pubkey",
-        default=os.path.expanduser("~/.kernel/keys/signing.pub"),
+        default=str(kyvern_home() / "keys" / "signing.pub"),
     )
     parser.add_argument(
         "--policy",
@@ -56,12 +56,12 @@ def build_app(
 ) -> FastMCP:
     chain_file = Path(chain_file)
     if not chain_file.exists():
-        raise KernelMCPError(f"chain file not found at {chain_file}")
+        raise KyvernMCPError(f"chain file not found at {chain_file}")
 
     pubkey_path = Path(pubkey) if pubkey else None
     if verify_on_query:
         if pubkey_path is None or not pubkey_path.exists():
-            raise KernelMCPError(
+            raise KyvernMCPError(
                 f"public key not found at {pubkey_path} — "
                 "pass --pubkey or use --no-verify-on-query"
             )
@@ -75,7 +75,7 @@ def build_app(
 
     policy_path = Path(policy) if policy else None
 
-    app = FastMCP("kernel")
+    app = FastMCP("kyvern")
     register_tools(app, store, policy_path=policy_path)
     register_resources(app, store, policy_path=policy_path)
     return app

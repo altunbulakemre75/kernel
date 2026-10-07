@@ -9,11 +9,12 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
+from shared.paths import kyvern_home
 from shared.schemas import RuntimeEvent
 
 
 def load_or_create_keypair() -> ed25519.Ed25519PrivateKey:
-    keys_dir = os.path.expanduser("~/.kernel/keys")
+    keys_dir = str(kyvern_home() / "keys")
     priv_path = os.path.join(keys_dir, "signing.key")
     pub_path = os.path.join(keys_dir, "signing.pub")
     

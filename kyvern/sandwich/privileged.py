@@ -10,10 +10,10 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from kernel.sandwich.providers import InMemoryAuditStore
-from kernel.sandwich.quarantined import QLLMCaller
-from kernel.sandwich.references import ReferenceStore
-from kernel.sandwich.schemas import (
+from kyvern.sandwich.providers import InMemoryAuditStore
+from kyvern.sandwich.quarantined import QLLMCaller
+from kyvern.sandwich.references import ReferenceStore
+from kyvern.sandwich.schemas import (
     SandwichDecision,
     SandwichPlan,
     SandwichToolMisuseError,
