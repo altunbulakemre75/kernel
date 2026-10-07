@@ -34,6 +34,10 @@ Availability on 2026-10-07: `kyvern` is free on PyPI and npm. The PyPI name is n
 | `KERNEL_MCP_E2E`, `KERNEL_SANDWICH_E2E` (test gates) | `KYVERN_MCP_E2E`, `KYVERN_SANDWICH_E2E` |
 | Prometheus metrics `kernel_*` | `kyvern_*` |
 | ROS2 node names `kernel_decision_publisher`, `kernel_decision_verifier` | `kyvern_decision_publisher`, `kyvern_decision_verifier` |
+| ROS2 topic `/kernel/decisions` | `/kyvern/decisions` |
+| NATS subjects `kernel.raw.*`, `kernel.tracks.active` | `kyvern.raw.*`, `kyvern.tracks.active` |
+| Classes `KernelMCPError`, `KernelDecisionPublisher`, `KernelDecisionVerifier` | `KyvernMCPError`, `KyvernDecisionPublisher`, `KyvernDecisionVerifier` |
+| Claude Desktop config key `"kernel"`, demo directory `kernel-demo` | `"kyvern"`, `kyvern-demo` |
 | `~/.kernel/keys/`, `~/.kernel/chain.jsonl` | `~/.kyvern/keys/`, `~/.kyvern/chain.jsonl` |
 | MCP server name `FastMCP("kernel")` | `FastMCP("kyvern")` |
 | MCP URIs `kernel://audit/recent` etc. | `kyvern://audit/recent` etc. |
