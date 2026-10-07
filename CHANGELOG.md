@@ -10,7 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - The test suite runs with only the `dev` extra installed: fusion and MCP
   tests skip themselves when their extra is missing, instead of
-  `tests/conftest.py` failing to import `filterpy` and stopping the whole run.
+  `tests/conftest.py` failing to import the fusion dependencies (numpy,
+  filterpy) and stopping the whole run.
   CI runs this configuration
 
 ## [0.3.1] — 2026-10-07
