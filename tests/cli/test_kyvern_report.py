@@ -195,3 +195,29 @@ def test_report_exit_code_one_on_chain_verification_failure(workspace):
         "--output", str(out),
     )
     assert res.returncode == 1
+
+
+def test_report_accepts_several_pubkeys(workspace):
+    new_key = ed25519.Ed25519PrivateKey.generate()
+    new_pub = workspace["tmp"] / "new.pub"
+    new_pub.write_bytes(new_key.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ))
+    last = workspace["chain"][-1]
+    d = {k: v for k, v in last.items() if k not in ("signature", "payload_hash", "key_id")}
+    d["chain_index"] = last["chain_index"] + 1
+    signed = sign_decision(d, prev_hash=last["payload_hash"], signing_key=new_key)
+    with open(workspace["chain_path"], "a", encoding="utf-8") as f:
+        f.write(json.dumps(signed) + "\n")
+
+    out = workspace["tmp"] / "report.pdf"
+    res = _run(
+        str(workspace["chain_path"]),
+        "--policy", str(workspace["policy_path"]),
+        "--pubkey", str(workspace["pub_path"]),
+        "--pubkey", str(new_pub),
+        "--output", str(out),
+    )
+    assert res.returncode == 0, res.stderr
+    assert "[chain: VALID]" in res.stdout

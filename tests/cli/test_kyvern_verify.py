@@ -181,3 +181,76 @@ def test_verbose_flag_shows_full_payloads(temp_workspace):
     assert res.returncode == 0
     # "track_0" is in the full payload dump
     assert "track_0" in res.stdout
+
+
+def _append_signed_by_new_key(workspace, tmp_path):
+    """Append one decision signed by a second key; return that key's public PEM path."""
+    new_key = ed25519.Ed25519PrivateKey.generate()
+    new_pub = tmp_path / "new.pub"
+    new_pub.write_bytes(new_key.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ))
+    last = workspace["chain"][-1]
+    d = {k: v for k, v in last.items() if k not in ("signature", "payload_hash", "key_id")}
+    d["track_id"] = "track_new_key"
+    d["chain_index"] = last["chain_index"] + 1
+    signed = sign_decision(d, prev_hash=last["payload_hash"], signing_key=new_key)
+    with open(workspace["chain_path"], "a", encoding="utf-8") as f:
+        f.write(json.dumps(signed) + "\n")
+    return new_pub
+
+
+def test_verify_accepts_several_pubkeys(temp_workspace, tmp_path):
+    new_pub = _append_signed_by_new_key(temp_workspace, tmp_path)
+    args = [str(temp_workspace["chain_path"]), "--policy", str(temp_workspace["policy_path"])]
+
+    both = run_cli(*args, "--pubkey", str(temp_workspace["pub_path"]), "--pubkey", str(new_pub))
+    assert both.returncode == 0, both.stdout
+    assert "Chain integrity: VALID (4 decisions" in both.stdout
+
+    old_only = run_cli(*args, "--pubkey", str(temp_workspace["pub_path"]))
+    assert old_only.returncode == 1
+    assert "signed by unknown key" in old_only.stdout
+
+
+def test_json_output_lists_key_ids_and_reason(temp_workspace, tmp_path):
+    from services.decision.audit_chain import key_id
+
+    new_pub = _append_signed_by_new_key(temp_workspace, tmp_path)
+    res = run_cli(
+        str(temp_workspace["chain_path"]),
+        "--policy", str(temp_workspace["policy_path"]),
+        "--pubkey", str(temp_workspace["pub_path"]),
+        "--json",
+    )
+    data = json.loads(res.stdout)
+    old_id = key_id(temp_workspace["private_key"].public_key())
+    new_id = key_id(serialization.load_pem_public_key(new_pub.read_bytes()))
+    assert data["key_ids"] == sorted([old_id, new_id])
+    assert data["reason"] == f"signed by unknown key {new_id}"
+
+
+def test_live_pipeline_decisions_verify(tmp_path, isolated_home):
+    """End to end: decisions produced by the live pipeline pass kyvern-verify."""
+    from services.decision.roe import load_roe
+    from services.decision.threat_graph import decide_full
+
+    clear_policy_cache()
+    policy = Path(__file__).parent.parent.parent / "config" / "policies" / "default.yaml"
+    chain = tmp_path / "chain.jsonl"
+    rules = load_roe(policy)
+    for i in range(3):
+        decide_full(
+            {
+                "track_id": f"live-{i}", "latitude": 40.0, "longitude": 33.0,
+                "altitude": 100.0, "confidence": 0.9, "hits": 10,
+                "vx": 5.0, "vy": 0.0, "vz": 0.0, "x": 0.0, "y": 0.0, "z": 100.0,
+                "sources": ["camera"],
+            },
+            rules, policy_path=str(policy), chain_path=chain,
+        )
+    pub = isolated_home / ".kyvern" / "keys" / "signing.pub"
+    res = run_cli(str(chain), "--policy", str(policy), "--pubkey", str(pub))
+    assert res.returncode == 0, res.stdout
+    assert "Chain integrity: VALID (3 decisions" in res.stdout

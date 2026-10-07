@@ -7,7 +7,12 @@ from typing import Any
 
 from cryptography.hazmat.primitives import serialization
 
-from services.decision.audit_chain import verify_chain, verify_decision_against_policy
+from services.decision.audit_chain import (
+    Keyring,
+    describe_chain_failure,
+    verify_chain,
+    verify_decision_against_policy,
+)
 from services.decision.policy_loader import load_policy
 
 try:
@@ -77,7 +82,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Verify a cryptographically signed decision chain.")
     parser.add_argument("chain_file", help="path to JSONL file with decisions")
     parser.add_argument("--policy", required=True, help="path to policy YAML")
-    parser.add_argument("--pubkey", required=True, help="path to PEM-encoded Ed25519 public key")
+    parser.add_argument(
+        "--pubkey", required=True, action="append",
+        help="path to a PEM-encoded Ed25519 public key; repeat for chains signed by several keys",
+    )
     parser.add_argument("--verbose", "-v", action="store_true", help="show full payload of each decision")
     parser.add_argument("--json", action="store_true", help="output machine-readable JSON instead of human format")
     
@@ -94,13 +102,17 @@ def main() -> None:
             print(f"{RED_CROSS} No decisions found in chain file.")
         sys.exit(1)
         
-    public_key = load_pubkey(args.pubkey)
-    
+    public_key = Keyring([load_pubkey(p) for p in args.pubkey])
+
     is_valid_chain, broken_idx = verify_chain(decisions, public_key)
     errors = []
-    
+    failure_reason = None
+
     if not is_valid_chain:
-        errors.append(f"Chain integrity broken at index {broken_idx}")
+        failure_reason = describe_chain_failure(decisions, broken_idx, public_key)
+        errors.append(f"Chain integrity broken at index {broken_idx}: {failure_reason}")
+
+    key_ids = sorted({d["key_id"] for d in decisions if d.get("key_id")})
         
     policy_matches = True
     mismatched_policy_idx = None
@@ -133,6 +145,8 @@ def main() -> None:
             "signature_valid": is_valid_chain,
             "decisions": decisions,
             "policy_version_id": policy_hash,
+            "key_ids": key_ids,
+            "reason": failure_reason,
             "errors": errors
         }
         print(json.dumps(out, indent=2))
@@ -141,7 +155,7 @@ def main() -> None:
     if is_valid_chain:
         print(f"{GREEN_CHECK} Chain integrity: VALID ({len(decisions)} decisions, all signed)")
     else:
-        print(f"{RED_CROSS} Chain integrity: INVALID (Broken at index {broken_idx})")
+        print(f"{RED_CROSS} Chain integrity: INVALID (Broken at index {broken_idx}: {failure_reason})")
         
     if policy_matches and policy_hash:
         try:
