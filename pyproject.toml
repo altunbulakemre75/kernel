@@ -24,7 +24,7 @@ dependencies = { file = ["requirements.txt"] }
 
 [tool.setuptools.packages.find]
 where   = ["."]
-include = ["services*", "kernel*"]
+include = ["services*", "kernel*", "shared*", "cli*"]
 
 # ── Optional dependency groups ────────────────────────────────────────────────
 [project.optional-dependencies]

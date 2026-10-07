@@ -4,9 +4,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-# Module-level constant — RuntimeEvent.payload JSON-serialized byte limit.
-# Audit chain bloat'u önler; sensor monitor / guard middleware için 64KB yeter.
-# Configurable: production operators override edebilir.
+# Upper bound on the compact-JSON size of RuntimeEvent.payload, so upstream evidence
+# cannot bloat the audit chain; larger artifacts should be referenced, not embedded.
 RUNTIME_EVENT_PAYLOAD_MAX_BYTES = 64 * 1024  # 64 KB
 
 

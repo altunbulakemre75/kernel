@@ -343,7 +343,8 @@ async def run_graph(
         workflow.add_edge("finalize", END)
         graph = workflow.compile()
         final_state = await graph.ainvoke(state)
-        return final_state.decision   # type: ignore
+        # StateGraph returns the final channel values as a dict, not a GraphState.
+        return final_state["decision"]
 
     except ImportError:
         # Fallback — pure sequential

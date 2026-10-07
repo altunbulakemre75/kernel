@@ -81,8 +81,13 @@ content. See [EU AI Act compliance](compliance/eu_ai_act.md).
 Plug kernel into Claude Desktop in ~30 seconds and ask questions like
 *"what did my autonomous system do in the last hour?"*:
 
+kernel is not published on PyPI yet (the `kernel` package there is an
+unrelated project), so install from source:
+
 ```bash
-pip install kernel[mcp]
+git clone https://github.com/altunbulakemre75/kernel.git
+cd kernel
+pip install -e ".[mcp]"
 ```
 
 Then add to your Claude Desktop config:

@@ -3,7 +3,7 @@ try:
 except ImportError as exc:
     raise ImportError(
         "kernel.mcp requires the 'mcp' extra.\n"
-        "Install with: pip install kernel[mcp]"
+        "Install with (from the kernel repo root): pip install -e \".[mcp]\""
     ) from exc
 
 from kernel.mcp.errors import KernelMCPError
