@@ -30,9 +30,11 @@ Pre-1.0. Core engine and audit chain are battle-tested in a private
 deployment (separate codebase). This repository is the generalized,
 domain-neutral open-core extraction.
 
-Current focus (v0.3.0): a production-grade audit path — fail-closed
-recording, verbatim chain storage, signing-key IDs, and external
-anchoring of the chain head.
+v0.3.0 (2026-10-07) made the audit path production-grade: every decision
+from the live pipeline is recorded in the verifiable chain or not returned
+at all, several processes can append safely, every entry names its signing
+key, and the chain head can be anchored with external RFC 3161 timestamps.
+See [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Quick start
 
@@ -195,8 +197,8 @@ including explicit non-defenses and what this means for compliance claims.
 - [ ] ROS2 action sink with feedback loop (planned)
 - [x] MCP server interface (`kyvern/mcp/`, `kyvern-mcp`)
 - [x] Upstream evidence events in the audit chain (`RuntimeEvent`)
-- [ ] v0.3.0: fail-closed audit path, verbatim chain storage, key IDs,
-      external chain-head anchoring
+- [x] v0.3.0: fail-closed audit path, verbatim chain storage, key IDs,
+      external chain-head anchoring (RFC 3161)
 - [ ] IMM filter as default in TrackManager
 - [ ] OpenAI provider in LLM chain
 - [ ] Internationalization of in-code documentation (Turkish → English)

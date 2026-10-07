@@ -221,3 +221,13 @@ def test_report_accepts_several_pubkeys(workspace):
     )
     assert res.returncode == 0, res.stderr
     assert "[chain: VALID]" in res.stdout
+
+
+def test_report_version_matches_the_package_version():
+    import re
+
+    from cli.kyvern_report import VERSION
+
+    pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    declared = re.search(r'^version\s*=\s*"([^"]+)"', pyproject, re.MULTILINE).group(1)
+    assert VERSION == declared
