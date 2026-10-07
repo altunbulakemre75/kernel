@@ -19,15 +19,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `PayloadTooLargeError` (64KB RuntimeEvent payload limit — asymmetric
   protection vs Decision, since upstream sources are less controlled)
 - `verify_runtime_event()` thin alias over `verify_decision()`
+- Startup check that stops with a clear error when only the pre-rename
+  `~/.kernel` directory exists, instead of silently generating a new
+  signing key
 
 ### Changed
+- **Renamed the project from `kernel` to Kyvern** (the PyPI name `kernel`
+  belongs to an unrelated package). Breaking for source checkouts:
+  - package and import name `kyvern` (was `kernel`)
+  - commands `kyvern-verify`, `kyvern-report`, `kyvern-mcp`
+  - environment variables `KYVERN_*` (was `KERNEL_*`) and metrics `kyvern_*`
+  - per-user directory `~/.kyvern` (was `~/.kernel`); run
+    `mv ~/.kernel ~/.kyvern` to keep your signing key
+  - MCP URIs `kyvern://...`, NATS subjects `kyvern.*`, ROS2 topic
+    `/kyvern/decisions`
 - MCP `EventSummary` (`query_events`) and `SearchHit` (`search_events`)
   output: `action` is now nullable and, like `threat_level`, is `null` for
   RuntimeEvent records; new fields `record_type`, `event_type`, `source`
-- MCP `get_stats` and `kernel://stats/today`: new `by_record_type` and
+- MCP `get_stats` and `kyvern://stats/today`: new `by_record_type` and
   `by_event_type` fields; `action_distribution` and `threat_distribution`
   now count Decision records only
-- `kernel://audit/recent`: entries now include `record_type`, `event_type`
+- `kyvern://audit/recent`: entries now include `record_type`, `event_type`
   and `source` (same shape as `query_events`); `action` is `null` instead
   of `""` for RuntimeEvent records
 
@@ -57,6 +69,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial open-core extraction.
 
-[Unreleased]: https://github.com/altunbulakemre75/kernel/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/altunbulakemre75/kernel/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/altunbulakemre75/kernel/releases/tag/v0.1.0
+[Unreleased]: https://github.com/altunbulakemre75/kyvern/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/altunbulakemre75/kyvern/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/altunbulakemre75/kyvern/releases/tag/v0.1.0

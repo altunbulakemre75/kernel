@@ -1,6 +1,6 @@
 # Free 4-Week Pilot Program
 
-kernel is offering free 4-week deployment pilots for selected partners
+Kyvern is offering free 4-week deployment pilots for selected partners
 in autonomous robotics, AGV/AMR, and defense AI. The goal is to validate
 the audit chain and EU AI Act compliance reporting in production scenarios.
 
@@ -11,7 +11,7 @@ the audit chain and EU AI Act compliance reporting in production scenarios.
 - Permission to publish a redacted case study at the end
 
 ## What we bring
-- kernel integration tailored to your decision pipeline
+- Kyvern integration tailored to your decision pipeline
 - Ed25519-signed audit chain capturing every decision
 - Custom EU AI Act Article 12/14 compliance PDF report
 - MCP server for natural-language audit queries from Claude Desktop

@@ -1,17 +1,16 @@
-# kernel-mcp — Read-Only Audit Query Server (MCP)
+# kyvern-mcp — Read-Only Audit Query Server (MCP)
 
-`kernel-mcp` is a Model Context Protocol server that exposes the kernel
+`kyvern-mcp` is a Model Context Protocol server that exposes the Kyvern
 decision-audit chain to Claude Desktop (and any MCP-compatible client) over
 stdio. Read-only by construction — no tool mutates audit or policy state.
 
 ## 30-Second Setup (Claude Desktop)
 
-1. **Install from source with the `mcp` extra** (kernel is not on PyPI yet;
-   the `kernel` package there is an unrelated project):
+1. **Install from source with the `mcp` extra** (Kyvern is not on PyPI yet):
 
    ```bash
-   git clone https://github.com/altunbulakemre75/kernel.git
-   cd kernel
+   git clone https://github.com/altunbulakemre75/kyvern.git
+   cd kyvern
    pip install -e ".[mcp]"
    ```
 
@@ -19,7 +18,7 @@ stdio. Read-only by construction — no tool mutates audit or policy state.
 
    ```bash
    python scripts/generate_demo_chain.py
-   # → /tmp/kernel-demo/chain.jsonl + signing.pub
+   # → /tmp/kyvern-demo/chain.jsonl + signing.pub
    ```
 
 3. **Edit your Claude Desktop config** (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS;
@@ -28,11 +27,11 @@ stdio. Read-only by construction — no tool mutates audit or policy state.
    ```json
    {
      "mcpServers": {
-       "kernel": {
-         "command": "kernel-mcp",
+       "kyvern": {
+         "command": "kyvern-mcp",
          "args": [
-           "--chain-file", "/tmp/kernel-demo/chain.jsonl",
-           "--pubkey", "/tmp/kernel-demo/signing.pub"
+           "--chain-file", "/tmp/kyvern-demo/chain.jsonl",
+           "--pubkey", "/tmp/kyvern-demo/signing.pub"
          ]
        }
      }
@@ -59,10 +58,10 @@ Example invocation (via Claude Desktop):
 
 | URI | Payload |
 |---|---|
-| `kernel://audit/recent` | Last 100 events. |
-| `kernel://stats/today` | Stats anchored to today's local-day boundaries on the server host. |
-| `kernel://chain/status` | Integrity result + chain length. |
-| `kernel://policy/active` | Metadata only — `version_id`, `version_short`, `path`, `loaded_at`. Body is not exposed. |
+| `kyvern://audit/recent` | Last 100 events. |
+| `kyvern://stats/today` | Stats anchored to today's local-day boundaries on the server host. |
+| `kyvern://chain/status` | Integrity result + chain length. |
+| `kyvern://policy/active` | Metadata only — `version_id`, `version_short`, `path`, `loaded_at`. Body is not exposed. |
 
 ## Threat Model
 
@@ -75,7 +74,7 @@ Example invocation (via Claude Desktop):
 
 - **v1 (this release):** stdio transport, 5 read-only tools, 4 resources.
 - **Phase 2:** SSE transport for remote MCP clients.
-- **Phase 3:** `kernel-mcp-admin` for write operations (rotate keys, archive chain segments) — separate binary, separate auth model.
+- **Phase 3:** `kyvern-mcp-admin` for write operations (rotate keys, archive chain segments) — separate binary, separate auth model.
 
 ## Troubleshooting
 
@@ -83,4 +82,4 @@ Example invocation (via Claude Desktop):
 |---|---|
 | `chain file not found at <path>` | Wrong `--chain-file` path, or chain not generated yet. |
 | `public key not found ...` | Pubkey path missing; pass `--pubkey` or `--no-verify-on-query`. |
-| `ImportError: kernel.mcp requires the 'mcp' extra` | From the kernel repo root, run `pip install -e ".[mcp]"`. |
+| `ImportError: kyvern.mcp requires the 'mcp' extra` | From the Kyvern repo root, run `pip install -e ".[mcp]"`. |

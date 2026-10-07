@@ -1,7 +1,7 @@
-site_name: kernel
-site_url: https://altunbulakemre75.github.io/kernel
-repo_url: https://github.com/altunbulakemre75/kernel
-repo_name: altunbulakemre75/kernel
+site_name: Kyvern
+site_url: https://altunbulakemre75.github.io/kyvern
+repo_url: https://github.com/altunbulakemre75/kyvern
+repo_name: altunbulakemre75/kyvern
 
 theme:
   name: material

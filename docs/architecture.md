@@ -1,4 +1,4 @@
-# kernel — Architecture
+# Kyvern — Architecture
 
 > Last updated: 2026-05-14 · Status: pre-1.0
 
@@ -6,7 +6,7 @@
 
 ## 1. Overview
 
-kernel is a decision-provenance layer that sits between autonomous/AI
+Kyvern is a decision-provenance layer that sits between autonomous/AI
 systems (sensors, perception, planners) and downstream actuators (robots,
 vehicles, effectors). It does not replace the autonomy stack — it wraps
 the decision boundary so that every consequential action is traceable to a
@@ -122,7 +122,7 @@ The system processes data through a linear pipeline:
 
 3. **Decision engine** — Each confirmed track is evaluated by the
    rule engine (`assess_threat` → `evaluate_roe`). If the LLM advisor
-   is enabled (`KERNEL_DECISION_LLM_ENABLED=true`), the track is
+   is enabled (`KYVERN_DECISION_LLM_ENABLED=true`), the track is
    independently assessed by the LLM via `query_llm`. The rule engine
    and LLM outputs are reconciled: the LLM can escalate (LOG → ALERT
    → HANDOFF) but **never** to ENGAGE, and it cannot downgrade.
@@ -135,7 +135,7 @@ The system processes data through a linear pipeline:
 5. **Audit chain** — The finalized `Decision` (including raw LLM
    response, guardrail trace, rule reference, and full reasoning) is
    cryptographically signed and persisted. Currently: PostgreSQL via
-   `asyncpg` in the `finalize` node when `KERNEL_DB_DSN` is set.
+   `asyncpg` in the `finalize` node when `KYVERN_DB_DSN` is set.
 
 6. **Action** — The `Decision` is published for downstream consumption.
    For ENGAGE actions, `requires_operator_approval` is hardcoded to
@@ -265,10 +265,10 @@ reconciliation and can only bring it back down.
   as a sink today.
 
 ### Audit Query Interface (implemented)
-- **MCP (Model Context Protocol)** — `kernel-mcp` (`kernel/mcp/`) is a
+- **MCP (Model Context Protocol)** — `kyvern-mcp` (`kyvern/mcp/`) is a
   read-only stdio MCP server that lets MCP-compatible AI agents query the
   JSONL audit chain: 5 tools (`query_events`, `get_event`, `get_stats`,
-  `verify_chain`, `search_events`) and 4 `kernel://` resources. It covers
+  `verify_chain`, `search_events`) and 4 `kyvern://` resources. It covers
   both Decisions and upstream RuntimeEvents — see §8.
 
 ### Observability (implemented)
@@ -287,7 +287,7 @@ reconciliation and can only bring it back down.
 **external systems** (sensor monitors, guard middleware, external policy
 adapters) into the audit chain. How it differs from a `Decision`:
 
-- A **Decision** comes out of kernel's own decision graph ("I did
+- A **Decision** comes out of Kyvern's own decision graph ("I did
   this") — controlled.
 - A **RuntimeEvent** comes from an external source ("I observed
   this") — uncontrolled.
@@ -314,7 +314,7 @@ record types — there are no separate counters.
 
 **Asymmetric protection:** Because a RuntimeEvent comes from an external
 system, its `payload` is capped at 64 KB (`PayloadTooLargeError`).
-Decisions have no such limit, since they are produced by kernel's own
+Decisions have no such limit, since they are produced by Kyvern's own
 controlled policy engine.
 
 **API:**
@@ -341,7 +341,7 @@ filter Decisions.
 ## Appendix: Directory Map
 
 ```
-kernel/
+kyvern/
 ├── config/
 │   └── policies/
 │       └── default.yaml          # Decision policy rules (YAML)

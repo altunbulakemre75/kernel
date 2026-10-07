@@ -3,7 +3,7 @@
 ## What and why
 
 Simon Willison's Dual-LLM Sandwich isolates untrusted content from the
-privileged execution context. kernel extends the pattern with mandatory
+privileged execution context. Kyvern extends the pattern with mandatory
 Ed25519 signing of every step.
 
 **Threat model priority:** prompt injection > tool misuse > data exfiltration.
@@ -30,7 +30,7 @@ Untrusted input → ReferenceStore ($INPUT_1)
 |---|---|---|
 | Single LLM with tools | HIGH — injection in user input can hijack tool calls | HIGH |
 | Dual-LLM Sandwich | LOW — P-LLM never sees raw content | LOW — tool args validated |
-| kernel Sandwich | LOW | LOW + every step audited + Ed25519 signed |
+| Kyvern Sandwich | LOW | LOW + every step audited + Ed25519 signed |
 
 ## Key invariants
 
@@ -43,7 +43,7 @@ Untrusted input → ReferenceStore ($INPUT_1)
 
 ```python
 from pydantic import BaseModel
-from kernel.sandwich import Sandwich, MockLLMProvider, InMemoryAuditStore
+from kyvern.sandwich import Sandwich, MockLLMProvider, InMemoryAuditStore
 
 class EmailSummary(BaseModel):
     subject: str

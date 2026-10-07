@@ -2,10 +2,10 @@
 
 ## Why this bridge exists
 
-kernel produces cryptographically signed `Decision` objects tied to a
+Kyvern produces cryptographically signed `Decision` objects tied to a
 tamper-evident hash chain. This bridge publishes each Decision to a
 ROS2 topic so any ROS2 node — controller, logger, HMI — can consume
-decisions natively without coupling to the kernel Python API.
+decisions natively without coupling to the Kyvern Python API.
 
 ## Quick start
 
@@ -14,9 +14,9 @@ decisions natively without coupling to the kernel Python API.
 **Publish decisions:**
 
 ```python
-from services.integrations.ros2_bridge import KernelDecisionPublisher
+from services.integrations.ros2_bridge import KyvernDecisionPublisher
 
-pub = KernelDecisionPublisher(topic="/kernel/decisions")
+pub = KyvernDecisionPublisher(topic="/kyvern/decisions")
 pub.start()
 pub.publish(signed_decision)   # signed_decision is a dict from sign_decision()
 pub.stop()
@@ -25,9 +25,9 @@ pub.stop()
 **Subscribe and verify:**
 
 ```python
-from services.integrations.ros2_subscriber_example import KernelDecisionVerifier
+from services.integrations.ros2_subscriber_example import KyvernDecisionVerifier
 
-verifier = KernelDecisionVerifier(public_key_path="/tmp/kernel-demo/signing.pub")
+verifier = KyvernDecisionVerifier(public_key_path="/tmp/kyvern-demo/signing.pub")
 verifier.start()   # blocks; Ctrl-C to stop
 ```
 
@@ -35,7 +35,7 @@ Or run the subscriber standalone:
 
 ```bash
 python -m services.integrations.ros2_subscriber_example \
-    --pubkey /tmp/kernel-demo/signing.pub
+    --pubkey /tmp/kyvern-demo/signing.pub
 ```
 
 ## Message format
@@ -58,11 +58,11 @@ Key fields:
 | `signature` | string | Base64 Ed25519 signature |
 | `timestamp_iso` | string | ISO 8601 UTC timestamp |
 
-**Why not a custom message type?** A custom `kernel_msgs/Decision.msg`
-would require every subscriber to build and source the `kernel_msgs`
+**Why not a custom message type?** A custom `kyvern_msgs/Decision.msg`
+would require every subscriber to build and source the `kyvern_msgs`
 package. `std_msgs/String` with JSON means a Python, C++, or Rust
 subscriber can parse the payload with a single `json.loads` call,
-with no build-time kernel dependency.
+with no build-time Kyvern dependency.
 
 ## QoS recommendations
 
@@ -72,7 +72,7 @@ with no build-time kernel dependency.
 | High-frequency telemetry / allow decisions | `qos_reliability="best_effort"` |
 
 ```python
-pub = KernelDecisionPublisher(qos_reliability="best_effort")
+pub = KyvernDecisionPublisher(qos_reliability="best_effort")
 ```
 
 ## End-to-end test (WSL + ROS2 Humble)
@@ -88,7 +88,7 @@ python scripts/generate_demo_chain.py
 ```bash
 source /opt/ros/humble/setup.bash
 python -m services.integrations.ros2_subscriber_example \
-    --pubkey /tmp/kernel-demo/signing.pub
+    --pubkey /tmp/kyvern-demo/signing.pub
 ```
 
 **Terminal 2 — publish one decision from the demo chain:**
@@ -97,10 +97,10 @@ python -m services.integrations.ros2_subscriber_example \
 source /opt/ros/humble/setup.bash
 python -c "
 import json
-from services.integrations.ros2_bridge import KernelDecisionPublisher
+from services.integrations.ros2_bridge import KyvernDecisionPublisher
 
-chain = [json.loads(l) for l in open('/tmp/kernel-demo/chain.jsonl')]
-pub = KernelDecisionPublisher()
+chain = [json.loads(l) for l in open('/tmp/kyvern-demo/chain.jsonl')]
+pub = KyvernDecisionPublisher()
 pub.start()
 pub.publish(chain[0])
 pub.stop()
