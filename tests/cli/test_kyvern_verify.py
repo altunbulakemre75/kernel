@@ -82,8 +82,8 @@ rules:
 
 
 def run_cli(*args):
-    cmd = [sys.executable, "-m", "cli.kernel_verify"] + list(args)
-    # Put the project root in PYTHONPATH to ensure cli.kernel_verify is reachable
+    cmd = [sys.executable, "-m", "cli.kyvern_verify"] + list(args)
+    # Put the project root in PYTHONPATH to ensure cli.kyvern_verify is reachable
     env = os.environ.copy()
     if "PYTHONPATH" in env:
         env["PYTHONPATH"] = f"{Path(__file__).parent.parent.parent}:{env['PYTHONPATH']}"

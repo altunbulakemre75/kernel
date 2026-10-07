@@ -5,7 +5,7 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from services.decision.audit_chain import sign_decision
-from services.integrations.ros2_bridge import KernelDecisionPublisher, decision_to_ros2_json
+from services.integrations.ros2_bridge import KyvernDecisionPublisher, decision_to_ros2_json
 
 
 def _signed(policy_version_id: str = "abc123"):
@@ -55,14 +55,14 @@ def test_serialization_handles_none_values():
 
 
 def test_publisher_initialization_does_not_require_rclpy():
-    pub = KernelDecisionPublisher()
-    assert pub.node_name == "kernel_decision_publisher"
-    assert pub.topic == "/kernel/decisions"
+    pub = KyvernDecisionPublisher()
+    assert pub.node_name == "kyvern_decision_publisher"
+    assert pub.topic == "/kyvern/decisions"
     assert pub.qos_reliability == "reliable"
 
 
 def test_publisher_start_stop():
     pytest.importorskip("rclpy")
-    pub = KernelDecisionPublisher(node_name="test_pub")
+    pub = KyvernDecisionPublisher(node_name="test_pub")
     pub.start()
     pub.stop()

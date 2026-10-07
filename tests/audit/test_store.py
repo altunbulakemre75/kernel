@@ -2,7 +2,7 @@ import os
 import time
 from datetime import datetime, timedelta, timezone
 
-from kernel.audit.store import AuditChainStore
+from kyvern.audit.store import AuditChainStore
 
 
 def test_store_loads_jsonl(sample_chain_file):

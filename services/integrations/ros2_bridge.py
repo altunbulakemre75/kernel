@@ -1,9 +1,9 @@
-"""ROS2 bridge for kernel Decision objects.
+"""ROS2 bridge for Kyvern Decision objects.
 
 Publishes cryptographically signed Decision dicts to a std_msgs/String
 topic as canonical JSON. Using String-with-JSON rather than a custom
 message type means any ROS2 node in any language can subscribe and parse
-without depending on a custom kernel_msgs package.
+without depending on a custom kyvern_msgs package.
 
 rclpy is imported lazily (inside methods) so this module is importable
 on non-ROS hosts (Windows, CI without ROS2).
@@ -16,11 +16,11 @@ def decision_to_ros2_json(decision: dict[str, Any]) -> str:
     return json.dumps(decision, sort_keys=True, separators=(",", ":"))
 
 
-class KernelDecisionPublisher:
+class KyvernDecisionPublisher:
     def __init__(
         self,
-        node_name: str = "kernel_decision_publisher",
-        topic: str = "/kernel/decisions",
+        node_name: str = "kyvern_decision_publisher",
+        topic: str = "/kyvern/decisions",
         qos_reliability: str = "reliable",
     ) -> None:
         self.node_name = node_name

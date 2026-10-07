@@ -1,4 +1,4 @@
-"""AuditChainStore — JSONL-backed read-only store for kernel decision audit chains."""
+"""AuditChainStore — JSONL-backed read-only store for Kyvern decision audit chains."""
 from __future__ import annotations
 
 import json
@@ -55,8 +55,8 @@ class AuditChainStore:
 
     def load(self) -> None:
         if not self._chain_file.exists():
-            from kernel.mcp.errors import KernelMCPError
-            raise KernelMCPError(f"chain file not found at {self._chain_file}")
+            from kyvern.mcp.errors import KyvernMCPError
+            raise KyvernMCPError(f"chain file not found at {self._chain_file}")
         self._events = [
             json.loads(line)
             for line in self._chain_file.read_text(encoding="utf-8").splitlines()
@@ -73,8 +73,8 @@ class AuditChainStore:
         try:
             current_mtime = self._chain_file.stat().st_mtime
         except FileNotFoundError:
-            from kernel.mcp.errors import KernelMCPError
-            raise KernelMCPError(f"chain file not found at {self._chain_file}") from None
+            from kyvern.mcp.errors import KyvernMCPError
+            raise KyvernMCPError(f"chain file not found at {self._chain_file}") from None
         if self._mtime is None or current_mtime != self._mtime:
             self.load()
 

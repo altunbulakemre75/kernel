@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from kernel.mcp.errors import KernelMCPError
-from kernel.mcp.server import build_app, parse_args
+from kyvern.mcp.errors import KyvernMCPError
+from kyvern.mcp.server import build_app, parse_args
 
 
 def test_parse_args_defaults(monkeypatch, tmp_path):
@@ -41,10 +41,10 @@ def test_build_app_starts(sample_chain_file, signing_keypair, tmp_path):
     # Resources registered
     resources = set(app._resource_manager._resources.keys())
     for expected in {
-        "kernel://audit/recent",
-        "kernel://stats/today",
-        "kernel://chain/status",
-        "kernel://policy/active",
+        "kyvern://audit/recent",
+        "kyvern://stats/today",
+        "kyvern://chain/status",
+        "kyvern://policy/active",
     }:
         assert expected in resources, f"missing resource: {expected}"
 
@@ -52,7 +52,7 @@ def test_build_app_starts(sample_chain_file, signing_keypair, tmp_path):
 def test_build_app_chain_file_missing(tmp_path, signing_keypair):
     _, _, pub_path = signing_keypair
     missing = tmp_path / "nope.jsonl"
-    with pytest.raises(KernelMCPError, match="chain file not found"):
+    with pytest.raises(KyvernMCPError, match="chain file not found"):
         build_app(
             chain_file=missing,
             pubkey=pub_path,
@@ -63,7 +63,7 @@ def test_build_app_chain_file_missing(tmp_path, signing_keypair):
 
 def test_build_app_pubkey_missing_with_verify(tmp_path, sample_chain_file):
     missing = tmp_path / "no-such-key.pub"
-    with pytest.raises(KernelMCPError, match="public key not found"):
+    with pytest.raises(KyvernMCPError, match="public key not found"):
         build_app(
             chain_file=sample_chain_file,
             pubkey=missing,

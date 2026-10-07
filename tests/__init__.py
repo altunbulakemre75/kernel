@@ -1,1 +1,1 @@
-"""kernel.tests — Test suite root."""
+"""kyvern.tests — Test suite root."""

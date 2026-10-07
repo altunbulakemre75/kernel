@@ -1,7 +1,7 @@
-"""One-shot demo data generator for kernel-verify.
+"""One-shot demo data generator for kyvern-verify.
 
 Not for commit. Writes a signed decision chain plus a tampered copy
-under <system tmp>/kernel-demo/ for manual CLI exercises.
+under <system tmp>/kyvern-demo/ for manual CLI exercises.
 """
 import json
 import sys
@@ -21,7 +21,7 @@ from services.decision.policy_loader import clear_policy_cache, load_policy  # n
 POLICY_PATH = "config/policies/default.yaml"
 # tempfile.gettempdir() matches bash's /tmp on this Windows host
 # (C:\Users\<user>\AppData\Local\Temp) and equals /tmp on POSIX.
-DEMO_DIR = Path(tempfile.gettempdir()) / "kernel-demo"
+DEMO_DIR = Path(tempfile.gettempdir()) / "kyvern-demo"
 
 
 def main() -> None:
@@ -88,13 +88,13 @@ def main() -> None:
     print(
         "Demo files created. Run these to see the verification:\n"
         "\n"
-        "python -m cli.kernel_verify /tmp/kernel-demo/chain.jsonl \\\n"
+        "python -m cli.kyvern_verify /tmp/kyvern-demo/chain.jsonl \\\n"
         "    --policy config/policies/default.yaml \\\n"
-        "    --pubkey /tmp/kernel-demo/signing.pub\n"
+        "    --pubkey /tmp/kyvern-demo/signing.pub\n"
         "\n"
-        "python -m cli.kernel_verify /tmp/kernel-demo/chain_tampered.jsonl \\\n"
+        "python -m cli.kyvern_verify /tmp/kyvern-demo/chain_tampered.jsonl \\\n"
         "    --policy config/policies/default.yaml \\\n"
-        "    --pubkey /tmp/kernel-demo/signing.pub"
+        "    --pubkey /tmp/kyvern-demo/signing.pub"
     )
 
 

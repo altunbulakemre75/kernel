@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from kernel.audit import AuditChainStore
+from kyvern.audit import AuditChainStore
 
 # Re-export tests/audit fixtures
 from tests.audit.conftest import (  # noqa: F401
@@ -23,8 +23,8 @@ _FROZEN_NOW = datetime(2026, 5, 18, 23, 59, 59, tzinfo=timezone.utc)
 
 @pytest.fixture(autouse=True)
 def freeze_tools_now():
-    """Patch datetime.now inside kernel.mcp.tools to return _FROZEN_NOW."""
-    with patch("kernel.mcp.tools.datetime") as mock_dt:
+    """Patch datetime.now inside kyvern.mcp.tools to return _FROZEN_NOW."""
+    with patch("kyvern.mcp.tools.datetime") as mock_dt:
         mock_dt.now.return_value = _FROZEN_NOW
         mock_dt.fromisoformat.side_effect = datetime.fromisoformat
         yield mock_dt

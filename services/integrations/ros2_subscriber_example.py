@@ -1,11 +1,11 @@
-"""Reference ROS2 subscriber for kernel Decision messages.
+"""Reference ROS2 subscriber for Kyvern Decision messages.
 
 Parses the JSON payload and verifies the Ed25519 signature on each
 received decision. Prints [VERIFIED] or [REJECTED] with chain_index.
 
 Run standalone:
     python -m services.integrations.ros2_subscriber_example \\
-        --pubkey /tmp/kernel-demo/signing.pub
+        --pubkey /tmp/kyvern-demo/signing.pub
 """
 import argparse
 import json
@@ -24,12 +24,12 @@ def _load_pubkey(path: str):
         return serialization.load_pem_public_key(f.read())
 
 
-class KernelDecisionVerifier:
+class KyvernDecisionVerifier:
     def __init__(
         self,
         public_key_path: str,
-        node_name: str = "kernel_decision_verifier",
-        topic: str = "/kernel/decisions",
+        node_name: str = "kyvern_decision_verifier",
+        topic: str = "/kyvern/decisions",
     ) -> None:
         self.public_key = _load_pubkey(public_key_path)
         self.node_name = node_name
@@ -73,13 +73,13 @@ class KernelDecisionVerifier:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Verify kernel decisions received on a ROS2 topic"
+        description="Verify Kyvern decisions received on a ROS2 topic"
     )
     parser.add_argument("--pubkey", required=True, help="Path to PEM public key")
-    parser.add_argument("--topic", default="/kernel/decisions", help="ROS2 topic name")
+    parser.add_argument("--topic", default="/kyvern/decisions", help="ROS2 topic name")
     args = parser.parse_args()
 
-    verifier = KernelDecisionVerifier(args.pubkey, topic=args.topic)
+    verifier = KyvernDecisionVerifier(args.pubkey, topic=args.topic)
     try:
         verifier.start()
     finally:

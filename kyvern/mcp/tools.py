@@ -1,4 +1,4 @@
-"""kernel.mcp.tools — register the 5 read-only tools on a FastMCP app."""
+"""kyvern.mcp.tools — register the 5 read-only tools on a FastMCP app."""
 # No `from __future__ import annotations` here: older FastMCP (e.g. mcp 1.12) calls
 # issubclass() on tool parameter annotations and crashes on string annotations.
 
@@ -8,8 +8,8 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
-from kernel.audit import AuditChainStore
-from kernel.mcp.errors import KernelMCPError
+from kyvern.audit import AuditChainStore
+from kyvern.mcp.errors import KyvernMCPError
 
 
 def _parse_iso(value: str | None, field: str) -> datetime | None:
@@ -18,7 +18,7 @@ def _parse_iso(value: str | None, field: str) -> datetime | None:
     try:
         return datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError as exc:
-        raise KernelMCPError(
+        raise KyvernMCPError(
             f"invalid time format for '{field}' — expected ISO 8601, "
             f"e.g. 2026-05-18T14:32:07Z"
         ) from exc
@@ -92,7 +92,7 @@ def register_tools(
         limit: int = 100,
     ) -> list[dict]:
         if not (1 <= limit <= 1000):
-            raise KernelMCPError("limit must be between 1 and 1000")
+            raise KyvernMCPError("limit must be between 1 and 1000")
         store.reload_if_stale()
         events = store.filter(
             start_time=_parse_iso(start_time, "start_time"),
@@ -132,7 +132,7 @@ def register_tools(
     @app.tool(description="Aggregated stats for a time window (1h/24h/7d/30d/all).")
     def get_stats(window: str = "24h") -> dict:
         if window not in {"1h", "24h", "7d", "30d", "all"}:
-            raise KernelMCPError(
+            raise KyvernMCPError(
                 "window must be one of: 1h, 24h, 7d, 30d, all"
             )
         store.reload_if_stale()
@@ -170,7 +170,7 @@ def register_tools(
     @app.tool(description="Case-insensitive substring search across all event fields (nested).")
     def search_events(query: str, limit: int = 50) -> list[dict]:
         if not (1 <= limit <= 500):
-            raise KernelMCPError("limit must be between 1 and 500")
+            raise KyvernMCPError("limit must be between 1 and 500")
         store.reload_if_stale()
         hits = store.search(query, limit=limit)
         return [

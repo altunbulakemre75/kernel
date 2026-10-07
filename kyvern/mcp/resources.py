@@ -1,4 +1,4 @@
-"""kernel.mcp.resources — register the 4 read-only resources on a FastMCP app."""
+"""kyvern.mcp.resources — register the 4 read-only resources on a FastMCP app."""
 from __future__ import annotations
 
 import json
@@ -7,8 +7,8 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
-from kernel.audit import AuditChainStore
-from kernel.mcp.tools import _distributions, _summary
+from kyvern.audit import AuditChainStore
+from kyvern.mcp.tools import _distributions, _summary
 
 
 def _today_bounds() -> tuple[datetime, datetime]:
@@ -25,7 +25,7 @@ def register_resources(
     policy_path: Path | None = None,
 ) -> None:
 
-    @app.resource("kernel://audit/recent", description="Last 100 audit events.")
+    @app.resource("kyvern://audit/recent", description="Last 100 audit events.")
     def recent() -> str:
         store.reload_if_stale()
         events = store.filter(limit=100)
@@ -36,7 +36,7 @@ def register_resources(
         return json.dumps(payload)
 
     @app.resource(
-        "kernel://stats/today",
+        "kyvern://stats/today",
         description=(
             "Today's stats — server-host local-day boundaries (00:00–23:59:59 local TZ). "
             "Not a rolling 24-hour window."
@@ -66,7 +66,7 @@ def register_resources(
         return json.dumps(payload)
 
     @app.resource(
-        "kernel://chain/status",
+        "kyvern://chain/status",
         description="Chain integrity verification result and chain length.",
     )
     def chain_status() -> str:
@@ -83,7 +83,7 @@ def register_resources(
         return json.dumps(payload)
 
     @app.resource(
-        "kernel://policy/active",
+        "kyvern://policy/active",
         description="Active policy metadata only — version_id, version_short, path, loaded_at. Body not exposed.",
     )
     def policy_active() -> str:

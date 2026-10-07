@@ -1,17 +1,17 @@
 """Fusion service — collects NATS sensor messages and merges them into tracks.
 
 Input subjects:
-  - kernel.raw.camera.*
-  - kernel.raw.rf.odid.*
-  - kernel.raw.rf.wifi.*
+  - kyvern.raw.camera.*
+  - kyvern.raw.rf.odid.*
+  - kyvern.raw.rf.wifi.*
 
 Output subject:
-  - kernel.tracks.active  (track pydantic JSON)
+  - kyvern.tracks.active  (track pydantic JSON)
 
 Prometheus:
-  - kernel_fusion_measurements_total{sensor_type}
-  - kernel_fusion_active_tracks
-  - kernel_fusion_tick_ms
+  - kyvern_fusion_measurements_total{sensor_type}
+  - kyvern_fusion_active_tracks
+  - kyvern_fusion_tick_ms
 """
 from __future__ import annotations
 
@@ -39,12 +39,12 @@ log = logging.getLogger(__name__)
 DEFAULT_REF = (39.9334, 32.8597)
 
 _meas_total = Counter(
-    "kernel_fusion_measurements_total",
+    "kyvern_fusion_measurements_total",
     "Number of measurements entering fusion",
     ["sensor_type"],
 )
-_active_gauge = Gauge("kernel_fusion_active_tracks", "Active track count")
-_tick_ms = Histogram("kernel_fusion_tick_ms", "Tick duration (ms)", buckets=[1, 5, 10, 25, 50, 100, 250])
+_active_gauge = Gauge("kyvern_fusion_active_tracks", "Active track count")
+_tick_ms = Histogram("kyvern_fusion_tick_ms", "Tick duration (ms)", buckets=[1, 5, 10, 25, 50, 100, 250])
 
 
 def latlon_to_enu(lat: float, lon: float, ref_lat: float, ref_lon: float) -> tuple[float, float]:
@@ -240,7 +240,7 @@ class FusionService:
                     payload["longitude"] = lon
                     payload["altitude"] = track.z
                     await self._nc.publish(
-                        "kernel.tracks.active", json.dumps(payload).encode()
+                        "kyvern.tracks.active", json.dumps(payload).encode()
                     )
 
             dt_ms = (time.monotonic() - t0) * 1000.0
@@ -266,9 +266,9 @@ class FusionService:
             await self._on_sim_cop(msg.data)
 
         self._subs = [
-            await self._nc.subscribe("kernel.raw.rf.odid.>", cb=odid_cb),
-            await self._nc.subscribe("kernel.raw.camera.>", cb=camera_cb),
-            await self._nc.subscribe("kernel.raw.sim.cop", cb=sim_cop_cb),
+            await self._nc.subscribe("kyvern.raw.rf.odid.>", cb=odid_cb),
+            await self._nc.subscribe("kyvern.raw.camera.>", cb=camera_cb),
+            await self._nc.subscribe("kyvern.raw.sim.cop", cb=sim_cop_cb),
         ]
         log.info("Fusion service listening on NATS %s", self.nats_url)
 
@@ -294,7 +294,7 @@ class FusionService:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Kernel Fusion Service")
+    parser = argparse.ArgumentParser(description="Kyvern Fusion Service")
     parser.add_argument("--nats", default="nats://localhost:6222")
     parser.add_argument("--ref-lat", type=float, default=DEFAULT_REF[0])
     parser.add_argument("--ref-lon", type=float, default=DEFAULT_REF[1])

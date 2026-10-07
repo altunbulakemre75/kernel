@@ -1,4 +1,4 @@
-"""Pydantic input/output models for kernel-mcp tools and resources."""
+"""Pydantic input/output models for kyvern-mcp tools and resources."""
 from __future__ import annotations
 
 from typing import Any, Literal

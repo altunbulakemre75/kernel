@@ -3,11 +3,11 @@ from datetime import datetime, timezone
 
 from mcp.server.fastmcp import FastMCP
 
-from kernel.mcp.resources import register_resources
+from kyvern.mcp.resources import register_resources
 
 
 def _make_app(store, policy_path=None):
-    app = FastMCP("kernel-test")
+    app = FastMCP("kyvern-test")
     register_resources(app, store, policy_path=policy_path)
     return app
 
@@ -18,14 +18,14 @@ def _resource_fn(app, uri):
 
 def test_resource_recent_returns_event_list(store):
     app = _make_app(store)
-    payload = json.loads(_resource_fn(app, "kernel://audit/recent")())
+    payload = json.loads(_resource_fn(app, "kyvern://audit/recent")())
     assert isinstance(payload, list)
     assert payload[0]["id"] in {0, 1, 2, 3}
 
 
 def test_resource_today_has_stats_shape(store):
     app = _make_app(store)
-    payload = json.loads(_resource_fn(app, "kernel://stats/today")())
+    payload = json.loads(_resource_fn(app, "kyvern://stats/today")())
     assert "action_distribution" in payload
     assert "threat_distribution" in payload
     assert "chain_status" in payload
@@ -34,7 +34,7 @@ def test_resource_today_has_stats_shape(store):
 
 def test_resource_recent_record_type_aware(store_mixed):
     app = _make_app(store_mixed)
-    payload = json.loads(_resource_fn(app, "kernel://audit/recent")())
+    payload = json.loads(_resource_fn(app, "kyvern://audit/recent")())
     assert len(payload) == 4
 
     # Same shape as query_events summaries
@@ -64,10 +64,10 @@ def test_resource_today_record_type_aware(store_mixed, monkeypatch):
     day_start = datetime(2026, 5, 18, 0, 0, 0, tzinfo=timezone.utc)
     day_end = datetime(2026, 5, 18, 23, 59, 59, tzinfo=timezone.utc)
     monkeypatch.setattr(
-        "kernel.mcp.resources._today_bounds", lambda: (day_start, day_end)
+        "kyvern.mcp.resources._today_bounds", lambda: (day_start, day_end)
     )
     app = _make_app(store_mixed)
-    payload = json.loads(_resource_fn(app, "kernel://stats/today")())
+    payload = json.loads(_resource_fn(app, "kyvern://stats/today")())
     assert payload["action_distribution"] == {"allow": 1, "block": 1}
     assert payload["threat_distribution"] == {"low": 1, "high": 1}
     assert payload["by_record_type"] == {"decision": 2, "runtime_event": 2}
@@ -76,7 +76,7 @@ def test_resource_today_record_type_aware(store_mixed, monkeypatch):
 
 def test_resource_chain_status_integrity(store):
     app = _make_app(store)
-    payload = json.loads(_resource_fn(app, "kernel://chain/status")())
+    payload = json.loads(_resource_fn(app, "kyvern://chain/status")())
     assert payload["integrity"] == "OK"
     assert payload["chain_length"] == 4
     assert "chain_file" in payload
@@ -89,7 +89,7 @@ def test_resource_policy_active_metadata_only(store, tmp_path):
         encoding="utf-8",
     )
     app = _make_app(store, policy_path=policy)
-    payload = json.loads(_resource_fn(app, "kernel://policy/active")())
+    payload = json.loads(_resource_fn(app, "kyvern://policy/active")())
     assert "version_id" in payload
     assert "version_short" in payload
     assert "loaded_at" in payload
@@ -101,6 +101,6 @@ def test_resource_policy_active_metadata_only(store, tmp_path):
 
 def test_resource_policy_active_missing_file(store, tmp_path):
     app = _make_app(store, policy_path=tmp_path / "does-not-exist.yaml")
-    payload = json.loads(_resource_fn(app, "kernel://policy/active")())
+    payload = json.loads(_resource_fn(app, "kyvern://policy/active")())
     assert "error" in payload
     assert "not found" in payload["error"]
