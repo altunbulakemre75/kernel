@@ -18,6 +18,7 @@ dynamic = ["dependencies"]
 kyvern-verify = "cli.kyvern_verify:main"
 kyvern-report = "cli.kyvern_report:main"
 kyvern-mcp = "kyvern.mcp.server:run"
+kyvern-anchor = "cli.kyvern_anchor:main"
 
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements.txt"] }
