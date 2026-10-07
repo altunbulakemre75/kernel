@@ -75,3 +75,10 @@ def test_guardrail_reasoning_separate_from_reasoning():
         # guardrail_reasoning populated, reasoning original kept
         assert decision.guardrail_reasoning
         assert "guardrails" not in decision.reasoning  # no longer appended to reasoning
+
+
+def test_decide_full_records_to_the_given_chain(tmp_path):
+    chain = tmp_path / "chain.jsonl"
+    decision = decide_full(_track(), load_roe(CONFIG_PATH), chain_path=chain)
+    assert decision.chain_index == 0
+    assert chain.read_text(encoding="utf-8").count("\n") == 1

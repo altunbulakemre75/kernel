@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timezone
+from pathlib import Path
 
 from services.decision.guardrails import FriendlyZone, apply_guardrails
 from services.decision.roe import evaluate_roe
@@ -83,11 +84,13 @@ def decide_full(
     heading_toward_zone: bool = False,
     friendly_zones: list[FriendlyZone] | None = None,
     policy_path: str | None = None,
+    chain_path: Path | str | None = None,
 ) -> Decision:
     """Sync wrapper over the full LangGraph 5-node production pipeline.
 
     Runs with ``asyncio.run()``; if you are inside an existing event loop,
-    call ``await llm_graph.run_graph(...)`` directly.
+    call ``await llm_graph.run_graph(...)`` directly. Raises AuditWriteError if
+    the decision cannot be recorded.
     """
     from services.decision.llm_graph import run_graph
 
@@ -97,4 +100,5 @@ def decide_full(
         inside_protected_zone=inside_protected_zone,
         heading_toward_zone=heading_toward_zone,
         policy_path=policy_path,
+        chain_path=chain_path,
     ))

@@ -1,6 +1,7 @@
 """LangGraph 5-node state machine tests (fallback path, LLM disabled)."""
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -62,3 +63,33 @@ async def test_graph_audit_trail_present():
     decision = await run_graph(_track(), rules)
     assert decision.timestamp_iso
     assert isinstance(decision.guardrails_triggered, list)
+
+
+@pytest.mark.asyncio
+async def test_run_graph_appends_each_decision_to_the_chain(tmp_path):
+    chain = tmp_path / "chain.jsonl"
+    rules = load_roe(CONFIG_PATH)
+    d1 = await run_graph(_track(), rules, chain_path=chain)
+    d2 = await run_graph(_track(track_id="t-2"), rules, chain_path=chain)
+    entries = [json.loads(line) for line in chain.read_text(encoding="utf-8").splitlines()]
+    assert [e["track_id"] for e in entries] == ["t-graph", "t-2"]
+    assert [e["chain_index"] for e in entries] == [0, 1]
+    assert d2.prev_hash == d1.payload_hash == entries[0]["payload_hash"]
+    assert d1.key_id == entries[0]["key_id"]
+
+
+@pytest.mark.asyncio
+async def test_run_graph_defaults_to_the_kyvern_home_chain(isolated_home):
+    await run_graph(_track(), load_roe(CONFIG_PATH))
+    chain = isolated_home / ".kyvern" / "chain.jsonl"
+    assert len(chain.read_text(encoding="utf-8").splitlines()) == 1
+
+
+@pytest.mark.asyncio
+async def test_run_graph_raises_when_the_decision_cannot_be_recorded(tmp_path):
+    from services.decision.chain_writer import AuditWriteError
+
+    chain = tmp_path / "chain.jsonl"
+    chain.mkdir()  # a directory where the chain file should be: appending fails
+    with pytest.raises(AuditWriteError):
+        await run_graph(_track(), load_roe(CONFIG_PATH), chain_path=chain)

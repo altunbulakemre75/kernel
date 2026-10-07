@@ -8,7 +8,7 @@ Nodes:
   2. retrieve_roe — pull context via policy RAG
   3. reason       — LLM action recommendation (context + policy)
   4. guardrail    — guardrails.apply_guardrails() downgrade
-  5. finalize     — create Decision + (optional) PostgreSQL checkpoint
+  5. finalize     — sign the Decision and append it to the audit chain (raises if it cannot)
 """
 from __future__ import annotations
 
@@ -16,8 +16,10 @@ import logging
 import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
+from services.decision.chain_writer import ChainWriter
 from services.decision.guardrails import FriendlyZone, apply_guardrails
 from services.decision.llm_client import LLMResponse, query_llm
 from services.decision.roe import evaluate_roe
@@ -52,6 +54,7 @@ class GraphState:
     decision: Decision | None = None
     policy_path: str | None = None
     loaded_policy: Any | None = None
+    chain_path: Path | None = None
 
 
 # ── Node 1: classify ──────────────────────────────────────────────
@@ -195,108 +198,24 @@ async def guardrail(state: GraphState) -> GraphState:
     return state
 
 
-# ── Node 5: finalize (checkpoint) ─────────────────────────────────
+# ── Node 5: finalize (audit chain) ────────────────────────────────
 
 async def finalize(state: GraphState) -> GraphState:
-    """PostgreSQL checkpoint — write the decision to the decisions table.
+    """Sign the decision and append it to the audit chain.
 
-    Silently skipped if no DB connection; the decision is still returned.
+    Raises AuditWriteError (from ChainWriter) if the decision cannot be recorded,
+    so run_graph() never returns a decision that is not in the chain.
     """
     if state.decision is None:
         return state
-
-    from services.decision.audit_chain import load_or_create_keypair, sign_decision
-
-    dsn = os.getenv("KYVERN_DB_DSN", os.getenv("NIZAM_DB_DSN"))
-    
-    prev_hash = None
-    chain_index = 0
-    conn = None
-
-    if dsn:
-        try:
-            import asyncpg
-            conn = await asyncpg.connect(dsn)
-            await conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS decisions (
-                    id SERIAL PRIMARY KEY,
-                    track_id TEXT NOT NULL,
-                    action TEXT NOT NULL,
-                    threat_level TEXT NOT NULL,
-                    confidence REAL NOT NULL,
-                    reasoning TEXT,
-                    source TEXT,
-                    roe_reference TEXT,
-                    requires_operator_approval BOOLEAN,
-                    timestamp_iso TIMESTAMPTZ NOT NULL,
-                    llm_provider TEXT,
-                    llm_model TEXT,
-                    llm_raw_response JSONB,
-                    guardrails_triggered TEXT[],
-                    signature TEXT,
-                    prev_hash TEXT,
-                    payload_hash TEXT,
-                    chain_index INTEGER,
-                    policy_version_id TEXT,
-                    policy_path TEXT
-                )
-                """
-            )
-            # Add columns if they don't exist yet (for smooth upgrade)
-            try:
-                await conn.execute("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS signature TEXT")
-                await conn.execute("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS prev_hash TEXT")
-                await conn.execute("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS payload_hash TEXT")
-                await conn.execute("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS chain_index INTEGER")
-                await conn.execute("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS policy_version_id TEXT")
-                await conn.execute("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS policy_path TEXT")
-            except Exception:
-                pass
-
-            row = await conn.fetchrow("SELECT payload_hash, chain_index FROM decisions ORDER BY id DESC LIMIT 1")
-            if row and row["payload_hash"]:
-                prev_hash = row["payload_hash"]
-                chain_index = (row["chain_index"] or 0) + 1
-        except Exception as exc:
-            log.warning("decision DB fetch failed: %s", exc)
 
     if state.loaded_policy:
         state.decision.policy_version_id = state.loaded_policy.version_id
         state.decision.policy_path = state.loaded_policy.path
 
-    state.decision.chain_index = chain_index
-    state.decision.prev_hash = prev_hash
-    
-    try:
-        signing_key = load_or_create_keypair()
-        signed_dict = sign_decision(state.decision.model_dump(), prev_hash, signing_key)
-        state.decision.signature = signed_dict["signature"]
-        state.decision.payload_hash = signed_dict["payload_hash"]
-    except Exception as exc:
-        log.warning("decision signing failed: %s", exc)
-
-    if conn:
-        try:
-            d = state.decision
-            await conn.execute(
-                """INSERT INTO decisions(track_id,action,threat_level,confidence,reasoning,
-                   source,roe_reference,requires_operator_approval,timestamp_iso,
-                   llm_provider,llm_model,llm_raw_response,guardrails_triggered,
-                   signature,prev_hash,payload_hash,chain_index,policy_version_id,policy_path)
-                   VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10,$11,$12::jsonb,$13,$14,$15,$16,$17,$18,$19)""",
-                d.track_id, d.action.value, d.threat_level.value, d.confidence, d.reasoning,
-                d.source.value, d.roe_reference, d.requires_operator_approval, d.timestamp_iso,
-                d.llm_provider, d.llm_model,
-                __import__("json").dumps(d.llm_raw_response) if d.llm_raw_response else None,
-                d.guardrails_triggered,
-                d.signature, d.prev_hash, d.payload_hash, d.chain_index, d.policy_version_id, d.policy_path,
-            )
-        except Exception as exc:
-            log.warning("decision checkpoint insert failed: %s", exc)
-        finally:
-            await conn.close()
-
+    writer = ChainWriter.open(state.chain_path)
+    signed = writer.append(state.decision.model_dump(mode="json"))
+    state.decision = Decision(**signed)
     return state
 
 
@@ -309,8 +228,14 @@ async def run_graph(
     inside_protected_zone: bool = False,
     heading_toward_zone: bool = False,
     policy_path: str | None = None,
+    chain_path: Path | str | None = None,
 ) -> Decision:
-    """Run the 5-node flow sequentially. Uses StateGraph if LangGraph is installed."""
+    """Run the 5-node flow sequentially. Uses StateGraph if LangGraph is installed.
+
+    The decision is appended to the audit chain at `chain_path` (default:
+    $KYVERN_CHAIN_PATH, else ~/.kyvern/chain.jsonl). Raises AuditWriteError if it
+    cannot be recorded.
+    """
     
     loaded_policy = None
     if policy_path:
@@ -324,6 +249,7 @@ async def run_graph(
         heading_toward_zone=heading_toward_zone,
         policy_path=policy_path,
         loaded_policy=loaded_policy,
+        chain_path=Path(chain_path) if chain_path is not None else None,
     )
 
     try:
