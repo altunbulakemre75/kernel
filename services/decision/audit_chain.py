@@ -248,42 +248,24 @@ def append_runtime_event(
     """Sign and append a RuntimeEvent to the JSONL audit chain.
 
     All chain fields on the input event (signature, prev_hash, payload_hash,
-    chain_index, policy_version_id) are overwritten by this function — caller
-    values are discarded. This is a security contract: caller cannot pre-set
-    chain_index or signature to compromise integrity.
+    chain_index, key_id, policy_version_id) are overwritten by this function —
+    caller values are discarded. This is a security contract: caller cannot
+    pre-set chain_index or signature to compromise integrity. Raises
+    AuditWriteError if the event cannot be appended.
 
     See spec: docs/superpowers/specs/2026-05-20-runtime-event-design.md §6.
     """
-    last = _read_last_entry(chain_path)
-    if last is None:
-        prev_hash: str | None = None
-        next_index = 0
-    else:
-        prev_hash = last.get("payload_hash")
-        next_index = int(last.get("chain_index", -1)) + 1
+    # Imported here: chain_writer imports this module.
+    from services.decision.chain_writer import ChainWriter
 
-    # Build the dict that will be signed. Pydantic validators have already run
-    # at construction time, so the event is structurally valid.
-    payload_dict: dict[str, Any] = event.model_dump()
-    payload_dict["chain_index"] = next_index
-    payload_dict["policy_version_id"] = policy_version_id
-    # Strip any caller-provided chain fields — sign_decision will refill them.
-    payload_dict.pop("signature", None)
-    payload_dict.pop("payload_hash", None)
-    payload_dict["prev_hash"] = prev_hash
-
-    signed_dict = sign_decision(
-        decision=payload_dict,
-        prev_hash=prev_hash,
-        signing_key=signing_key,
-    )
-
-    # Append signed line to chain file (single-writer assumption — no locking).
-    with open(chain_path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(signed_dict, separators=(",", ":")) + "\n")
-        f.flush()
-
-    return RuntimeEvent(**signed_dict)
+    # Pydantic validators have already run at construction time, so the event
+    # is structurally valid.
+    record: dict[str, Any] = event.model_dump()
+    record["policy_version_id"] = policy_version_id
+    # ChainWriter discards caller-supplied signature/payload_hash/key_id/prev_hash/
+    # chain_index, holds the chain lock, checks the tail and fsyncs.
+    signed = ChainWriter(Path(chain_path), signing_key).append(record)
+    return RuntimeEvent(**signed)
 
 
 def verify_runtime_event(event: dict[str, Any], public_key: ed25519.Ed25519PublicKey) -> bool:

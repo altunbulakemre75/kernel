@@ -404,3 +404,19 @@ def test_mcp_query_events_filters_by_event_type(
     types = {r["record_type"] for r in results}
     assert types == {"decision", "runtime_event"}
     assert len(results) == 4
+
+
+def test_append_runtime_event_uses_the_chain_writer(tmp_path: Path, signing_key, public_key):
+    from services.decision.audit_chain import append_runtime_event, key_id
+    from services.decision.chain_writer import AuditWriteError
+
+    chain_path = tmp_path / "chain.jsonl"
+    signed = append_runtime_event(
+        RuntimeEvent(**_valid_event_kwargs()), chain_path, signing_key, "p_test"
+    )
+    assert signed.key_id == key_id(public_key)
+
+    with open(chain_path, "ab") as f:
+        f.write(b"{torn")
+    with pytest.raises(AuditWriteError, match="corrupt"):
+        append_runtime_event(RuntimeEvent(**_valid_event_kwargs()), chain_path, signing_key, "p_test")
