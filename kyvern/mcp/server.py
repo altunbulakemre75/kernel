@@ -10,7 +10,7 @@ from kyvern.audit import AuditChainStore
 from kyvern.mcp.errors import KyvernMCPError
 from kyvern.mcp.resources import register_resources
 from kyvern.mcp.tools import register_tools
-from shared.paths import kyvern_home
+from shared.paths import default_chain_path, kyvern_home
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -21,12 +21,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--chain-file",
         dest="chain_file",
-        default=str(kyvern_home() / "chain.jsonl"),
+        default=str(default_chain_path()),
     )
     parser.add_argument(
         "--pubkey",
         dest="pubkey",
-        default=str(kyvern_home() / "keys" / "signing.pub"),
+        action="append",
+        default=None,
+        help="Ed25519 public key PEM; repeat for chains signed by several keys",
     )
     parser.add_argument(
         "--policy",
@@ -44,13 +46,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         dest="verify_on_query",
         action="store_false",
     )
-    return parser.parse_args(argv)
+    ns = parser.parse_args(argv)
+    if ns.pubkey is None:
+        ns.pubkey = [str(kyvern_home() / "keys" / "signing.pub")]
+    return ns
 
 
 def build_app(
     *,
     chain_file: Path | str,
-    pubkey: Path | str | None,
+    pubkey: Path | str | list[Path | str] | None,
     policy: Path | str | None,
     verify_on_query: bool,
 ) -> FastMCP:
@@ -58,17 +63,19 @@ def build_app(
     if not chain_file.exists():
         raise KyvernMCPError(f"chain file not found at {chain_file}")
 
-    pubkey_path = Path(pubkey) if pubkey else None
+    raw_paths = pubkey if isinstance(pubkey, (list, tuple)) else [pubkey]
+    pubkey_paths = [Path(p) for p in raw_paths if p]
     if verify_on_query:
-        if pubkey_path is None or not pubkey_path.exists():
+        missing = [p for p in pubkey_paths if not p.exists()]
+        if not pubkey_paths or missing:
             raise KyvernMCPError(
-                f"public key not found at {pubkey_path} — "
+                f"public key not found at {missing[0] if missing else None} — "
                 "pass --pubkey or use --no-verify-on-query"
             )
 
     store = AuditChainStore(
         chain_file=chain_file,
-        public_key_path=pubkey_path if verify_on_query else None,
+        public_key_paths=pubkey_paths if verify_on_query else None,
         verify_on_query=verify_on_query,
     )
     store.load()
