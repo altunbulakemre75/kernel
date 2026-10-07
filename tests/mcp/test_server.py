@@ -2,6 +2,8 @@ from pathlib import Path
 
 import pytest
 
+pytest.importorskip("mcp")  # the mcp extra
+
 from kyvern.mcp.errors import KyvernMCPError
 from kyvern.mcp.server import build_app, parse_args
 

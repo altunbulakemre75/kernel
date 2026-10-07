@@ -5,6 +5,8 @@ import sys
 
 import pytest
 
+pytest.importorskip("mcp")  # the mcp extra
+
 
 @pytest.mark.integration
 def test_integration_with_real_mcp_client(sample_chain_file, signing_keypair, tmp_path):
