@@ -1,6 +1,6 @@
 # kernel
 
-[![Build](https://img.shields.io/github/actions/workflow/status/altunbulakemre75/kernel/ci.yml?branch=main&label=build)](https://github.com/altunbulakemre75/kernel/actions) [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE) [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](#quick-start) [![Tests](https://img.shields.io/badge/tests-194%20passing-brightgreen)](#quick-start) [![Status](https://img.shields.io/badge/status-alpha-orange)](#status) [![EU AI Act](https://img.shields.io/badge/EU%20AI%20Act-Article%2012%20%7C%2014-blue)](#eu-ai-act-compliance-reports)
+[![Build](https://img.shields.io/github/actions/workflow/status/altunbulakemre75/kernel/ci.yml?branch=main&label=build)](https://github.com/altunbulakemre75/kernel/actions) [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE) [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](#quick-start) [![Tests](https://img.shields.io/badge/tests-215%20passing-brightgreen)](#quick-start) [![Status](https://img.shields.io/badge/status-alpha-orange)](#status) [![EU AI Act](https://img.shields.io/badge/EU%20AI%20Act-Article%2012%20%7C%2014-blue)](#eu-ai-act-compliance-reports)
 
 Decision provenance and accountability infrastructure for autonomous systems.
 
@@ -30,8 +30,9 @@ Pre-1.0. Core engine and audit chain are battle-tested in a private
 deployment (separate codebase). This repository is the generalized,
 domain-neutral open-core extraction.
 
-Active areas: ROS2 adapter, MCP server interface, EU AI Act Article 12
-compliance reporting.
+Current focus (v0.3.0): a production-grade audit path — fail-closed
+recording, verbatim chain storage, signing-key IDs, and external
+anchoring of the chain head.
 
 ## Quick start
 
@@ -88,8 +89,13 @@ content. See [`docs/compliance/eu_ai_act.md`](docs/compliance/eu_ai_act.md).
 Plug kernel into Claude Desktop in ~30 seconds and ask questions like
 *"what did my autonomous system do in the last hour?"*:
 
+kernel is not published on PyPI yet (the `kernel` package there is an
+unrelated project), so install from source:
+
 ```bash
-pip install kernel[mcp]
+git clone https://github.com/altunbulakemre75/kernel.git
+cd kernel
+pip install -e ".[mcp]"
 ```
 
 Then add to your Claude Desktop config:
@@ -109,6 +115,29 @@ Five read-only tools (`query_events`, `get_event`, `get_stats`,
 `verify_chain`, `search_events`) and four resources cover signed audit
 query, chain verification, and active-policy metadata. See
 [`docs/integrations/mcp.md`](docs/integrations/mcp.md).
+
+## Recording events from your existing stack
+
+You do not have to adopt kernel's decision engine to get a signed record.
+`RuntimeEvent` lets sensor monitors, guard middleware, or other upstream
+components append their own evidence to the same signed chain as kernel
+Decisions:
+
+```python
+from shared.schemas import RuntimeEvent
+from services.decision.audit_chain import append_runtime_event
+
+event = RuntimeEvent(
+    event_type="guardrail_downgrade",
+    source="kinematic_guard",
+    source_id="kg-main",
+    timestamp_iso="2026-05-20T12:00:00+00:00",
+    payload={"reason": "speed_exceeded"},
+)
+append_runtime_event(event, chain_path, signing_key, policy_version_id="p_v1")
+```
+
+See [`docs/architecture.md` §8](docs/architecture.md) for chain semantics.
 
 ## Integrations
 
@@ -140,6 +169,9 @@ including explicit non-defenses and what this means for compliance claims.
 - [x] ROS2 publisher (`services/integrations/ros2_bridge.py`)
 - [ ] ROS2 action sink with feedback loop (planned)
 - [x] MCP server interface (`kernel/mcp/`, `kernel-mcp`)
+- [x] Upstream evidence events in the audit chain (`RuntimeEvent`)
+- [ ] v0.3.0: fail-closed audit path, verbatim chain storage, key IDs,
+      external chain-head anchoring
 - [ ] IMM filter as default in TrackManager
 - [ ] OpenAI provider in LLM chain
 - [ ] Internationalization of in-code documentation (Turkish → English)

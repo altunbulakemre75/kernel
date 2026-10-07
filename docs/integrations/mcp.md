@@ -6,10 +6,13 @@ stdio. Read-only by construction — no tool mutates audit or policy state.
 
 ## 30-Second Setup (Claude Desktop)
 
-1. **Install the extra:**
+1. **Install from source with the `mcp` extra** (kernel is not on PyPI yet;
+   the `kernel` package there is an unrelated project):
 
    ```bash
-   pip install kernel[mcp]
+   git clone https://github.com/altunbulakemre75/kernel.git
+   cd kernel
+   pip install -e ".[mcp]"
    ```
 
 2. **Generate or point at a signed chain.** If you don't have one yet:
@@ -80,4 +83,4 @@ Example invocation (via Claude Desktop):
 |---|---|
 | `chain file not found at <path>` | Wrong `--chain-file` path, or chain not generated yet. |
 | `public key not found ...` | Pubkey path missing; pass `--pubkey` or `--no-verify-on-query`. |
-| `ImportError: kernel.mcp requires the 'mcp' extra` | Run `pip install kernel[mcp]`. |
+| `ImportError: kernel.mcp requires the 'mcp' extra` | From the kernel repo root, run `pip install -e ".[mcp]"`. |
