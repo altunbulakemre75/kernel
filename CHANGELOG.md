@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Dependencies are declared in `pyproject.toml`: a light core (cryptography,
+  pydantic, pyyaml, filelock, rfc3161-client, certifi, reportlab, httpx) plus
+  extras `fusion`, `llm`, `mcp`, `dev`, `docs`. `pydantic` is no longer pinned
+  to 2.9.2 and `numpy` is no longer capped below 2 (the cap made `pip install .`
+  fail on Python 3.13 without a C compiler). `requirements.txt` installs the
+  full development environment
+
+### Removed
+- Unused dependencies: fastapi, uvicorn, pydantic-settings, sqlalchemy,
+  alembic, PyJWT, passlib, python-multipart, python-dotenv, scikit-learn,
+  joblib, opentelemetry-sdk, opentelemetry-exporter-otlp-proto-grpc,
+  opentelemetry-instrumentation-fastapi
+- `shared/auth.py` (JWT helpers from the private deployment's web API; unused)
+
 ## [0.3.0] — 2026-10-07
 
 ### Added
