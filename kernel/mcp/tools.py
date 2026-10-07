@@ -1,5 +1,6 @@
 """kernel.mcp.tools — register the 5 read-only tools on a FastMCP app."""
-from __future__ import annotations
+# No `from __future__ import annotations` here: older FastMCP (e.g. mcp 1.12) calls
+# issubclass() on tool parameter annotations and crashes on string annotations.
 
 from collections import Counter
 from datetime import datetime, timedelta, timezone
