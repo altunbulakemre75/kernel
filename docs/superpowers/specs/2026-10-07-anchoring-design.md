@@ -20,9 +20,21 @@ An RFC 3161 timestamp is a signature by an independent TSA over a hash and a tim
 |---|---|
 | Where receipts live | A separate file next to the chain, `<chain stem>.anchors.jsonl` (for `chain.jsonl`: `chain.anchors.jsonl`). The chain format and every existing reader stay unchanged. Receipts are not signed by Kyvern; the TSA signature is what makes them evidence. |
 | When anchoring happens | A separate command, `kyvern-anchor`, run on a schedule (cron, Windows Task Scheduler, systemd timer). The decision path never waits on the network. |
-| Default TSA | DigiCert, `http://timestamp.digicert.com`. Free, operated by a public CA, and its root (DigiCert Trusted Root G4) is in the `certifi` bundle, so verification works without extra setup. Overridable with `--tsa-url` / `--tsa-root`. |
+| Default TSA | IdenTrust, `http://timestamp.identrust.com`. Free, operated by a public CA, and its chain (TrustID Timestamp Authority → TrustID Timestamping CA 6 → IdenTrust Public Sector Root CA 1) verifies against the `certifi` bundle, so verification works without extra setup. Overridable with `--tsa-url` / `--tsa-root`. DigiCert was the first choice but is not usable with `rfc3161-client` — see §2.1. |
 | Library | `rfc3161-client` (Trail of Bits, Apache-2.0, depends only on `cryptography`). Version `>=1.0.9`; versions before 1.0.3 did not verify the response signature against the leaf certificate (CVE-2025-52556). It does no network I/O; Kyvern sends the request with `urllib.request`. |
 | Generic hook | A small `Anchor` protocol; every receipt names its anchor type (`"anchor": "rfc3161"`) and verification dispatches on it. |
+
+### 2.1 TSA compatibility probe (2026-10-07)
+
+Each TSA was sent one request for the hash of a throwaway statement, with a nonce and `certReq`, and the response was decoded and verified with `rfc3161-client` 1.0.9 against the `certifi` roots:
+
+| TSA | Result |
+|---|---|
+| IdenTrust `http://timestamp.identrust.com` | parses and verifies with `certifi` roots |
+| FreeTSA `https://freetsa.org/tsr`, Sigstore `https://timestamp.sigstore.dev/api/v1/timestamp` | parse; verify only when their own (self-signed) root is supplied with `--tsa-root` |
+| DigiCert, Sectigo, GlobalSign, Entrust | rejected while parsing: `InvalidSetOrdering` in `SignedData::certificates` (their responses are not strict DER, and the library's parser is) |
+
+`rfc3161-client` checks the certificate chain at the token's `genTime`, so receipts stay verifiable after the TSA certificate expires (IdenTrust's current TSA certificate runs to 2027-09-11).
 
 ## 3. What is anchored
 
@@ -78,7 +90,7 @@ A receipt line is:
 
 ```json
 {"anchor": "rfc3161", "chain_index": 4810, "payload_hash": "<hex>",
- "anchored_at": "2026-10-07T10:00:03Z", "tsa_url": "http://timestamp.digicert.com",
+ "anchored_at": "2026-10-07T10:00:03Z", "tsa_url": "http://timestamp.identrust.com",
  "token": "<base64 DER TimeStampResp>"}
 ```
 
@@ -99,7 +111,7 @@ It does not hold the chain lock while talking to the TSA; the receipt names the 
 ### 4.2 `services/decision/rfc3161_anchor.py`
 
 ```python
-DEFAULT_TSA_URL = "http://timestamp.digicert.com"
+DEFAULT_TSA_URL = "http://timestamp.identrust.com"
 
 class RFC3161Anchor:
     name = "rfc3161"
@@ -151,13 +163,13 @@ No test contacts the network by default.
 - **Receipts file:** `anchors_path_for`; append then read round-trips; each append is fsynced.
 - **`anchor_head` with a fake `Anchor`** (records the statements it was asked to anchor; `verify` returns ok): anchors the head; second call without new entries returns `None` and does not call the anchor; after a new chain entry it anchors again; empty chain returns `None`; an `AnchorError` from the anchor propagates and writes nothing.
 - **`check_anchors` with the fake anchor:** all valid → counts, `latest_index`, `unanchored_tail`; rewritten entry (same index, different `payload_hash`) → failure mentioning "does not match"; missing entry → failure; unknown anchor type → failure; fake `verify` returning not ok → failure with its reason.
-- **Recorded fixture** (`tests/fixtures/rfc3161/`), created once during implementation by a small script and committed: a test-only Ed25519 key pair (`signing.key`, `signing.pub`), a two-entry `chain.jsonl` signed with it, and `chain.anchors.jsonl` holding a real DigiCert receipt for entry 1. Recording sends DigiCert only the hash of that test statement. All tests below use these files offline.
-- **`RFC3161Anchor.verify`:** the fixture receipt verifies with the default roots and returns DigiCert's `genTime`; it fails for a different statement; it fails with an empty root list; a corrupted token gives `ok=False` with a reason starting `"timestamp does not verify"`, not an exception.
+- **Recorded fixture** (`tests/fixtures/rfc3161/`), created once during implementation by a small script and committed: a test-only Ed25519 key pair (`signing.key`, `signing.pub`), a two-entry `chain.jsonl` signed with it, and `chain.anchors.jsonl` holding a real IdenTrust receipt for entry 1. Recording sends IdenTrust only the hash of that test statement. All tests below use these files offline.
+- **`RFC3161Anchor.verify`:** the fixture receipt verifies with the default roots and returns IdenTrust's `genTime`; it fails for a different statement; it fails with an empty root list; a corrupted token gives `ok=False` with a reason starting `"timestamp does not verify"`, not an exception.
 - **`RFC3161Anchor.request` without network:** `urllib.request.urlopen` patched to return the fixture token → returns the receipt fields; patched to raise → `AnchorError`; asked to anchor a different statement while returning the fixture token → `AnchorError` (immediate verification).
 - **`kyvern-anchor` CLI** (in-process `main()` with `sys.argv` patched and `RFC3161Anchor` replaced by the fake): exit 0 and one receipt line; second run prints "already anchored"; empty chain exit 0; failing anchor exit 1 with "Anchoring failed".
 - **`kyvern-verify`** (subprocess, like the existing CLI tests, on copies of the fixture): exit 0 and "Anchors: 1 valid"; receipt `payload_hash` edited → exit 1 and "does not match"; no receipts file → "Anchors: none" and exit 0; JSON output has the `anchors` object.
 - **Rewrite with the same key is caught:** change entry 1 of the fixture chain and re-sign entries 1.. with the fixture private key, so `verify_chain` passes; `kyvern-verify` still exits 1 because entry 1 no longer matches the anchored hash.
-- **Live DigiCert test**, skipped unless `KYVERN_TSA_E2E=1`: `kyvern-anchor` on a temp chain against DigiCert, then `kyvern-verify` passes.
+- **Live IdenTrust test**, skipped unless `KYVERN_TSA_E2E=1`: `kyvern-anchor` on a temp chain against IdenTrust, then `kyvern-verify` passes.
 
 ## 7. Documentation
 
@@ -169,7 +181,7 @@ No test contacts the network by default.
 ## 8. Acceptance criteria
 
 - All existing tests pass (251 passed, 3 skipped before this work) plus the new ones; `ruff check .` clean; CI green on Python 3.10–3.12.
-- With `KYVERN_TSA_E2E=1` on the dev machine: `kyvern-anchor` obtains a DigiCert timestamp for a temp chain and `kyvern-verify` reports it valid.
+- With `KYVERN_TSA_E2E=1` on the dev machine: `kyvern-anchor` obtains an IdenTrust timestamp for a temp chain and `kyvern-verify` reports it valid.
 - Tampering with an anchored entry (rewriting and re-signing the chain with the same key) makes `kyvern-verify` fail with "does not match the anchored hash" — demonstrated by the fixture test in §6.
 - The real `~/.kyvern` is unchanged after the suite.
 
