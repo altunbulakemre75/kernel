@@ -1,17 +1,21 @@
+from pathlib import Path
+
 import pytest
 
 from kernel.mcp.errors import KernelMCPError
 from kernel.mcp.server import build_app, parse_args
 
 
-def test_parse_args_defaults():
+def test_parse_args_defaults(monkeypatch, tmp_path):
+    monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
     ns = parse_args([])
-    assert ns.chain_file.endswith("chain.jsonl")
-    assert ns.pubkey.endswith("signing.pub")
+    assert Path(ns.chain_file) == tmp_path / ".kyvern" / "chain.jsonl"
+    assert Path(ns.pubkey) == tmp_path / ".kyvern" / "keys" / "signing.pub"
     assert ns.verify_on_query is True
 
 
-def test_parse_args_no_verify():
+def test_parse_args_no_verify(monkeypatch, tmp_path):
+    monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
     ns = parse_args(["--no-verify-on-query"])
     assert ns.verify_on_query is False
 

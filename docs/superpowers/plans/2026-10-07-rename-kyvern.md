@@ -134,6 +134,15 @@ def test_parse_args_defaults(monkeypatch, tmp_path):
     assert ns.verify_on_query is True
 ```
 
+`test_parse_args_no_verify` also calls `parse_args()`, so redirect its home the same way:
+
+```python
+def test_parse_args_no_verify(monkeypatch, tmp_path):
+    monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+    ns = parse_args(["--no-verify-on-query"])
+    assert ns.verify_on_query is False
+```
+
 - [ ] **Step 3: Run the new tests to verify they fail**
 
 Run: `python -m pytest -q -p no:cacheprovider tests/test_paths.py`

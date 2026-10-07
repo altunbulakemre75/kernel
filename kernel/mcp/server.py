@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import os
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
@@ -11,6 +10,7 @@ from kernel.audit import AuditChainStore
 from kernel.mcp.errors import KernelMCPError
 from kernel.mcp.resources import register_resources
 from kernel.mcp.tools import register_tools
+from shared.paths import kyvern_home
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -21,12 +21,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--chain-file",
         dest="chain_file",
-        default=os.path.expanduser("~/.kernel/chain.jsonl"),
+        default=str(kyvern_home() / "chain.jsonl"),
     )
     parser.add_argument(
         "--pubkey",
         dest="pubkey",
-        default=os.path.expanduser("~/.kernel/keys/signing.pub"),
+        default=str(kyvern_home() / "keys" / "signing.pub"),
     )
     parser.add_argument(
         "--policy",
