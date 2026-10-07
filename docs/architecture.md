@@ -187,6 +187,16 @@ if not is_valid:
           f"{describe_chain_failure(decisions, broken_idx, keys)}")
 ```
 
+**Anchoring.** `kyvern-anchor` (`cli/kyvern_anchor.py`) timestamps the chain
+head with an external authority. The statement it anchors is the canonical
+JSON `{"chain_index": n, "kyvern_anchor": 1, "payload_hash": h}`; the receipt
+goes to `<chain stem>.anchors.jsonl`. `services/decision/anchors.py` defines
+the `Anchor` protocol (`name`, `request(statement)`, `verify(statement,
+receipt)`); `services/decision/rfc3161_anchor.py` is the RFC 3161
+implementation. Another kind of anchor implements the same two methods under
+a new `name` and is added to the mapping `kyvern-verify` passes to
+`check_anchors()`.
+
 The same chain also carries signed evidence events from external
 systems (`RuntimeEvent`) — see §8.
 

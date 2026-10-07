@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -254,3 +255,74 @@ def test_live_pipeline_decisions_verify(tmp_path, isolated_home):
     res = run_cli(str(chain), "--policy", str(policy), "--pubkey", str(pub))
     assert res.returncode == 0, res.stdout
     assert "Chain integrity: VALID (3 decisions" in res.stdout
+
+
+# ── anchors ──────────────────────────────────────────────────────────────────
+
+RFC3161_FIXTURE = Path(__file__).parent.parent / "fixtures" / "rfc3161"
+
+
+@pytest.fixture
+def anchored(tmp_path):
+    """A copy of the recorded fixture: 2-entry chain, receipt for entry 1, policy, keys."""
+    for name in ("chain.jsonl", "chain.anchors.jsonl", "policy.yaml", "signing.pub", "signing.key"):
+        shutil.copy(RFC3161_FIXTURE / name, tmp_path / name)
+    clear_policy_cache()
+    return tmp_path
+
+
+def _verify_anchored(ws, *extra):
+    return run_cli(
+        str(ws / "chain.jsonl"), "--policy", str(ws / "policy.yaml"),
+        "--pubkey", str(ws / "signing.pub"), *extra,
+    )
+
+
+def test_verify_reports_valid_anchors(anchored):
+    res = _verify_anchored(anchored)
+    assert res.returncode == 0, res.stdout
+    assert "Anchors: 1 valid; latest covers chain_index 1" in res.stdout
+
+
+def test_verify_fails_on_an_edited_receipt(anchored):
+    receipts = anchored / "chain.anchors.jsonl"
+    receipt = json.loads(receipts.read_text(encoding="utf-8"))
+    receipt["payload_hash"] = "00" * 32
+    receipts.write_text(json.dumps(receipt) + "\n", encoding="utf-8")
+    res = _verify_anchored(anchored)
+    assert res.returncode == 1
+    assert "does not match the anchored hash" in res.stdout
+
+
+def test_verify_without_receipts_says_none(anchored):
+    (anchored / "chain.anchors.jsonl").unlink()
+    res = _verify_anchored(anchored)
+    assert res.returncode == 0, res.stdout
+    assert "Anchors: none" in res.stdout
+
+
+def test_verify_json_has_anchor_report(anchored):
+    data = json.loads(_verify_anchored(anchored, "--json").stdout)
+    assert data["anchors"]["valid"] == 1
+    assert data["anchors"]["failures"] == []
+    assert data["anchors"]["latest_index"] == 1
+    assert data["anchors"]["unanchored_tail"] == 0
+
+
+def test_rewrite_resigned_with_the_same_key_is_caught(anchored):
+    """The keyholder rewrites anchored entry 1 and re-signs it: signatures pass, the anchor does not."""
+    from services.decision.audit_chain import verify_chain
+
+    key = serialization.load_pem_private_key((anchored / "signing.key").read_bytes(), password=None)
+    chain_path = anchored / "chain.jsonl"
+    entries = [json.loads(line) for line in chain_path.read_text(encoding="utf-8").splitlines()]
+    rewritten = {k: v for k, v in entries[1].items() if k not in ("signature", "payload_hash", "key_id")}
+    rewritten["reasoning"] = "rewritten after the incident"
+    entries[1] = sign_decision(rewritten, prev_hash=entries[0]["payload_hash"], signing_key=key)
+    chain_path.write_text("".join(json.dumps(e) + "\n" for e in entries), encoding="utf-8")
+
+    assert verify_chain(entries, key.public_key()) == (True, None)
+    res = _verify_anchored(anchored)
+    assert res.returncode == 1
+    assert "Signature verification: PASSED" in res.stdout
+    assert "does not match the anchored hash" in res.stdout

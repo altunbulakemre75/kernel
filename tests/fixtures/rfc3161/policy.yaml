@@ -1,0 +1,7 @@
+rules:
+  - rule_id: "rule_1"
+    description: "Fixture policy"
+    when_threat_level: "low"
+    requires_operator_approval: false
+    action: "log"
+    enabled: true

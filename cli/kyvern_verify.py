@@ -2,11 +2,14 @@ import argparse
 import json
 import os
 import sys
+from dataclasses import asdict
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from cryptography.hazmat.primitives import serialization
 
+from services.decision.anchors import anchors_path_for, check_anchors, read_receipts
 from services.decision.audit_chain import (
     Keyring,
     describe_chain_failure,
@@ -14,6 +17,7 @@ from services.decision.audit_chain import (
     verify_decision_against_policy,
 )
 from services.decision.policy_loader import load_policy
+from services.decision.rfc3161_anchor import RFC3161Anchor, load_roots
 
 try:
     import colorama
@@ -86,6 +90,14 @@ def main() -> None:
         "--pubkey", required=True, action="append",
         help="path to a PEM-encoded Ed25519 public key; repeat for chains signed by several keys",
     )
+    parser.add_argument(
+        "--anchors", default=None,
+        help="anchor receipts JSONL (default: <chain stem>.anchors.jsonl next to the chain, if present)",
+    )
+    parser.add_argument(
+        "--tsa-root", action="append", default=None,
+        help="PEM file with trusted TSA root certificate(s); repeatable (default: certifi bundle)",
+    )
     parser.add_argument("--verbose", "-v", action="store_true", help="show full payload of each decision")
     parser.add_argument("--json", action="store_true", help="output machine-readable JSON instead of human format")
     
@@ -136,8 +148,24 @@ def main() -> None:
         errors.append(f"Failed to load policy file: {e}")
         policy_matches = False
 
-    all_valid = is_valid_chain and policy_matches
-    
+    anchors_path = Path(args.anchors) if args.anchors else anchors_path_for(Path(args.chain_file))
+    anchor_report = None
+    anchors_ok = True
+    if anchors_path.exists():
+        anchor_report = check_anchors(
+            decisions,
+            read_receipts(anchors_path),
+            {RFC3161Anchor.name: RFC3161Anchor(roots=load_roots(args.tsa_root))},
+        )
+        for failure in anchor_report.failures:
+            errors.append(f"Anchor check failed: {failure}")
+        anchors_ok = not anchor_report.failures
+    elif args.anchors:
+        errors.append(f"Anchors file not found: {anchors_path}")
+        anchors_ok = False
+
+    all_valid = is_valid_chain and policy_matches and anchors_ok
+
     if args.json:
         out = {
             "chain_valid": is_valid_chain,
@@ -147,6 +175,7 @@ def main() -> None:
             "policy_version_id": policy_hash,
             "key_ids": key_ids,
             "reason": failure_reason,
+            "anchors": asdict(anchor_report) if anchor_report else None,
             "errors": errors
         }
         print(json.dumps(out, indent=2))
@@ -179,6 +208,22 @@ def main() -> None:
         print(f"{GREEN_CHECK} Signature verification: PASSED (Ed25519)")
     else:
         print(f"{RED_CROSS} Signature verification: FAILED")
+
+    if anchor_report is None:
+        print(f"  Anchors: none (no {anchors_path.name})")
+    elif anchor_report.failures:
+        print(f"{RED_CROSS} Anchors: FAILED")
+        for failure in anchor_report.failures:
+            print(f"  {failure}")
+    else:
+        line = f"{GREEN_CHECK} Anchors: {anchor_report.valid} valid"
+        if anchor_report.latest_index is not None:
+            line += (
+                f"; latest covers chain_index {anchor_report.latest_index} at "
+                f"{anchor_report.latest_time}; {anchor_report.unanchored_tail} later "
+                "entries not yet anchored"
+            )
+        print(line)
 
     print("\nDecision summary:")
     for i, d in enumerate(decisions):

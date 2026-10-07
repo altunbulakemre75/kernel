@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   several keys; verification failures name their reason
 - `run_graph(chain_path=...)` / `decide_full(chain_path=...)` and
   `KYVERN_CHAIN_PATH`
+- External anchoring of the chain head: `kyvern-anchor` stores RFC 3161
+  timestamps (IdenTrust by default) in `<chain stem>.anchors.jsonl`;
+  `kyvern-verify` checks them (`--anchors`, `--tsa-root`) and fails when an
+  anchored entry was rewritten; generic `Anchor` protocol for other anchor
+  types. New dependencies: `rfc3161-client`, `certifi`
 
 ### Changed
 - **Decisions are now recorded in the JSONL audit chain**
