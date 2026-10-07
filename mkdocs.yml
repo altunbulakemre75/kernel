@@ -3,6 +3,10 @@ site_url: https://altunbulakemre75.github.io/kyvern
 repo_url: https://github.com/altunbulakemre75/kyvern
 repo_name: altunbulakemre75/kyvern
 
+# Internal design specs and implementation plans stay in the repo, not on the site.
+exclude_docs: |
+  superpowers/
+
 theme:
   name: material
   palette:

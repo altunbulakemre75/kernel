@@ -62,5 +62,5 @@ result = sandwich.run(
 )
 ```
 
-See [`examples/sandwich_email_triage.py`](../../examples/sandwich_email_triage.py) for a complete mock example
-and [`examples/sandwich_real_anthropic.py`](../../examples/sandwich_real_anthropic.py) for real API usage.
+See [`examples/sandwich_email_triage.py`](https://github.com/altunbulakemre75/kyvern/blob/main/examples/sandwich_email_triage.py) for a complete mock example
+and [`examples/sandwich_real_anthropic.py`](https://github.com/altunbulakemre75/kyvern/blob/main/examples/sandwich_real_anthropic.py) for real API usage.
