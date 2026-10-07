@@ -11,17 +11,24 @@ readme      = "README.md"
 license     = { text = "Apache-2.0" }
 authors     = [{ name = "Emre Altunbulak" }]
 requires-python = ">=3.10"
-# Dependencies are maintained in requirements.txt — single source of truth.
-dynamic = ["dependencies"]
+# Core: what the decision pipeline, the audit chain and the CLIs import.
+# Lower bounds only, so installing Kyvern never downgrades your packages.
+dependencies = [
+    "cryptography>=43",          # Ed25519 signing; rfc3161-client needs >=43
+    "pydantic>=2.9,<3",
+    "pyyaml>=6.0",
+    "filelock>=3.12",            # inter-process lock for appending to the audit chain
+    "rfc3161-client>=1.0.9",     # RFC 3161 anchoring; <1.0.3 had CVE-2025-52556
+    "certifi",                   # trusted roots for verifying TSA timestamps
+    "reportlab>=4.0",            # kyvern-report PDF
+    "httpx>=0.27,<1",            # LLM client
+]
 
 [project.scripts]
 kyvern-verify = "cli.kyvern_verify:main"
 kyvern-report = "cli.kyvern_report:main"
 kyvern-mcp = "kyvern.mcp.server:run"
 kyvern-anchor = "cli.kyvern_anchor:main"
-
-[tool.setuptools.dynamic]
-dependencies = { file = ["requirements.txt"] }
 
 [tool.setuptools.packages.find]
 where   = ["."]
@@ -32,8 +39,22 @@ include = ["services*", "kyvern*", "shared*", "cli*"]
 dev = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
     "ruff>=0.4.0",
     "mypy>=1.10.0",
+    "pypdf>=4.0.0",   # PDF assertions in the report tests
+]
+
+fusion = [
+    # Multi-sensor tracking and the detector services: pip install -e ".[fusion]"
+    # Camera/RF hardware stacks (ultralytics, opencv, scapy, bleak, mavsdk) are
+    # imported lazily and installed separately when those services run.
+    "numpy>=1.24",
+    "scipy>=1.11",
+    "filterpy>=1.4.5,<2",
+    "pyproj>=3.6",               # optional: shared/geo.py falls back to flat-Earth math
+    "nats-py>=2.6,<3",
+    "prometheus-client>=0.19",
 ]
 
 llm = [
