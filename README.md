@@ -53,6 +53,24 @@ kyvern-verify chain.jsonl --policy config/policies/default.yaml --pubkey ~/.kyve
 Repeat `--pubkey` to verify a chain signed by more than one key (for example
 after a key rotation); every entry records which key signed it.
 
+### Anchoring the chain
+
+Run `kyvern-anchor` on a schedule to timestamp the chain head with an
+external RFC 3161 authority (IdenTrust by default; `--tsa-url` and
+`--tsa-root` to change it). `kyvern-verify` then checks the receipts and
+fails if an anchored entry was rewritten, even by someone holding the
+signing key.
+
+```bash
+# Linux/macOS, hourly (crontab -e)
+0 * * * * kyvern-anchor /var/lib/kyvern/chain.jsonl
+```
+
+```bash
+# Windows, hourly
+schtasks /Create /SC HOURLY /TN "Kyvern anchor" /TR "kyvern-anchor C:\kyvern\chain.jsonl"
+```
+
 **Output:**
 
 ```text

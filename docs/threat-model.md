@@ -97,10 +97,20 @@ an action more aggressive than the rule engine would have taken without it.
   A verifier given the wrong key reports "signed by unknown key <id>" instead
   of a generic failure, and the signing key is never silently re-created
   next to a non-empty chain.
-- **Still open: the keyholder.** Whoever holds the signing key can rewrite
-  the chain from any point and re-sign it forward; nothing inside the chain
-  proves that did not happen. Periodic external anchoring of the chain head
-  (RFC 3161 timestamping, v0.3.0 part B) is the planned defense.
+- **Anchoring the chain head.** Whoever holds the signing key can rewrite
+  the chain from any point and re-sign it forward, and nothing inside the
+  chain proves that did not happen. `kyvern-anchor` closes this for anchored
+  entries: it sends the hash of the current chain head to an RFC 3161 Time
+  Stamping Authority (IdenTrust by default) and stores the signed timestamp
+  in `chain.anchors.jsonl`. `kyvern-verify` checks every receipt against the
+  chain: an anchored entry that was rewritten — even re-signed with the
+  right key — no longer matches its receipt and verification fails. Limits:
+  - entries after the latest anchor can still be rewritten until the next
+    `kyvern-anchor` run, so run it on a schedule (for example hourly);
+  - the receipts file is the evidence: copy `chain.anchors.jsonl` off the
+    host (log shipping, object storage), otherwise an attacker with host
+    access can delete it;
+  - the TSA receives only a hash, never chain contents.
 
 ### Rotating the signing key
 
