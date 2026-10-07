@@ -7,6 +7,7 @@ compliance evidence.
 import argparse
 import base64
 import hashlib
+import importlib.metadata
 import json
 import sys
 from collections import Counter
@@ -32,7 +33,11 @@ from reportlab.platypus.flowables import HRFlowable
 from services.decision.audit_chain import Keyring, verify_chain
 from services.decision.policy_loader import load_policy
 
-VERSION = "0.1.0"
+try:
+    # Single source of truth: the version in pyproject.toml, via the installed metadata.
+    VERSION = importlib.metadata.version("kyvern")
+except importlib.metadata.PackageNotFoundError:  # running from a source tree without an install
+    VERSION = "unknown"
 PAGE_W, PAGE_H = A4
 MARGIN = 2 * cm
 
