@@ -67,7 +67,9 @@ llm = [
 mcp = [
     # Activate with: pip install -e ".[mcp]"
     # Required to run the kyvern-mcp stdio audit-query server.
-    "mcp>=1.0.0",
+    # mcp 2.x renamed FastMCP to MCPServer; kyvern-mcp is written against 1.x
+    # and tested with 1.12 and 1.27.
+    "mcp>=1.12,<2",
 ]
 
 docs = [

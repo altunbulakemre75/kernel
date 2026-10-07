@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to 2.9.2 and `numpy` is no longer capped below 2 (the cap made `pip install .`
   fail on Python 3.13 without a C compiler). `requirements.txt` installs the
   full development environment
+- The `mcp` extra is capped below 2 (`mcp>=1.12,<2`): mcp 2.x renamed
+  `FastMCP` to `MCPServer`, which breaks `kyvern-mcp`
 
 ### Removed
 - Unused dependencies: fastapi, uvicorn, pydantic-settings, sqlalchemy,
