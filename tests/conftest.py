@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Generator
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 
@@ -24,6 +25,23 @@ from services.schemas.track import Measurement, SensorType
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Isolation from the developer's real home directory
+# ══════════════════════════════════════════════════════════════════════════════
+
+@pytest.fixture(autouse=True)
+def isolated_home(tmp_path_factory, monkeypatch) -> Path:
+    """Point Path.home() at a fresh directory for every test.
+
+    run_graph() and ChainWriter.open() create the signing key under ~/.kyvern and
+    append to ~/.kyvern/chain.jsonl; no test may touch the developer's real ones.
+    """
+    home = tmp_path_factory.mktemp("home")
+    monkeypatch.setattr(Path, "home", staticmethod(lambda: home))
+    monkeypatch.delenv("KYVERN_CHAIN_PATH", raising=False)
+    return home
 
 
 # ══════════════════════════════════════════════════════════════════════════════
