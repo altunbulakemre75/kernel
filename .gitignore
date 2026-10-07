@@ -16,3 +16,4 @@ site/
 *.pt
 recordings/
 data/
+*.jsonl.lock
