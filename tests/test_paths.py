@@ -58,3 +58,16 @@ def test_keypair_created_under_kyvern_dir(fake_home):
 def test_suite_runs_with_an_isolated_home(isolated_home):
     assert Path.home() == isolated_home
     assert "KYVERN_CHAIN_PATH" not in os.environ
+
+
+def test_default_chain_path_lives_in_kyvern_home(isolated_home):
+    from shared.paths import default_chain_path
+
+    assert default_chain_path() == isolated_home / ".kyvern" / "chain.jsonl"
+
+
+def test_default_chain_path_honours_the_env_override(tmp_path, monkeypatch):
+    from shared.paths import default_chain_path
+
+    monkeypatch.setenv("KYVERN_CHAIN_PATH", str(tmp_path / "elsewhere.jsonl"))
+    assert default_chain_path() == tmp_path / "elsewhere.jsonl"

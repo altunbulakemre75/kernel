@@ -4,10 +4,12 @@ shared/paths.py — Where Kyvern keeps per-user state (signing keys, default cha
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 HOME_DIR_NAME = ".kyvern"
 LEGACY_HOME_DIR_NAME = ".kernel"  # used before the kernel -> Kyvern rename
+CHAIN_PATH_ENV = "KYVERN_CHAIN_PATH"
 
 
 class LegacyHomeError(RuntimeError):
@@ -30,3 +32,9 @@ def kyvern_home() -> Path:
             f"mv {legacy} {current}"
         )
     return current
+
+
+def default_chain_path() -> Path:
+    """The audit chain file used when none is given: $KYVERN_CHAIN_PATH, else ~/.kyvern/chain.jsonl."""
+    override = os.environ.get(CHAIN_PATH_ENV)
+    return Path(override) if override else kyvern_home() / "chain.jsonl"
