@@ -249,6 +249,12 @@ def main() -> None:
         time_str = format_time(d.get("timestamp_iso", ""))
         if record_type_of(d) == "runtime_event":
             print(f"  [{i}] {time_str}  event={d.get('event_type')} source={d.get('source')}")
+        elif d.get("record_type") == "decision":  # recorded with record_decision()
+            action = str(d.get("action", "UNKNOWN")).upper()
+            print(
+                f"  [{i}] {time_str}  action={action:<7} rule_id={d.get('rule_id')} "
+                f"source={d.get('source')}"
+            )
         else:
             # str() throughout: a tampered record may hold any JSON value in these fields.
             action = str(d.get("action", "UNKNOWN")).upper()

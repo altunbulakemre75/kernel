@@ -68,9 +68,10 @@ def compute_action_distribution(records: list[dict[str, Any]]) -> dict[str, int]
 
 
 def compute_threat_distribution(records: list[dict[str, Any]]) -> dict[str, int]:
-    """Threat level counts over Decisions."""
+    """Threat level counts over the Decisions that record one (Kyvern's engine
+    decisions do; decisions recorded with record_decision() do not)."""
     decisions, _ = split_records(records)
-    return dict(Counter(str(d.get("threat_level", "unknown")) for d in decisions))
+    return dict(Counter(str(d["threat_level"]) for d in decisions if d.get("threat_level")))
 
 
 def compute_event_distribution(records: list[dict[str, Any]]) -> dict[str, int]:
@@ -157,6 +158,30 @@ def _has_text(value: Any) -> bool:
     return isinstance(value, str) and bool(value)
 
 
+def _is_recorded(d: dict[str, Any]) -> bool:
+    """Recorded with record_decision(); Kyvern's engine decisions have no record_type."""
+    return d.get("record_type") == "decision"
+
+
+def _has_risk_fields(d: dict[str, Any]) -> bool:
+    if _is_recorded(d):
+        return isinstance(d.get("inputs"), dict) and bool(d["inputs"]) and _has_text(d.get("reasoning"))
+    return (
+        _has_text(d.get("threat_level")) and "roe_reference" in d
+        and isinstance(d.get("guardrails_triggered"), list)
+    )
+
+
+def _has_operation_fields(d: dict[str, Any]) -> bool:
+    common = (
+        _has_text(d.get("action")) and _has_text(d.get("timestamp_iso"))
+        and isinstance(d.get("requires_operator_approval"), bool)
+    )
+    if _is_recorded(d):
+        return common and _has_text(d.get("source"))
+    return common and "guardrail_reasoning" in d
+
+
 def compute_checks(
     records: list[dict[str, Any]],
     *,
@@ -199,10 +224,11 @@ def compute_checks(
         add("integrity", "12", label, "Art.12(1)", FAIL,
             f"Chain broken at index {broken_idx}; entries from there on are unverified.")
     per_decision(
-        "risk_fields", "Each decision records its threat level, rule reference and guardrails",
-        "Art.12(2)(a)", "threat_level, roe_reference and guardrails_triggered",
-        lambda d: _has_text(d.get("threat_level")) and "roe_reference" in d
-        and isinstance(d.get("guardrails_triggered"), list),
+        "risk_fields", "Each decision records what it was based on",
+        "Art.12(2)(a)",
+        "threat_level, roe_reference and guardrails_triggered (inputs and reasoning "
+        "for decisions recorded with record_decision())",
+        _has_risk_fields,
     )
     per_decision(
         "policy_recorded", "Each decision records the policy version it was made under",
@@ -210,11 +236,11 @@ def compute_checks(
     )
     per_decision(
         "operation_fields",
-        "Each decision records its action, timestamp, approval flag and guardrail reasoning",
+        "Each decision records its action, timestamp, approval flag and who or what decided",
         "Art.12(2)(c)",
-        "action, timestamp_iso, requires_operator_approval and guardrail_reasoning",
-        lambda d: _has_text(d.get("action")) and _has_text(d.get("timestamp_iso"))
-        and isinstance(d.get("requires_operator_approval"), bool) and "guardrail_reasoning" in d,
+        "action, timestamp_iso, requires_operator_approval and guardrail_reasoning "
+        "(source for decisions recorded with record_decision())",
+        _has_operation_fields,
     )
     label = "Every entry's timestamp is ISO 8601 in UTC"
     parsed = [_parse_utc(r.get("timestamp_iso")) for r in records]
@@ -470,7 +496,8 @@ def generate_pdf(
         _dist_table(action_dist, n, "Action"),
         Spacer(1, 0.4 * cm),
         Paragraph("Threat level distribution:", s["body"]),
-        _dist_table(threat_dist, n, "Threat Level"),
+        _dist_table(threat_dist, sum(threat_dist.values()), "Threat Level") if threat_dist
+        else Paragraph("No decision records a threat level.", s["body"]),
     ]
     if events:
         story += [

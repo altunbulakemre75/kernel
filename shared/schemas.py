@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -42,11 +43,67 @@ class RuntimeEvent(BaseModel):
     @field_validator("payload")
     @classmethod
     def _validate_payload_size(cls, v: dict[str, Any]) -> dict[str, Any]:
-        size = len(json.dumps(v, separators=(",", ":")).encode("utf-8"))
-        if size > RUNTIME_EVENT_PAYLOAD_MAX_BYTES:
-            raise PayloadTooLargeError(
-                f"payload exceeds {RUNTIME_EVENT_PAYLOAD_MAX_BYTES} bytes "
-                f"(got {size} bytes); use file references or chunking for "
-                f"larger evidence."
-            )
+        return _check_evidence_size("payload", v)
+
+
+def _check_evidence_size(field_name: str, v: dict[str, Any]) -> dict[str, Any]:
+    size = len(json.dumps(v, separators=(",", ":")).encode("utf-8"))
+    if size > RUNTIME_EVENT_PAYLOAD_MAX_BYTES:
+        raise PayloadTooLargeError(
+            f"{field_name} exceeds {RUNTIME_EVENT_PAYLOAD_MAX_BYTES} bytes "
+            f"(got {size} bytes); use file references or chunking for "
+            f"larger evidence."
+        )
+    return v
+
+
+class RecordedDecision(BaseModel):
+    """A decision made by the user's own system (a robot's safety controller, a
+    planner, an operator), recorded into the audit chain by record_decision().
+
+    Unlike a RuntimeEvent ("I observed this"), it is a decision ("I did this"):
+    the auditor tools count it as one and check its policy_version_id against
+    the policies given with --policy. Field names are domain-neutral; Kyvern's
+    own engine decisions (services.decision.schemas.Decision) carry no
+    record_type.
+    """
+
+    record_type: Literal["decision"] = "decision"
+
+    action: str = Field(min_length=1, max_length=64)
+    source: str = Field(min_length=1, max_length=256)  # who decided; "operator" for a person
+    reasoning: str = Field(default="", max_length=2000)
+    inputs: dict[str, Any] = Field(default_factory=dict)  # what the decision was based on
+    rule_id: str | None = Field(default=None, max_length=256)
+    subject_id: str | None = Field(default=None, max_length=256)
+    requires_operator_approval: bool = False
+    timestamp_iso: str
+
+    # Set by record_decision() from policy_path
+    policy_version_id: str | None = None
+    policy_path: str | None = None
+
+    # Audit chain fields (filled by chain when signed)
+    signature: str | None = None
+    prev_hash: str | None = None
+    payload_hash: str | None = None
+    key_id: str | None = None
+    chain_index: int = 0
+
+    @field_validator("inputs")
+    @classmethod
+    def _validate_inputs_size(cls, v: dict[str, Any]) -> dict[str, Any]:
+        return _check_evidence_size("inputs", v)
+
+    @field_validator("timestamp_iso")
+    @classmethod
+    def _validate_utc(cls, v: str) -> str:
+        try:
+            # Python 3.10's fromisoformat does not accept a trailing "Z".
+            dt = datetime.fromisoformat(v[:-1] + "+00:00" if v.endswith("Z") else v)
+        except ValueError as exc:
+            raise ValueError(f"timestamp_iso is not ISO 8601: {v!r}") from exc
+        offset = dt.utcoffset()
+        if offset is None or offset.total_seconds() != 0:
+            raise ValueError(f"timestamp_iso must be in UTC (+00:00 or Z): {v!r}")
         return v

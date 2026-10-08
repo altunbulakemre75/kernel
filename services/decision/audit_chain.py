@@ -11,8 +11,8 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from shared.paths import kyvern_home
-from shared.schemas import RuntimeEvent
+from shared.paths import default_chain_path, kyvern_home
+from shared.schemas import RecordedDecision, RuntimeEvent
 
 if TYPE_CHECKING:
     from services.decision.policy_loader import LoadedPolicy
@@ -378,6 +378,61 @@ def append_runtime_event(
     # chain_index, holds the chain lock, checks the tail and fsyncs.
     signed = ChainWriter(Path(chain_path), signing_key).append(record)
     return RuntimeEvent(**signed)
+
+
+def record_decision(
+    action: str,
+    *,
+    source: str,
+    reasoning: str = "",
+    inputs: dict[str, Any] | None = None,
+    rule_id: str | None = None,
+    subject_id: str | None = None,
+    requires_operator_approval: bool = False,
+    policy_path: str | Path | None = None,
+    chain_path: str | Path | None = None,
+    signing_key: ed25519.Ed25519PrivateKey | None = None,
+    timestamp_iso: str | None = None,
+) -> RecordedDecision:
+    """Sign a decision your own system made and append it to the audit chain.
+
+    `source` names who decided ("safety_controller", "planner", "operator" for a
+    person); `inputs` is what the decision was based on (at most 64 KB as JSON);
+    `rule_id` is the rule in your policy that fired. Pass `policy_path` (a YAML
+    file with a `rules:` list) to bind the decision to that policy's version id:
+    kyvern-verify --policy fails decisions recorded without one.
+
+    The chain defaults to the one run_graph() writes ($KYVERN_CHAIN_PATH, else
+    ~/.kyvern/chain.jsonl) and the key to ~/.kyvern/keys/signing.key. Raises a
+    pydantic ValidationError for bad input (nothing is recorded) and
+    AuditWriteError if the decision cannot be appended.
+
+    See docs/superpowers/specs/2026-10-08-record-decision-design.md.
+    """
+    # Imported here: chain_writer imports this module.
+    from datetime import datetime, timezone
+
+    from services.decision.chain_writer import ChainWriter
+    from services.decision.policy_loader import load_policy
+
+    decision = RecordedDecision(
+        action=action,
+        source=source,
+        reasoning=reasoning,
+        inputs=inputs or {},
+        rule_id=rule_id,
+        subject_id=subject_id,
+        requires_operator_approval=requires_operator_approval,
+        timestamp_iso=timestamp_iso or datetime.now(timezone.utc).isoformat(),
+    )
+    record: dict[str, Any] = decision.model_dump()
+    if policy_path is not None:
+        policy = load_policy(str(policy_path))
+        record["policy_version_id"] = policy.version_id
+        record["policy_path"] = policy.path
+    path = Path(chain_path) if chain_path is not None else default_chain_path()
+    signed = ChainWriter(path, signing_key or load_or_create_keypair()).append(record)
+    return RecordedDecision(**signed)
 
 
 def verify_runtime_event(event: dict[str, Any], public_key: ed25519.Ed25519PublicKey) -> bool:
