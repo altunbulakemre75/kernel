@@ -231,11 +231,13 @@ class PolicyCheck:
     Positions are offsets into the list passed to check_policy_binding(). RuntimeEvents
     are not checked: their policy_version_id only records the policy in force when the
     event was appended. A chain with no Decision fails: nothing in it is bound to a policy.
+    So does a chain that failed verify_chain(): the policy ids it records are unverified.
     """
 
     per_policy: dict[str, int] = field(default_factory=dict)
     unbound: list[int] = field(default_factory=list)
     unknown: dict[int, str] = field(default_factory=dict)
+    broken_at: int | None = None
 
     @property
     def decision_count(self) -> int:
@@ -243,13 +245,21 @@ class PolicyCheck:
 
     @property
     def ok(self) -> bool:
-        return self.decision_count > 0 and not self.unbound and not self.unknown
+        return (
+            self.broken_at is None and self.decision_count > 0
+            and not self.unbound and not self.unknown
+        )
 
     def reason(self) -> str:
         """One line explaining a failed check; empty when it passed."""
-        if self.decision_count == 0:
-            return "no decisions in the chain to check against a policy"
         parts = []
+        if self.broken_at is not None:
+            parts.append(
+                f"chain integrity is broken at index {self.broken_at}, "
+                "so the policy ids it records are unverified"
+            )
+        if self.decision_count == 0:
+            parts.append("no decisions in the chain to check against a policy")
         if self.unbound:
             parts.append(
                 f"{len(self.unbound)} decision(s) not bound to any policy "
@@ -271,11 +281,17 @@ def _positions(indices: list[int], limit: int = 10) -> str:
 
 
 def check_policy_binding(
-    records: list[dict[str, Any]], policies: "list[LoadedPolicy]"
+    records: list[dict[str, Any]],
+    policies: "list[LoadedPolicy]",
+    broken_at: int | None = None,
 ) -> PolicyCheck:
-    """Check that each Decision's policy_version_id matches one of `policies`."""
+    """Check that each Decision's policy_version_id matches one of `policies`.
+
+    broken_at is the index verify_chain() returned for the same records (None when
+    the chain verified); a broken chain fails the check.
+    """
     known = {p.version_id for p in policies}
-    check = PolicyCheck(per_policy={p.version_id: 0 for p in policies})
+    check = PolicyCheck(per_policy={p.version_id: 0 for p in policies}, broken_at=broken_at)
     for i, record in enumerate(records):
         if record_type_of(record) != "decision":
             continue

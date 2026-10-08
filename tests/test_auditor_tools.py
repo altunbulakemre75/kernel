@@ -68,6 +68,15 @@ def _event(ws):
     append_runtime_event(event, ws["chain"], load_or_create_keypair())
 
 
+def _tamper(ws, index, **fields):
+    """Rewrite chain entry `index` without re-signing it."""
+    lines = ws["chain"].read_text(encoding="utf-8").splitlines()
+    record = json.loads(lines[index])
+    record.update(fields)
+    lines[index] = json.dumps(record)
+    ws["chain"].write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def _cli(module, *args):
     env = dict(os.environ, PYTHONPATH=str(REPO_ROOT))
     return subprocess.run(
@@ -195,3 +204,24 @@ def test_chain_without_decisions_fails_the_policy_check(ws):
     assert "[chain: VALID] [policy: FAILED]" in res.stdout
     text = _pdf_text(ws["pdf"])
     assert "Verifiable policy deployment failed: no decisions in the chain" in text
+
+
+def test_broken_chain_does_not_pass_the_policy_check(ws):
+    # Every Decision still names the right policy, but the records are no longer authentic.
+    _decide(ws, 2, policy=ws["policy"])
+    _tamper(ws, 1, threat_level="LOW")
+
+    res = _verify(ws, ws["policy"])
+    assert res.returncode == 1
+    assert "Chain integrity: INVALID" in res.stdout
+    assert "Policy match: FAILED" in res.stdout
+    assert "chain integrity is broken at index 1" in res.stdout
+    out = json.loads(_verify(ws, ws["policy"], extra=["--json"]).stdout)
+    assert out["chain_valid"] is False
+    assert out["policy_match"] is False
+
+    res = _report(ws, ws["policy"])
+    assert res.returncode == 1
+    assert "[chain: INVALID] [policy: FAILED]" in res.stdout
+    text = _pdf_text(ws["pdf"])
+    assert "Verifiable policy deployment failed: chain integrity is broken at index 1" in text

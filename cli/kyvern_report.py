@@ -558,9 +558,9 @@ def main() -> None:
             print(f"Error loading policy {path}: {e}", file=sys.stderr)
             sys.exit(1)
     policy_version = ",".join(p.version_id for p in policies)
-    policy_check = check_policy_binding(decisions, policies)
 
     chain_valid, broken_idx = verify_chain(decisions, public_key)
+    policy_check = check_policy_binding(decisions, policies, broken_at=broken_idx)
     period = args.period or compute_period(decisions)
     pubkey_fp = ", ".join(public_key.ids())
     generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")

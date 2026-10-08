@@ -149,7 +149,7 @@ def main() -> None:
         except Exception as e:
             policy_load_error = f"Failed to load policy file {path}: {e}"
             errors.append(policy_load_error)
-    policy_check = check_policy_binding(decisions, policies)
+    policy_check = check_policy_binding(decisions, policies, broken_at=broken_idx)
     policy_matches = policy_load_error is None and policy_check.ok
     if policy_load_error is None and not policy_check.ok:
         errors.append(f"Policy check failed: {policy_check.reason()}")
