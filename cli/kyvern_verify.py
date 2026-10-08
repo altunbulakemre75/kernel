@@ -32,6 +32,8 @@ except ImportError:
 def format_time(ts: str) -> str:
     if not ts:
         return "Unknown"
+    if not isinstance(ts, str):  # a tampered record may hold any JSON value
+        return "Invalid"
     try:
         if ts.endswith("Z"):
             ts = ts[:-1] + "+00:00"
@@ -141,7 +143,7 @@ def main() -> None:
         failure_reason = describe_chain_failure(decisions, broken_idx, public_key)
         errors.append(f"Chain integrity broken at index {broken_idx}: {failure_reason}")
 
-    key_ids = sorted({d["key_id"] for d in decisions if d.get("key_id")})
+    key_ids = sorted({d["key_id"] for d in decisions if isinstance(d.get("key_id"), str) and d["key_id"]})
     decision_count = sum(1 for d in decisions if record_type_of(d) == "decision")
     event_count = len(decisions) - decision_count
 
@@ -248,12 +250,13 @@ def main() -> None:
         if record_type_of(d) == "runtime_event":
             print(f"  [{i}] {time_str}  event={d.get('event_type')} source={d.get('source')}")
         else:
+            # str() throughout: a tampered record may hold any JSON value in these fields.
             action = str(d.get("action", "UNKNOWN")).upper()
-            rule_id = d.get("roe_reference", "unknown")
-            if rule_id is None:
-                rule_id = "None"
-            guardrails = d.get("guardrails_triggered", [])
-            g_str = "[" + ", ".join(guardrails) + "]"
+            rule_id = str(d.get("roe_reference", "unknown"))
+            guardrails = d.get("guardrails_triggered") or []
+            if not isinstance(guardrails, list):
+                guardrails = [guardrails]
+            g_str = "[" + ", ".join(str(g) for g in guardrails) + "]"
             print(f"  [{i}] {time_str}  action={action:<7} rule_id={rule_id:<6} guardrails={g_str}")
         if args.verbose:
             print(f"      {json.dumps(d)}")

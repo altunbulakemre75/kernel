@@ -168,17 +168,21 @@ class AuditChainStore:
                 integrity="UNKNOWN",
             )
         from services.decision.audit_chain import describe_chain_failure, verify_chain
-        start = 0 if start_id is None else start_id
-        end = self._events[-1].get("chain_index", 0) if self._events else 0
-        if end_id is not None:
-            end = end_id
-        slice_events = [e for e in self._events if start <= e.get("chain_index", -1) <= end]
+        # In an intact chain an entry's chain_index is its position, so the range is
+        # taken by position: an entry whose chain_index was removed or rewritten stays
+        # in the range and fails it, instead of dropping out of it.
+        start = 0 if start_id is None else max(start_id, 0)
+        end = len(self._events) - 1 if end_id is None else end_id
+        slice_events = self._events[start:end + 1] if end >= start else []
+        if not slice_events:
+            return ChainVerifyResult(
+                verified_count=0,
+                total_count=0,
+                first_break=None,
+                integrity="UNKNOWN",
+            )
         # A range that does not start at genesis links to the entry just before it.
-        prev_hash = None
-        if slice_events and slice_events[0].get("chain_index", 0) > 0:
-            first = slice_events[0]["chain_index"]
-            before = next((e for e in self._events if e.get("chain_index") == first - 1), None)
-            prev_hash = before.get("payload_hash") if before else None
+        prev_hash = self._events[start - 1].get("payload_hash") if start > 0 else None
         ok, broken_idx = verify_chain(slice_events, self._keyring, prev_hash=prev_hash)
         if ok:
             return ChainVerifyResult(
@@ -187,8 +191,7 @@ class AuditChainStore:
                 first_break=None,
                 integrity="OK",
             )
-        broken_event = slice_events[broken_idx] if broken_idx is not None else None
-        broken_id = broken_event.get("chain_index", broken_idx) if broken_event else None
+        broken_id = start + broken_idx if broken_idx is not None else None
         return ChainVerifyResult(
             verified_count=broken_idx if broken_idx is not None else 0,
             total_count=len(slice_events),

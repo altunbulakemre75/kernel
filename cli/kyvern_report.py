@@ -77,8 +77,10 @@ def compute_event_distribution(records: list[dict[str, Any]]) -> dict[str, int]:
 
 
 def compute_period(decisions: list[dict[str, Any]]) -> str:
+    # Text only: a tampered record may hold any JSON value here.
     timestamps = sorted(
-        d["timestamp_iso"] for d in decisions if d.get("timestamp_iso")
+        d["timestamp_iso"] for d in decisions
+        if isinstance(d.get("timestamp_iso"), str) and d["timestamp_iso"]
     )
     if not timestamps:
         return "Unknown"
@@ -396,6 +398,8 @@ def generate_pdf(
     for d in decisions:
         vid = str(d.get("policy_version_id") or "(none recorded)")
         ts = d.get("timestamp_iso", "")
+        if not isinstance(ts, str):
+            ts = ""
         if vid not in policy_versions:
             policy_versions[vid] = {"first": ts, "last": ts}
         else:

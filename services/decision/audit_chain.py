@@ -90,6 +90,8 @@ def _candidate_keys(record: dict[str, Any], keys: PublicKeys) -> list[ed25519.Ed
     """Keys allowed to have signed `record`. Records from before key_id existed may be
     signed by any trusted key; records with a key_id only by that key."""
     rid = record.get("key_id")
+    if rid is not None and not isinstance(rid, str):
+        return []  # a tampered record may hold any JSON value; no key has that id
     if isinstance(keys, Keyring):
         if rid is None:
             return list(keys)
@@ -182,7 +184,9 @@ def verify_chain(
         return True, None
 
     expected_index = decisions[0].get("chain_index", 0)
-    
+    if type(expected_index) is not int:  # not bool, list, ...: a tampered first entry
+        return False, 0
+
     for i, decision in enumerate(decisions):
         if decision.get("chain_index") != expected_index:
             return False, i
@@ -207,7 +211,10 @@ def describe_chain_failure(
 ) -> str:
     """Explain why records[index] failed verify_chain() (called with the same prev_hash)."""
     record = records[index]
-    expected_index = records[0].get("chain_index", 0) + index
+    first_index = records[0].get("chain_index", 0)
+    if type(first_index) is not int:
+        return f"chain_index is not an integer: {first_index!r}"
+    expected_index = first_index + index
     if record.get("chain_index") != expected_index:
         return f"chain_index gap: expected {expected_index}, found {record.get('chain_index')}"
     expected_prev = prev_hash if index == 0 else records[index - 1].get("payload_hash")

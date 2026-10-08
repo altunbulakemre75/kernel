@@ -295,3 +295,99 @@ def test_report_prints_markup_like_text_as_text(ws):
     assert "Operator: <font>ops" in text
     assert "Period: <i>2026-10/<i>2026-10" in text
     assert "(<b>evil</b>)" in text
+
+
+# ── tampered chains ───────────────────────────────────────────────────────────
+# An auditor runs these tools on chains they do not trust. A tampered record can
+# hold any JSON value in any field; the tools must report the chain as failed,
+# never crash and never call it OK.
+
+def test_mcp_range_with_no_entries_is_not_ok(ws):
+    _decide(ws, 2, policy=ws["policy"])
+    store = AuditChainStore(ws["chain"], public_key_path=ws["pub"])
+    store.load()
+
+    result = store.verify_chain_range(10, 20)
+    assert result.integrity == "UNKNOWN"
+    assert result.total_count == 0
+    # A negative end must not count from the end of the chain.
+    assert store.verify_chain_range(0, -2).integrity == "UNKNOWN"
+
+
+def test_mcp_range_keeps_an_entry_whose_chain_index_was_removed(ws):
+    _decide(ws, 3, policy=ws["policy"])
+    lines = ws["chain"].read_text(encoding="utf-8").splitlines()
+    record = json.loads(lines[1])
+    del record["chain_index"]
+    lines[1] = json.dumps(record)
+    ws["chain"].write_text("\n".join(lines) + "\n", encoding="utf-8")
+    store = AuditChainStore(ws["chain"], public_key_path=ws["pub"])
+    store.load()
+
+    result = store.verify_chain_range(0, 1)
+    assert result.integrity == "BROKEN"
+    assert result.first_break["id"] == 1
+
+
+_TAMPER_VALUES = (5, [5], {"k": [5]})
+
+# Runs each CLI's main() for every case in one process, so the sweep stays fast;
+# prints {case: exit code, or the traceback if main() raised}.
+_DRIVER = """
+import importlib, io, json, sys, traceback
+cases = json.loads(open(sys.argv[1], encoding="utf-8").read())
+results = {}
+for name, (module, argv) in cases.items():
+    sys.argv = [module, *argv]
+    sys.stdout = sys.stderr = io.TextIOWrapper(io.BytesIO(), encoding="utf-8")
+    try:
+        importlib.import_module(module).main()
+        results[name] = "returned"
+    except SystemExit as exc:
+        results[name] = exc.code
+    except Exception:
+        results[name] = traceback.format_exc()
+sys.stdout = sys.__stdout__
+print(json.dumps(results))
+"""
+
+
+def test_auditor_tools_survive_any_tampered_field(ws, tmp_path):
+    _decide(ws, 1, policy=ws["policy"])
+    _event(ws)
+    records = [json.loads(line) for line in ws["chain"].read_text(encoding="utf-8").splitlines()]
+
+    cases, failures = {}, {}
+    for index, record in enumerate(records):
+        for field_name in record:
+            for n, value in enumerate(_TAMPER_VALUES):
+                name = f"[{index}].{field_name}={value!r}"
+                tampered = [dict(r) for r in records]
+                tampered[index][field_name] = value
+                chain = tmp_path / f"{index}-{field_name}-{n}.jsonl"
+                chain.write_text("".join(json.dumps(r) + "\n" for r in tampered), encoding="utf-8")
+
+                common = [str(chain), "--policy", str(ws["policy"]), "--pubkey", str(ws["pub"])]
+                cases[f"kyvern-verify {name}"] = ["cli.kyvern_verify", common]
+                cases[f"kyvern-verify --json {name}"] = ["cli.kyvern_verify", [*common, "--json"]]
+                cases[f"kyvern-report {name}"] = [
+                    "cli.kyvern_report", [*common, "--output", str(tmp_path / "report.pdf")],
+                ]
+                try:
+                    store = AuditChainStore(chain, public_key_path=ws["pub"])
+                    store.load()
+                    integrity = store.verify_chain_range(None, None).integrity
+                except Exception as exc:
+                    integrity = repr(exc)
+                if integrity != "BROKEN":
+                    failures[f"store.verify_chain_range {name}"] = integrity
+
+    spec = tmp_path / "cases.json"
+    spec.write_text(json.dumps(cases), encoding="utf-8")
+    res = subprocess.run(
+        [sys.executable, "-c", _DRIVER, str(spec)], capture_output=True, text=True,
+        env=dict(os.environ, PYTHONPATH=str(REPO_ROOT)),
+    )
+    assert res.returncode == 0, res.stderr
+    failures.update({name: code for name, code in json.loads(res.stdout).items() if code != 1})
+    assert not failures, "\n".join(f"{name}: {outcome}" for name, outcome in failures.items())
