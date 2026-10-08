@@ -17,6 +17,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `haversine_m`, the one function the guardrails used, now lives in
   `services/decision/guardrails.py`
 
+### Fixed
+- `kyvern-verify`, `kyvern-report` and MCP `verify_chain` crashed on a
+  tampered record holding a number, list or object in `timestamp_iso`,
+  `key_id`, `chain_index`, `guardrails_triggered` or `roe_reference`; they now
+  report the chain as failed
+- MCP `verify_chain` reported `OK` for a range with no entries; it now
+  reports `UNKNOWN`. A range is taken by entry position, so an entry whose
+  `chain_index` was removed or rewritten stays in the range and fails it
+  (it used to drop out, and the range reported `OK`)
+
 ## [0.3.2] — 2026-10-08
 
 ### Changed
