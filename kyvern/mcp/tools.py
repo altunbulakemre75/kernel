@@ -153,7 +153,8 @@ def register_tools(
             },
         }
 
-    @app.tool(description="Verify integrity of the audit chain (or a subrange).")
+    @app.tool(description="Verify integrity of the audit chain (or a subrange). A subrange "
+              "that does not start at entry 0 is checked from its link to the entry before it.")
     def verify_chain(
         start_id: int | None = None,
         end_id: int | None = None,

@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `kyvern-verify` and `kyvern-report` accept `--policy` more than once, for a
+  chain that spans a policy update. Every Decision must be bound to one of the
+  given policies; the output says how many Decisions each policy covers, and
+  lists Decisions recorded without a policy or under a policy that was not
+  given, with their chain positions. The policy check also fails for a chain
+  with no Decision and for a chain that fails the integrity check. The same
+  policy given twice counts once
+- `kyvern-verify`, `kyvern-report` and their JSON output count Decisions and
+  RuntimeEvents separately; RuntimeEvents are listed by `event_type` and
+  `source` instead of as decisions with action `UNKNOWN`
+- `kyvern-verify --json` adds `decision_count`, `runtime_event_count`,
+  `policy_version_ids`, `decisions_per_policy`, `unbound_decisions` and
+  `unknown_policy_decisions`, also in the output for an empty chain file.
+  `policy_version_id` is `null` when more than one policy is given
+- `kyvern-verify`'s policy line reads `✓ Policy match: <version> (<file> @
+  <time>): <n> decisions`, one line per policy
+- `kyvern-report` checks the chain against `--policy`: the Article 14
+  "Verifiable policy deployment" row is computed instead of always PASS, and
+  the exit code is 1 when the policy check fails (the PDF is still written).
+  The status line adds `[policy: OK|FAILED]` after `[chain: ...]`
+- `kyvern-report`'s fingerprint covers the RuntimeEvent count and the policy
+  check result, and its decision count no longer includes RuntimeEvents
+- `append_runtime_event()`'s `policy_version_id` is optional; it is shown but
+  not checked against a policy
+
+### Fixed
+- `kyvern-report` crashed on decisions recorded without a policy
+  (`policy_version_id` null) and wrote no PDF
+- `kyvern-report` crashed on a `policy_version_id` that is not text (a
+  tampered record), and on `--system-id`, `--operator`, `--period` or chain
+  text containing ReportLab markup such as `<font>`; that text is now printed
+  as written
+- MCP `verify_chain` reported a valid chain as `BROKEN` for any range that did
+  not start at entry 0; a range is now checked from its link to the entry
+  before it (`verify_chain()` and `describe_chain_failure()` take an optional
+  `prev_hash`)
+- The test suite runs with only the `dev` extra installed: fusion and MCP
+  tests skip themselves when their extra is missing, instead of
+  `tests/conftest.py` failing to import the fusion dependencies (numpy,
+  filterpy) and stopping the whole run. CI runs this configuration.
+
 ## [0.3.1] — 2026-10-07
 
 ### Changed

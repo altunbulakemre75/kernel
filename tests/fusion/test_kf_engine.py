@@ -1,8 +1,11 @@
 """Kalman engine tests — predict, update, Mahalanobis."""
 from __future__ import annotations
 
-import numpy as np
 import pytest
+
+pytest.importorskip("filterpy")  # the fusion extra
+
+import numpy as np
 
 from services.fusion.kf_engine import (
     mahalanobis_distance,

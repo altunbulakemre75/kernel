@@ -58,7 +58,12 @@ kyvern-verify chain.jsonl --policy config/policies/default.yaml --pubkey ~/.kyve
 ```
 
 Repeat `--pubkey` to verify a chain signed by more than one key (for example
-after a key rotation); every entry records which key signed it.
+after a key rotation); every entry records which key signed it. Repeat
+`--policy` for a chain that spans a policy update: every Decision must be
+bound to one of the given policies. Decisions recorded without a policy
+(`run_graph()` / `decide_full()` called without `policy_path=`) cannot be
+checked against one, so `kyvern-verify` lists them and fails. RuntimeEvents
+are counted separately and are not checked against a policy.
 
 ### Anchoring the chain
 
@@ -81,16 +86,18 @@ schtasks /Create /SC HOURLY /TN "Kyvern anchor" /TR "kyvern-anchor C:\kyvern\cha
 **Output:**
 
 ```text
-✓ Chain integrity: VALID (5 decisions, all signed)
-✓ Policy match: c1fc5724f6b02970 (default.yaml @ 2026-05-15 18:30 UTC)
+✓ Chain integrity: VALID (3 decisions, 1 runtime events, all signed)
+✓ Policy match: 5b64432b2dd0796f (default.yaml @ 2026-10-08 04:51 UTC): 3 decisions
 ✓ Signature verification: PASSED (Ed25519)
+  Anchors: none (no chain.anchors.jsonl)
 
 Decision summary:
-  [0] 14:32:07  action=LOG      rule_id=r_001  guardrails=[]
-  [1] 14:32:09  action=ALERT    rule_id=r_003  guardrails=[geofence]
-  [2] 14:32:15  action=HANDOFF  rule_id=r_001  guardrails=[]
+  [0] 14:32:07  action=LOG     rule_id=POL-1  guardrails=[input-single-tick]
+  [1] 14:32:09  action=ALERT   rule_id=POL-2  guardrails=[]
+  [2] 14:32:12  event=sensor_anomaly source=imu_monitor
+  [3] 14:32:15  action=ALERT   rule_id=POL-2  guardrails=[]
 
-Audit hash: c1fc5724f6b02970 (verifiable against deployed policy)
+Audit hash: 5b64432b2dd0796f (verifiable against deployed policy)
 ```
 
 ## EU AI Act Compliance Reports
@@ -151,8 +158,12 @@ components append their own evidence to the same signed chain as Kyvern
 Decisions:
 
 ```python
+from shared.paths import default_chain_path
 from shared.schemas import RuntimeEvent
-from services.decision.audit_chain import append_runtime_event
+from services.decision.audit_chain import append_runtime_event, load_or_create_keypair
+
+chain_path = default_chain_path()       # the chain run_graph() writes
+signing_key = load_or_create_keypair()  # ~/.kyvern/keys/signing.key
 
 event = RuntimeEvent(
     event_type="guardrail_downgrade",
@@ -161,8 +172,12 @@ event = RuntimeEvent(
     timestamp_iso="2026-05-20T12:00:00+00:00",
     payload={"reason": "speed_exceeded"},
 )
-append_runtime_event(event, chain_path, signing_key, policy_version_id="p_v1")
+append_runtime_event(event, chain_path, signing_key)
 ```
+
+`append_runtime_event()` also takes an optional `policy_version_id` to record
+which policy was in force; auditor tools show it but only check Decisions
+against a policy.
 
 Decisions from `run_graph()` are appended to the same chain automatically
 (`~/.kyvern/chain.jsonl` by default; override with `chain_path=` or

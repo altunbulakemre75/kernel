@@ -1,4 +1,7 @@
 import pytest
+
+pytest.importorskip("mcp")  # the mcp extra
+
 from mcp.server.fastmcp import FastMCP
 
 from kyvern.mcp.errors import KyvernMCPError

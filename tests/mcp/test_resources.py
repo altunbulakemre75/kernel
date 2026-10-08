@@ -1,6 +1,10 @@
 import json
 from datetime import datetime, timezone
 
+import pytest
+
+pytest.importorskip("mcp")  # the mcp extra
+
 from mcp.server.fastmcp import FastMCP
 
 from kyvern.mcp.resources import register_resources

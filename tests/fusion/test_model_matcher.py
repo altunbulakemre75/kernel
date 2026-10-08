@@ -1,6 +1,10 @@
 """Drone model matcher (FAISS or numpy fallback) tests."""
 from __future__ import annotations
 
+import pytest
+
+pytest.importorskip("numpy")  # the fusion extra
+
 from services.fusion.model_matcher import DroneCatalog
 
 

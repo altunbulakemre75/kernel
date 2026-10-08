@@ -1,6 +1,10 @@
 """Hungarian + Mahalanobis association tests."""
 from __future__ import annotations
 
+import pytest
+
+pytest.importorskip("filterpy")  # the fusion extra
+
 import numpy as np
 
 from services.fusion.association import associate

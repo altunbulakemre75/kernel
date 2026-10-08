@@ -3,6 +3,10 @@ from __future__ import annotations
 
 import pytest
 
+# the fusion extra
+pytest.importorskip("filterpy")
+pytest.importorskip("prometheus_client")
+
 from services.fusion.fusion_service import (
     camera_to_measurements,
     enu_to_latlon,

@@ -50,3 +50,23 @@ jobs:
       - name: Smoke test from outside the checkout
         working-directory: /tmp
         run: /tmp/core/bin/python "$GITHUB_WORKSPACE/scripts/smoke_core_install.py"
+
+  tests-without-extras:
+    name: Tests with only the dev extra
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          # Own cache key: with the default (requirements.txt) this job would
+          # share the full-extras 3.12 job's key and could fill it dev-only.
+          cache-dependency-path: pyproject.toml
+
+      - name: Install the core and dev tooling
+        run: pip install -e ".[dev]"
+
+      - name: Test (pytest) — fusion and MCP tests skip themselves
+        run: pytest tests/ -rfEs --tb=short

@@ -1,6 +1,10 @@
 """IMM filter tests."""
 from __future__ import annotations
 
+import pytest
+
+pytest.importorskip("filterpy")  # the fusion extra
+
 import numpy as np
 
 from services.fusion.imm_engine import imm_mode_probabilities, make_imm_filter

@@ -173,7 +173,13 @@ class AuditChainStore:
         if end_id is not None:
             end = end_id
         slice_events = [e for e in self._events if start <= e.get("chain_index", -1) <= end]
-        ok, broken_idx = verify_chain(slice_events, self._keyring)
+        # A range that does not start at genesis links to the entry just before it.
+        prev_hash = None
+        if slice_events and slice_events[0].get("chain_index", 0) > 0:
+            first = slice_events[0]["chain_index"]
+            before = next((e for e in self._events if e.get("chain_index") == first - 1), None)
+            prev_hash = before.get("payload_hash") if before else None
+        ok, broken_idx = verify_chain(slice_events, self._keyring, prev_hash=prev_hash)
         if ok:
             return ChainVerifyResult(
                 verified_count=len(slice_events),
@@ -188,7 +194,9 @@ class AuditChainStore:
             total_count=len(slice_events),
             first_break={
                 "id": broken_id,
-                "reason": describe_chain_failure(slice_events, broken_idx, self._keyring),
+                "reason": describe_chain_failure(
+                    slice_events, broken_idx, self._keyring, prev_hash=prev_hash
+                ),
             },
             integrity="BROKEN",
         )

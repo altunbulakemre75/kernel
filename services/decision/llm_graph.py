@@ -235,6 +235,10 @@ async def run_graph(
     The decision is appended to the audit chain at `chain_path` (default:
     $KYVERN_CHAIN_PATH, else ~/.kyvern/chain.jsonl). Raises AuditWriteError if it
     cannot be recorded.
+
+    Pass `policy_path` (the YAML `roe_rules` were loaded from) to bind the decision
+    to that policy's version id. Without it the decision records no policy, and
+    kyvern-verify / kyvern-report report it as unbound and fail the policy check.
     """
     
     loaded_policy = None

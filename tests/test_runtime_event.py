@@ -333,6 +333,8 @@ def test_mcp_query_events_filters_by_event_type(
 ):
     """End-to-end: MCP query_events with event_type filter returns only
     matching RuntimeEvents from a mixed chain; action filter returns only Decisions."""
+    pytest.importorskip("mcp")
+
     from cryptography.hazmat.primitives import serialization
     from mcp.server.fastmcp import FastMCP
 

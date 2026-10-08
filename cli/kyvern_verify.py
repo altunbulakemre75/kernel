@@ -12,9 +12,10 @@ from cryptography.hazmat.primitives import serialization
 from services.decision.anchors import anchors_path_for, check_anchors, read_receipts
 from services.decision.audit_chain import (
     Keyring,
+    check_policy_binding,
     describe_chain_failure,
+    record_type_of,
     verify_chain,
-    verify_decision_against_policy,
 )
 from services.decision.policy_loader import load_policy
 from services.decision.rfc3161_anchor import RFC3161Anchor, load_roots
@@ -71,6 +72,15 @@ def load_pubkey(path: str) -> Any:
         print(f"{RED_CROSS} Invalid public key in {path}: {e}")
         sys.exit(1)
 
+def _policy_label(path: str) -> str:
+    """Policy file name and modification time, for the human-readable output."""
+    try:
+        mtime = datetime.fromtimestamp(os.path.getmtime(path), tz=timezone.utc)
+        when = mtime.strftime("%Y-%m-%d %H:%M UTC")
+    except OSError:
+        when = "unknown date"
+    return f"{os.path.basename(path)} @ {when}"
+
 def main() -> None:
     if sys.stdout.encoding.lower() != "utf-8":
         try:
@@ -85,7 +95,10 @@ def main() -> None:
             
     parser = argparse.ArgumentParser(description="Verify a cryptographically signed decision chain.")
     parser.add_argument("chain_file", help="path to JSONL file with decisions")
-    parser.add_argument("--policy", required=True, help="path to policy YAML")
+    parser.add_argument(
+        "--policy", required=True, action="append",
+        help="path to a policy YAML; repeat for a chain that spans policy updates",
+    )
     parser.add_argument(
         "--pubkey", required=True, action="append",
         help="path to a PEM-encoded Ed25519 public key; repeat for chains signed by several keys",
@@ -108,7 +121,11 @@ def main() -> None:
         if args.json:
             print(json.dumps({
                 "chain_valid": False, "policy_match": False, "signature_valid": False,
-                "decisions": [], "policy_version_id": None, "errors": ["No decisions found in chain file"]
+                "decisions": [], "decision_count": 0, "runtime_event_count": 0,
+                "policy_version_id": None, "policy_version_ids": [],
+                "decisions_per_policy": {}, "unbound_decisions": [],
+                "unknown_policy_decisions": {}, "key_ids": [], "reason": None,
+                "anchors": None, "errors": ["No decisions found in chain file"],
             }))
         else:
             print(f"{RED_CROSS} No decisions found in chain file.")
@@ -125,28 +142,27 @@ def main() -> None:
         errors.append(f"Chain integrity broken at index {broken_idx}: {failure_reason}")
 
     key_ids = sorted({d["key_id"] for d in decisions if d.get("key_id")})
-        
-    policy_matches = True
-    mismatched_policy_idx = None
-    policy_reason = None
-    
-    for idx, d in enumerate(decisions):
-        is_match, reason = verify_decision_against_policy(d, args.policy, public_key)
-        if not is_match:
-            policy_matches = False
-            mismatched_policy_idx = idx
-            policy_reason = reason
-            errors.append(f"Policy mismatch at index {idx}: {reason}")
-            break
-            
-    try:
-        policy_obj = load_policy(args.policy)
-        policy_hash = policy_obj.version_id
-    except Exception as e:
-        policy_obj = None
-        policy_hash = None
-        errors.append(f"Failed to load policy file: {e}")
-        policy_matches = False
+    decision_count = sum(1 for d in decisions if record_type_of(d) == "decision")
+    event_count = len(decisions) - decision_count
+
+    unique_policies: dict[str, Any] = {}
+    policy_load_error = None
+    for path in args.policy:
+        try:
+            policy = load_policy(path)
+        except Exception as e:
+            policy_load_error = f"Failed to load policy file {path}: {e}"
+            errors.append(policy_load_error)
+            continue
+        # The same policy given twice (or two files with the same content) counts once.
+        unique_policies.setdefault(policy.version_id, policy)
+    policies = list(unique_policies.values())
+    policy_check = check_policy_binding(decisions, policies, broken_at=broken_idx)
+    policy_matches = policy_load_error is None and policy_check.ok
+    if policy_load_error is None and not policy_check.ok:
+        errors.append(f"Policy check failed: {policy_check.reason()}")
+    # One version id only when one policy was given; policy_version_ids lists them all.
+    policy_hash = policies[0].version_id if len(policies) == 1 else None
 
     anchors_path = Path(args.anchors) if args.anchors else anchors_path_for(Path(args.chain_file))
     anchor_report = None
@@ -172,7 +188,13 @@ def main() -> None:
             "policy_match": policy_matches,
             "signature_valid": is_valid_chain,
             "decisions": decisions,
+            "decision_count": decision_count,
+            "runtime_event_count": event_count,
             "policy_version_id": policy_hash,
+            "policy_version_ids": [p.version_id for p in policies],
+            "decisions_per_policy": policy_check.per_policy,
+            "unbound_decisions": policy_check.unbound,
+            "unknown_policy_decisions": {str(i): v for i, v in policy_check.unknown.items()},
             "key_ids": key_ids,
             "reason": failure_reason,
             "anchors": asdict(anchor_report) if anchor_report else None,
@@ -181,28 +203,23 @@ def main() -> None:
         print(json.dumps(out, indent=2))
         sys.exit(0 if all_valid else 1)
         
+    counts = f"{decision_count} decisions"
+    if event_count:
+        counts += f", {event_count} runtime events"
     if is_valid_chain:
-        print(f"{GREEN_CHECK} Chain integrity: VALID ({len(decisions)} decisions, all signed)")
+        print(f"{GREEN_CHECK} Chain integrity: VALID ({counts}, all signed)")
     else:
         print(f"{RED_CROSS} Chain integrity: INVALID (Broken at index {broken_idx}: {failure_reason})")
-        
-    if policy_matches and policy_hash:
-        try:
-            mtime = os.path.getmtime(args.policy)
-            mtime_dt = datetime.fromtimestamp(mtime, tz=timezone.utc)
-            mtime_str = mtime_dt.strftime("%Y-%m-%d %H:%M UTC")
-        except Exception:
-            mtime_str = "unknown date"
-        
-        policy_basename = os.path.basename(args.policy)
-        short_hash = policy_hash[:16]
-        print(f"{GREEN_CHECK} Policy match: {short_hash} ({policy_basename} @ {mtime_str})")
+
+    if policy_matches:
+        for policy in policies:
+            print(
+                f"{GREEN_CHECK} Policy match: {policy.version_short} ({_policy_label(policy.path)}): "
+                f"{policy_check.per_policy[policy.version_id]} decisions"
+            )
     else:
         print(f"{RED_CROSS} Policy match: FAILED")
-        if mismatched_policy_idx is not None:
-            print(f"  Reason: Decision [{mismatched_policy_idx}] mismatch - {policy_reason}")
-        elif not policy_hash:
-            print("  Reason: Failed to load policy file")
+        print(f"  Reason: {policy_load_error or policy_check.reason()}")
             
     if is_valid_chain:
         print(f"{GREEN_CHECK} Signature verification: PASSED (Ed25519)")
@@ -228,14 +245,16 @@ def main() -> None:
     print("\nDecision summary:")
     for i, d in enumerate(decisions):
         time_str = format_time(d.get("timestamp_iso", ""))
-        action = str(d.get("action", "UNKNOWN")).upper()
-        rule_id = d.get("roe_reference", "unknown")
-        if rule_id is None:
-            rule_id = "None"
-        guardrails = d.get("guardrails_triggered", [])
-        g_str = "[" + ", ".join(guardrails) + "]"
-        
-        print(f"  [{i}] {time_str}  action={action:<7} rule_id={rule_id:<6} guardrails={g_str}")
+        if record_type_of(d) == "runtime_event":
+            print(f"  [{i}] {time_str}  event={d.get('event_type')} source={d.get('source')}")
+        else:
+            action = str(d.get("action", "UNKNOWN")).upper()
+            rule_id = d.get("roe_reference", "unknown")
+            if rule_id is None:
+                rule_id = "None"
+            guardrails = d.get("guardrails_triggered", [])
+            g_str = "[" + ", ".join(guardrails) + "]"
+            print(f"  [{i}] {time_str}  action={action:<7} rule_id={rule_id:<6} guardrails={g_str}")
         if args.verbose:
             print(f"      {json.dumps(d)}")
 
