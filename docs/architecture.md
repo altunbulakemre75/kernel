@@ -212,7 +212,8 @@ reconciliation and can only bring it back down.
 - **Ollama** — Default for air-gapped deployments. Connects to
   `localhost:11434`, model configurable via `OLLAMA_MODEL` env
   (default: `llama3.1:8b`). Structured output via `format=json`.
-- **Anthropic Claude** — Used when `ANTHROPIC_API_KEY` is set. Structured
+- **Anthropic Claude** — Used when `ANTHROPIC_API_KEY` is set; model from
+  `KYVERN_LLM_MODEL` (default `claude-sonnet-4-6`). Structured
   output via tool-use (`submit_assessment`). Provider chain:
   Anthropic → Ollama → None (graceful degradation).
 - **OpenAI** — Not yet implemented. `llm_client.py` is structured for

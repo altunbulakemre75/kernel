@@ -38,7 +38,7 @@ def test_decide_full_sync_runs_graph():
     decision = decide_full(_track(), rules)
     assert decision is not None
     assert decision.track_id == "t-u"
-    # LLM disabled (no NIZAM_DECISION_LLM_ENABLED env) -> llm_provider None
+    # LLM disabled (no KYVERN_DECISION_LLM_ENABLED env) -> llm_provider None
     # Guardrails executed -> guardrails_triggered is list
 
 

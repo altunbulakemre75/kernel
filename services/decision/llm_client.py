@@ -57,6 +57,13 @@ DECISION_SCHEMA = {
 }
 
 
+DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-6"
+
+
+def _anthropic_model() -> str:
+    return os.getenv("KYVERN_LLM_MODEL", DEFAULT_ANTHROPIC_MODEL)
+
+
 async def _try_anthropic(prompt: str) -> LLMResponse | None:
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
@@ -68,10 +75,10 @@ async def _try_anthropic(prompt: str) -> LLMResponse | None:
         return None
 
     client = AsyncAnthropic(api_key=api_key)
-    model = os.getenv("NIZAM_LLM_MODEL", "claude-sonnet-4-6")
+    model = _anthropic_model()
     tools = [{
         "name": "submit_assessment",
-        "description": "Submit counter-UAS threat assessment.",
+        "description": "Submit the advisor's assessment.",
         "input_schema": DECISION_SCHEMA,
     }]
 

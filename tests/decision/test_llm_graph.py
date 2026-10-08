@@ -114,7 +114,6 @@ def _llm(action: str) -> LLMResponse:
 
 def _llm_off(monkeypatch):
     monkeypatch.delenv("KYVERN_DECISION_LLM_ENABLED", raising=False)
-    monkeypatch.delenv("NIZAM_DECISION_LLM_ENABLED", raising=False)
 
 
 def _llm_answers(monkeypatch, action: str):
@@ -177,3 +176,29 @@ async def test_guardrails_still_cap_an_action_the_llm_raised(monkeypatch):
     decision = await run_graph(_track(), load_roe(CONFIG_PATH), friendly_zones=zones)
     assert decision.action == Action.ALERT
     assert decision.guardrails_triggered == ["friendly-zone-OP"]
+
+
+@pytest.mark.asyncio
+async def test_decision_source_is_the_llm_only_when_it_changed_the_action(monkeypatch):
+    rules = load_roe(CONFIG_PATH)
+    _llm_off(monkeypatch)
+    rule_only = await run_graph(_track(), rules)
+
+    _llm_answers(monkeypatch, rule_only.action.value)  # the LLM agrees with the rule
+    agreed = await run_graph(_track(), rules)
+    assert agreed.source == DecisionSource.RULE_ENGINE
+    assert agreed.llm_provider == "fake"  # consulted, and recorded as such
+
+    _llm_answers(monkeypatch, "engage")  # ignored
+    assert (await run_graph(_track(), rules)).source == DecisionSource.RULE_ENGINE
+
+    _llm_answers(monkeypatch, "handoff")  # raises the rule's action
+    assert (await run_graph(_track(), rules)).source == DecisionSource.LLM_ADVISOR
+
+
+def test_llm_is_enabled_only_by_the_kyvern_variable(monkeypatch):
+    _llm_off(monkeypatch)
+    monkeypatch.setenv("NIZAM_DECISION_LLM_ENABLED", "true")  # pre-rename name: ignored
+    assert not llm_graph._is_llm_enabled()
+    monkeypatch.setenv("KYVERN_DECISION_LLM_ENABLED", "true")
+    assert llm_graph._is_llm_enabled()

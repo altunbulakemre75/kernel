@@ -26,8 +26,9 @@ class Action(str, Enum):
 
 
 class DecisionSource(str, Enum):
-    RULE_ENGINE = "rule_engine"
-    LLM_ADVISOR = "llm_advisor"
+    """Who set the decision's action before the guardrails ran."""
+    RULE_ENGINE = "rule_engine"  # the rule engine's action stands (an LLM may have been consulted)
+    LLM_ADVISOR = "llm_advisor"  # the LLM advisor raised the rule engine's action
     OPERATOR = "operator"
 
 
