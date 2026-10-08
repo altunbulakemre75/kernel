@@ -44,7 +44,6 @@ Kyvern is not on PyPI yet; install from a clone of this repository.
 pip install .                 # core: decisions, audit chain, kyvern-verify/report/anchor
 pip install ".[mcp]"          # + kyvern-mcp (Claude Desktop)
 pip install ".[llm]"          # + LLM advisor (LangGraph, Anthropic)
-pip install ".[fusion]"       # + multi-sensor tracking and detector services
 pip install -r requirements.txt && pytest   # full development environment
 ```
 
