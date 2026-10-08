@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `action=STOP rule_id=... source=...`; `kyvern-report`'s Article 12 checks
   ask them for inputs and reasoning instead of a threat level, and its
   threat-level table covers only decisions that record one
+- `examples/ros2_safety_demo`: a robot's own safety controller (stop / slow /
+  continue from the closest obstacle, thresholds in its own policy file)
+  recording each change of action with `record_decision()`, as a ROS2 node
+  (`/scan` in, `/safety/action` out) and as a scenario that runs without
+  ROS2 and ends with `kyvern-verify` and `kyvern-report`
 
 ### Changed
 - A decision's `source` is `llm_advisor` only when the LLM advisor raised the

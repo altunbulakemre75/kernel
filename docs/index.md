@@ -117,6 +117,11 @@ query, chain verification, and active-policy metadata. See [MCP integration](int
 
 ## Integrations
 
+**ROS2 safety-controller demo:** a robot's own stop / slow / continue
+decisions, recorded with `record_decision()` from a `/scan` subscriber,
+then verified and reported. It runs without ROS2 too. See
+[`examples/ros2_safety_demo`](https://github.com/altunbulakemre75/kyvern/tree/main/examples/ros2_safety_demo).
+
 **ROS2 bridge:** publishes signed Decision objects to a ROS2 topic for
 consumption by autonomous systems. See [ROS2 integration](integrations/ros2.md).
 

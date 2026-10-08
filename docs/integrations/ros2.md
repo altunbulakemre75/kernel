@@ -108,3 +108,10 @@ pub.stop()
 ```
 
 Terminal 1 should log: `[VERIFIED] chain_index=0`
+
+## Recording a robot's own decisions
+
+The bridge publishes decisions Kyvern's engine made. To record the
+decisions your robot's own controller makes, call `kyvern.record_decision()`
+from your node; [`examples/ros2_safety_demo`](https://github.com/altunbulakemre75/kyvern/tree/main/examples/ros2_safety_demo) does this for a
+LaserScan-based safety controller.

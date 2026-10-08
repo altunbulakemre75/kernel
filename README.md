@@ -220,6 +220,11 @@ See [`docs/architecture.md` §8](docs/architecture.md) for chain semantics.
 
 ## Integrations
 
+**ROS2 safety-controller demo:** a robot's own stop / slow / continue
+decisions, recorded with `record_decision()` from a `/scan` subscriber,
+then verified and reported. It runs without ROS2 too. See
+[`examples/ros2_safety_demo`](examples/ros2_safety_demo/README.md).
+
 **ROS2 bridge:** publishes signed Decision objects to a ROS2 topic for
 consumption by autonomous systems. See [`docs/integrations/ros2.md`](docs/integrations/ros2.md).
 
