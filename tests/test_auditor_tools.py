@@ -179,6 +179,44 @@ def test_chain_spanning_a_policy_update(ws):
     assert res.returncode == 0, res.stderr
 
 
+def test_verify_json_names_one_policy_version_only_for_one_policy(ws):
+    _decide(ws, 1, policy=ws["policy"])
+    _decide(ws, 1, policy=ws["updated"], prefix="u")
+    ids = [load_policy(str(p)).version_id for p in (ws["policy"], ws["updated"])]
+
+    out = json.loads(_verify(ws, ws["policy"], ws["updated"], extra=["--json"]).stdout)
+    assert out["policy_version_ids"] == ids
+    assert out["policy_version_id"] is None
+
+    out = json.loads(_verify(ws, ws["policy"], extra=["--json"]).stdout)
+    assert out["policy_version_id"] == ids[0]
+
+
+def test_the_same_policy_given_twice_is_listed_once(ws):
+    _decide(ws, 2, policy=ws["policy"])
+
+    res = _verify(ws, ws["policy"], ws["policy"])
+    assert res.returncode == 0, res.stdout
+    assert res.stdout.count("Policy match:") == 1
+    assert ": 2 decisions" in res.stdout
+    assert "Audit hash:" in res.stdout
+    out = json.loads(_verify(ws, ws["policy"], ws["policy"], extra=["--json"]).stdout)
+    assert out["policy_version_ids"] == [out["policy_version_id"]]
+
+
+def test_verify_json_for_an_empty_chain_has_the_usual_keys(ws):
+    _decide(ws, 1, policy=ws["policy"])
+    usual = json.loads(_verify(ws, ws["policy"], extra=["--json"]).stdout)
+    ws["chain"].write_text("", encoding="utf-8")
+
+    res = _verify(ws, ws["policy"], extra=["--json"])
+    assert res.returncode == 1
+    out = json.loads(res.stdout)
+    assert out.keys() == usual.keys()
+    assert out["errors"] == ["No decisions found in chain file"]
+    assert out["decision_count"] == 0
+
+
 def test_report_checks_the_chain_against_the_policy(ws):
     _decide(ws, 2, policy=ws["policy"])
 

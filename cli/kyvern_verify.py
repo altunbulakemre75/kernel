@@ -121,7 +121,11 @@ def main() -> None:
         if args.json:
             print(json.dumps({
                 "chain_valid": False, "policy_match": False, "signature_valid": False,
-                "decisions": [], "policy_version_id": None, "errors": ["No decisions found in chain file"]
+                "decisions": [], "decision_count": 0, "runtime_event_count": 0,
+                "policy_version_id": None, "policy_version_ids": [],
+                "decisions_per_policy": {}, "unbound_decisions": [],
+                "unknown_policy_decisions": {}, "key_ids": [], "reason": None,
+                "anchors": None, "errors": ["No decisions found in chain file"],
             }))
         else:
             print(f"{RED_CROSS} No decisions found in chain file.")
@@ -141,19 +145,24 @@ def main() -> None:
     decision_count = sum(1 for d in decisions if record_type_of(d) == "decision")
     event_count = len(decisions) - decision_count
 
-    policies = []
+    unique_policies: dict[str, Any] = {}
     policy_load_error = None
     for path in args.policy:
         try:
-            policies.append(load_policy(path))
+            policy = load_policy(path)
         except Exception as e:
             policy_load_error = f"Failed to load policy file {path}: {e}"
             errors.append(policy_load_error)
+            continue
+        # The same policy given twice (or two files with the same content) counts once.
+        unique_policies.setdefault(policy.version_id, policy)
+    policies = list(unique_policies.values())
     policy_check = check_policy_binding(decisions, policies, broken_at=broken_idx)
     policy_matches = policy_load_error is None and policy_check.ok
     if policy_load_error is None and not policy_check.ok:
         errors.append(f"Policy check failed: {policy_check.reason()}")
-    policy_hash = policies[0].version_id if policies else None
+    # One version id only when one policy was given; policy_version_ids lists them all.
+    policy_hash = policies[0].version_id if len(policies) == 1 else None
 
     anchors_path = Path(args.anchors) if args.anchors else anchors_path_for(Path(args.chain_file))
     anchor_report = None
@@ -203,9 +212,9 @@ def main() -> None:
         print(f"{RED_CROSS} Chain integrity: INVALID (Broken at index {broken_idx}: {failure_reason})")
 
     if policy_matches:
-        for policy, path in zip(policies, args.policy, strict=True):
+        for policy in policies:
             print(
-                f"{GREEN_CHECK} Policy match: {policy.version_short} ({_policy_label(path)}): "
+                f"{GREEN_CHECK} Policy match: {policy.version_short} ({_policy_label(policy.path)}): "
                 f"{policy_check.per_policy[policy.version_id]} decisions"
             )
     else:
@@ -249,7 +258,7 @@ def main() -> None:
         if args.verbose:
             print(f"      {json.dumps(d)}")
 
-    if all_valid and len(policies) == 1:
+    if all_valid and policy_hash:
         print(f"\nAudit hash: {policy_hash[:16]} (verifiable against deployed policy)")
         
     sys.exit(0 if all_valid else 1)
