@@ -100,7 +100,7 @@ async def retrieve_roe(state: GraphState) -> GraphState:
 # ── Node 3: reason (LLM advisor) ──────────────────────────────────
 
 def _is_llm_enabled() -> bool:
-    return os.getenv("KYVERN_DECISION_LLM_ENABLED", os.getenv("NIZAM_DECISION_LLM_ENABLED", "false")).lower() == "true"
+    return os.getenv("KYVERN_DECISION_LLM_ENABLED", "false").lower() == "true"
 
 
 async def reason(state: GraphState) -> GraphState:
@@ -187,7 +187,12 @@ async def guardrail(state: GraphState) -> GraphState:
         threat_level=state.assessment.threat_level,
         confidence=float(state.track.get("confidence", 0.0)),
         reasoning=base_reasoning[:500],
-        source=DecisionSource.LLM_ADVISOR if state.llm_response else DecisionSource.RULE_ENGINE,
+        # The LLM is the source only when it changed the rule engine's action; that it was
+        # consulted at all is recorded in llm_provider / llm_raw_response.
+        source=(
+            DecisionSource.LLM_ADVISOR if merged_action != state.rule_action
+            else DecisionSource.RULE_ENGINE
+        ),
         roe_reference=state.rule_ref,
         requires_operator_approval=state.rule_approval_required or merged_action == Action.ENGAGE,
         timestamp_iso=datetime.now(timezone.utc).isoformat(),

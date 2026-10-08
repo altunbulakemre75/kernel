@@ -39,3 +39,13 @@ async def test_query_llm_returns_none_when_no_provider(monkeypatch):
     monkeypatch.setattr(llm_client, "OLLAMA_URL", "http://localhost:1")  # won't respond
     result = await llm_client.query_llm("test prompt")
     assert result is None
+
+
+def test_anthropic_model_comes_from_the_kyvern_variable(monkeypatch):
+    from services.decision import llm_client
+
+    monkeypatch.delenv("KYVERN_LLM_MODEL", raising=False)
+    monkeypatch.setenv("NIZAM_LLM_MODEL", "old-name")  # pre-rename name: ignored
+    assert llm_client._anthropic_model() == llm_client.DEFAULT_ANTHROPIC_MODEL
+    monkeypatch.setenv("KYVERN_LLM_MODEL", "claude-x")
+    assert llm_client._anthropic_model() == "claude-x"
