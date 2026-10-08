@@ -134,7 +134,8 @@ def test_verify_wrong_policy_returns_one(temp_workspace):
         "--pubkey", str(temp_workspace["pub_path"])
     )
     assert res.returncode == 1
-    assert "Decision [0] mismatch" in res.stdout
+    assert "3 decision(s) bound to a policy not given with --policy" in res.stdout
+    assert "at [0, 1, 2]" in res.stdout
 
 
 def test_verify_missing_signature_returns_one(temp_workspace):
