@@ -413,7 +413,12 @@ def generate_pdf(
         Paragraph("Deployed Policy Versions During Period", s["h2"]),
         _hr(),
     ]
-    if len(policy_versions) == 1:
+    if list(policy_versions) == ["(none recorded)"]:
+        story.append(Paragraph(
+            "No decision in the period records a policy version.",
+            s["body"],
+        ))
+    elif len(policy_versions) == 1:
         story.append(Paragraph(
             "Single policy version in effect throughout the period.",
             s["body"],

@@ -155,6 +155,8 @@ def test_decisions_recorded_without_a_policy(ws):
     text = _pdf_text(ws["pdf"])
     assert "(none recorded)" in text
     assert "Verifiable policy deployment failed: 2 decision(s) not bound" in text
+    assert "Single policy version in effect" not in text
+    assert "No decision in the period records a policy version." in text
 
 
 def test_chain_spanning_a_policy_update(ws):
