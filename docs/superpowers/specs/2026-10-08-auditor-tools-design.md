@@ -63,11 +63,13 @@ all seven passed CI.
 `services/decision/audit_chain.py` gains:
 
 - `record_type_of(record) -> str` — `"runtime_event"` or `"decision"`.
-- `check_policy_binding(records, policies) -> PolicyCheck` — `policies` is a
-  list of `LoadedPolicy`. `PolicyCheck` holds `ok`, `per_policy` (version id →
-  number of Decisions), `unbound` (chain positions of Decisions without a policy
-  id) and `unknown` (position → policy id not among `policies`), plus
-  `reason()` for a one-line explanation.
+- `check_policy_binding(records, policies, broken_at=None) -> PolicyCheck` —
+  `policies` is a list of `LoadedPolicy`; `broken_at` is the index
+  `verify_chain()` returned for the same records. `PolicyCheck` holds `ok`,
+  `per_policy` (version id → number of Decisions), `unbound` (chain positions of
+  Decisions without a policy id) and `unknown` (position → policy id not among
+  `policies`), plus `reason()` for a one-line explanation. The check also fails
+  when the chain holds no Decision or `broken_at` is set (added after review).
 
 `verify_decision_against_policy()` stays for API compatibility.
 

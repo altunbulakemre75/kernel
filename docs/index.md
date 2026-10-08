@@ -45,16 +45,18 @@ kyvern-verify chain.jsonl --policy config/policies/default.yaml --pubkey ~/.kyve
 **Output:**
 
 ```text
-✓ Chain integrity: VALID (5 decisions, all signed)
-✓ Policy match: c1fc5724f6b02970 (default.yaml @ 2026-05-15 18:30 UTC)
+✓ Chain integrity: VALID (3 decisions, 1 runtime events, all signed)
+✓ Policy match: 5b64432b2dd0796f (default.yaml @ 2026-10-08 04:51 UTC): 3 decisions
 ✓ Signature verification: PASSED (Ed25519)
+  Anchors: none (no chain.anchors.jsonl)
 
 Decision summary:
-  [0] 14:32:07  action=LOG      rule_id=r_001  guardrails=[]
-  [1] 14:32:09  action=ALERT    rule_id=r_003  guardrails=[geofence]
-  [2] 14:32:15  action=HANDOFF  rule_id=r_001  guardrails=[]
+  [0] 14:32:07  action=LOG     rule_id=POL-1  guardrails=[input-single-tick]
+  [1] 14:32:09  action=ALERT   rule_id=POL-2  guardrails=[]
+  [2] 14:32:12  event=sensor_anomaly source=imu_monitor
+  [3] 14:32:15  action=ALERT   rule_id=POL-2  guardrails=[]
 
-Audit hash: c1fc5724f6b02970 (verifiable against deployed policy)
+Audit hash: 5b64432b2dd0796f (verifiable against deployed policy)
 ```
 
 ## EU AI Act Compliance Reports
