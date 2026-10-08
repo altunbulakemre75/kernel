@@ -58,6 +58,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `llm_graph._reconcile_action`
 - `kyvern/mcp/schemas.py`: Pydantic models no module imported (the MCP tools
   return plain dicts)
+- `AgentName`, `TaskRequest`, `AgentResult` and `OrchestratorResponse` from
+  `shared/schemas.py`: unused models from the private deployment's orchestrator
 
 ### Fixed
 - `kyvern-verify`, `kyvern-report` and MCP `verify_chain` crashed on a
