@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- The counter-UAS components moved to a separate private repository: sensor
+  adapters (`services/detectors`), multi-sensor tracking (`services/fusion`,
+  `services/schemas`), autonomy (`services/autonomy`: intercept planner,
+  MAVSDK sender, geofence), the `shared/` helpers only they used (`clock`,
+  `geo`, `rate_limit`, `lifecycle`, `heartbeat`, `logging_setup`, `utils`)
+  and the `fusion` extra. Kyvern's core did not depend on them;
+  `haversine_m`, the one function the guardrails used, now lives in
+  `services/decision/guardrails.py`
+
 ## [0.3.2] — 2026-10-08
 
 ### Changed

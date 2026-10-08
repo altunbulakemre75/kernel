@@ -45,18 +45,6 @@ dev = [
     "pypdf>=4.0.0",   # PDF assertions in the report tests
 ]
 
-fusion = [
-    # Multi-sensor tracking and the detector services: pip install -e ".[fusion]"
-    # Camera/RF hardware stacks (ultralytics, opencv, scapy, bleak, mavsdk) are
-    # imported lazily and installed separately when those services run.
-    "numpy>=1.24",
-    "scipy>=1.11",
-    "filterpy>=1.4.5,<2",
-    "pyproj>=3.6",               # optional: shared/geo.py falls back to flat-Earth math
-    "nats-py>=2.6,<3",
-    "prometheus-client>=0.19",
-]
-
 llm = [
     # Activate with: pip install -e ".[llm]"
     # Required when KYVERN_DECISION_LLM_ENABLED=true

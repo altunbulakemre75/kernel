@@ -1,6 +1,6 @@
 # Kyvern — Architecture
 
-> Last updated: 2026-05-14 · Status: pre-1.0
+> Last updated: 2026-10-08 · Status: pre-1.0
 
 ---
 
@@ -43,63 +43,21 @@ Entry points:
 - `threat_graph.decide_full()` — sync wrapper over `run_graph` (full pipeline).
 - `llm_graph.run_graph()` — async, production entry point.
 
-### 2.2 `services/fusion/` — Multi-Sensor State Estimation
+### 2.2 What is not in this repository
 
-Fuses measurements from heterogeneous sensors into unified tracks.
+The original deployment also had sensor adapters (camera, RF/OpenDroneID,
+Wi-Fi), multi-sensor tracking (Kalman/IMM fusion over NATS) and counter-UAS
+autonomy (intercept planning, MAVSDK). That code now lives in a separate
+private repository. Kyvern does not need it: it records decisions from
+whatever perception and planning stack produces them — its own example
+engine (§2.1) or yours, through `RuntimeEvent` (§8).
 
-| Module | Role |
-|--------|------|
-| `fusion_service.py` (`FusionService`) | NATS subscriber orchestrator. Listens on `nizam.raw.rf.odid.>`, `nizam.raw.camera.>`, and `nizam.raw.sim.cop` subjects. Includes `SlidingWindowLimiter` and `QueueCircuitBreaker` for DoS protection. Runs a fixed-rate tick loop (default 100 ms). |
-| `track_manager.py` (`TrackManager`) | Track lifecycle: tentative → confirmed → lost → deleted. Each tick: predict → associate → update → spawn → reap. Lifecycle thresholds: N_CONFIRM=3, M_LOST=3, K_DELETE=10. |
-| `kf_engine.py` | 3D constant-velocity Kalman filter (filterpy). State: `[x, y, z, vx, vy, vz]`. Measurement: `[x, y, z]` in ENU metres. DWNA process noise model. |
-| `imm_engine.py` | IMM (Interacting Multiple Model) filter. Two parallel CV filters with different process noise levels (cruise vs. maneuver). Uses filterpy's `IMMEstimator`. **Implemented but not yet wired into `TrackManager` as default.** |
-| `association.py` | Hungarian algorithm + Mahalanobis gating (χ² 99.7% gate at 3.77). Uses `scipy.optimize.linear_sum_assignment`. |
-
-Coordinate system: all internal state is in ENU (East-North-Up) metres
-relative to a configurable reference point. `shared/geo.py` handles
-lat/lon ↔ ENU conversion (pyproj when available, flat-Earth fallback
-otherwise).
-
-### 2.3 `services/schemas/` — Shared Data Contracts
-
-All inter-service data is defined as Pydantic v2 models:
-
-- `track.py` — `Measurement`, `Track`, `TrackState`, `SensorType`
-- `detection.py` — `CameraDetectionEvent`, `Detection`, `BoundingBox`
-- `rf.py` — `ODIDEvent`, `ODIDBasicID`, `ODIDLocation` (ASTM F3411),
-  `WiFiOUIEvent`
-- `services/decision/schemas.py` — `ThreatAssessment`, `Decision`,
-  `Action`, `ThreatLevel`, `DecisionSource`, `ROERule`
-
-These schemas serve as the contract between fusion, decision, and any
-future downstream consumers. All enum fields are `str, Enum` for JSON
-serialization. `Decision` includes audit-specific fields
-(`llm_raw_response`, `guardrails_triggered`, `guardrail_reasoning`) that
-are never truncated.
-
-### 2.4 `shared/` — Common Utilities
+### 2.3 `shared/`
 
 | Module | Purpose |
 |--------|---------|
-| `clock.py` | Deterministic `Clock` / `FakeClock` protocol for testable time. Process-global `get_clock()` / `set_clock()` accessor pair. Also provides `Rng` protocol for seeded randomness. |
-| `geo.py` | Lat/lon ↔ ENU coordinate conversion. pyproj (accurate) or flat-Earth (fallback). |
-| `lifecycle.py` | `run_with_shutdown()` — SIGTERM/SIGINT graceful shutdown for async services. |
-| `heartbeat.py` | Lightweight orchestrator heartbeat client. Background daemon thread, zero external dependencies. |
-| `rate_limit.py` | `SlidingWindowLimiter` and `QueueCircuitBreaker` for sensor-level DoS protection. |
-| `logging_setup.py` | Structured logging configuration. |
-| `auth.py` | Authentication utilities. |
-
-### 2.5 Other Service Directories
-
-- `services/autonomy/` — Geofence enforcement (`geofence.py`,
-  `NoFlyZone`, `violates_geofence`), intercept planning
-  (`intercept_planner.py`), MAVSDK action sender (`mavsdk_sender.py`).
-  **Intercept planner and MAVSDK sender are implemented but not
-  integration-tested against real hardware.**
-- `services/detectors/` — Sensor adapters for camera and RF. Contains
-  camera calibration / bbox-to-position projection. **Detector modules
-  exist but are tightly coupled to the original deployment; generalization
-  is in progress.**
+| `paths.py` | Per-user locations: `~/.kyvern`, the default chain path (`KYVERN_CHAIN_PATH`), the pre-rename `~/.kernel` guard. |
+| `schemas.py` | `RuntimeEvent`, the record type for upstream evidence (§8). |
 
 ---
 
@@ -107,32 +65,23 @@ are never truncated.
 
 The system processes data through a linear pipeline:
 
-1. **Sensors** — External sensors (cameras, RF/ODID receivers, radar,
-   AIS) publish raw detection events to NATS subjects
-   (`nizam.raw.camera.*`, `nizam.raw.rf.odid.*`, etc.). Each event is a
-   JSON-serialized Pydantic model (`CameraDetectionEvent`, `ODIDEvent`,
-   etc.).
+1. **Input** — A track or situation report from your perception stack: a
+   dict with an identifier, position, velocity, confidence and source
+   information. Kyvern does not do perception or tracking itself.
 
-2. **Fusion** — `FusionService` subscribes to these subjects, converts
-   raw events into `Measurement` objects (with ENU coordinates and
-   per-sensor noise estimates), and feeds them to `TrackManager`.
-   TrackManager runs the predict-associate-update cycle per tick,
-   producing a list of `Track` objects with Kalman-filtered state
-   estimates.
-
-3. **Decision engine** — Each confirmed track is evaluated by the
+2. **Decision engine** — Each track is evaluated by the
    rule engine (`assess_threat` → `evaluate_roe`). If the LLM advisor
    is enabled (`KYVERN_DECISION_LLM_ENABLED=true`), the track is
    independently assessed by the LLM via `query_llm`. The rule engine
    and LLM outputs are reconciled: the LLM can escalate (LOG → ALERT
    → HANDOFF) but **never** to ENGAGE, and it cannot downgrade.
 
-4. **Guardrails** — `apply_guardrails` runs all registered guardrail
+3. **Guardrails** — `apply_guardrails` runs all registered guardrail
    functions against the pre-decision. Any triggered guardrail can only
    **downgrade** the action severity (see §6). Guardrail IDs and
    reasoning are appended to the `Decision` object without truncation.
 
-5. **Audit chain** — The finalized `Decision` (including raw LLM
+4. **Audit chain** — The finalized `Decision` (including raw LLM
    response, guardrail trace, rule reference, and full reasoning) is
    signed and appended to the JSONL audit chain by `ChainWriter`
    (`services/decision/chain_writer.py`): under an inter-process file
@@ -143,10 +92,9 @@ The system processes data through a linear pipeline:
    decision cannot be recorded, `run_graph()` raises `AuditWriteError`
    and returns nothing.
 
-6. **Action** — The `Decision` is published for downstream consumption.
+5. **Action** — The `Decision` is published for downstream consumption.
    For ENGAGE actions, `requires_operator_approval` is hardcoded to
-   `true` regardless of policy configuration. Action sinks are planned
-   (see §7).
+   `true` regardless of policy configuration. See §7 for action sinks.
 
 ---
 
@@ -258,16 +206,6 @@ reconciliation and can only bring it back down.
 
 ## 7. Integration Points
 
-### Sensor Adapters (implemented, extensible)
-- **RF/ODID** — ASTM F3411 (OpenDroneID) via NATS. Schema: `ODIDEvent`.
-- **Camera** — YOLO-family detectors with calibration-based
-  bbox-to-position projection. Schema: `CameraDetectionEvent`.
-- **Radar/AIS** — Schema defined (`SensorType.RADAR`, `SensorType.AIS`),
-  adapter stubs present. No production adapter yet.
-- Adding a new sensor type requires: (1) a Pydantic event schema in
-  `services/schemas/`, (2) a NATS callback in `FusionService` that
-  converts the event to `Measurement`, (3) an entry in `SensorType` enum.
-
 ### LLM Backends (implemented)
 - **Ollama** — Default for air-gapped deployments. Connects to
   `localhost:11434`, model configurable via `OLLAMA_MODEL` env
@@ -278,9 +216,10 @@ reconciliation and can only bring it back down.
 - **OpenAI** — Not yet implemented. `llm_client.py` is structured for
   adding a `_try_openai` step in the provider chain.
 
-### Action Sinks (planned)
-- **ROS2** — Planned adapter for publishing `Decision` as ROS2 messages.
-  Not yet implemented.
+### Action Sinks
+- **ROS2** — `services/integrations/ros2_bridge.py` publishes signed
+  Decisions as JSON on a ROS2 topic (`std_msgs/String`);
+  `ros2_subscriber_example.py` verifies them on the receiving side.
 - **Custom** — The `Decision` Pydantic model serializes to JSON. Any
   system that can consume JSON over NATS, HTTP, or direct import can act
   as a sink today.
@@ -291,14 +230,6 @@ reconciliation and can only bring it back down.
   JSONL audit chain: 5 tools (`query_events`, `get_event`, `get_stats`,
   `verify_chain`, `search_events`) and 4 `kyvern://` resources. It covers
   both Decisions and upstream RuntimeEvents — see §8.
-
-### Observability (implemented)
-- **Prometheus** — `FusionService` exports
-  `nizam_fusion_measurements_total`, `nizam_fusion_active_tracks`, and
-  `nizam_fusion_tick_ms` metrics. Decision layer metrics are planned.
-- **Structured logging** — via `shared/logging_setup.py`.
-- **Heartbeat** — `shared/heartbeat.py` provides orchestrator health
-  registration.
 
 ---
 
@@ -363,50 +294,39 @@ filter Decisions.
 
 ```
 kyvern/
+├── cli/
+│   ├── kyvern_anchor.py          # kyvern-anchor: RFC 3161 receipts for the chain head
+│   ├── kyvern_report.py          # kyvern-report: EU AI Act evidence PDF
+│   └── kyvern_verify.py          # kyvern-verify: offline chain, policy and anchor check
 ├── config/
 │   └── policies/
 │       └── default.yaml          # Decision policy rules (YAML)
+├── kyvern/
+│   ├── audit/store.py            # AuditChainStore: read, filter and verify the JSONL chain
+│   ├── mcp/                      # kyvern-mcp: read-only MCP server (tools, resources)
+│   └── sandwich/                 # Dual-LLM (privileged/quarantined) isolation
 ├── services/
-│   ├── autonomy/
-│   │   ├── geofence.py           # NoFlyZone, haversine_m, violates_geofence
-│   │   ├── intercept_planner.py  # Waypoint planning (implemented)
-│   │   ├── mavsdk_sender.py      # MAVSDK action sender (implemented)
-│   │   └── schemas.py            # Waypoint model
 │   ├── decision/
-│   │   ├── guardrails.py         # apply_guardrails, GuardrailResult
+│   │   ├── anchors.py            # Anchor protocol, receipts, check_anchors
+│   │   ├── audit_chain.py        # Sign/verify entries, keyring, policy binding, RuntimeEvent append
+│   │   ├── chain_writer.py       # ChainWriter: locked, fsynced appends
+│   │   ├── guardrails.py         # apply_guardrails, GuardrailResult, haversine_m
 │   │   ├── llm_advisor.py        # query_llm_advisor, reconcile
 │   │   ├── llm_client.py         # LLMResponse, query_llm, provider chain
 │   │   ├── llm_graph.py          # 5-node GraphState pipeline, run_graph
+│   │   ├── policy_loader.py      # load_policy, SHA-256 policy version id
+│   │   ├── rfc3161_anchor.py     # RFC 3161 timestamp authority client
 │   │   ├── roe.py                # load_roe, evaluate_roe
 │   │   ├── rules.py              # assess_threat, ThreatAssessment
 │   │   ├── sanitize.py           # sanitize_track_for_llm, UnsafeContent
 │   │   ├── schemas.py            # Decision, Action, ThreatLevel, ROERule
 │   │   └── threat_graph.py       # decide (sync), decide_full (sync wrapper)
-│   ├── detectors/
-│   │   ├── camera/               # Camera calibration + projection
-│   │   └── rf/                   # RF adapter stubs
-│   ├── fusion/
-│   │   ├── association.py        # Hungarian + Mahalanobis gating
-│   │   ├── fusion_service.py     # FusionService (NATS orchestrator)
-│   │   ├── imm_engine.py         # IMM filter (implemented, not default)
-│   │   ├── kf_engine.py          # 3D constant-velocity Kalman filter
-│   │   ├── model_matcher.py      # Entity model matching
-│   │   └── track_manager.py      # TrackManager lifecycle
-│   └── schemas/
-│       ├── detection.py          # CameraDetectionEvent, BoundingBox
-│       ├── rf.py                 # ODIDEvent, WiFiOUIEvent (ASTM F3411)
-│       └── track.py              # Track, Measurement, SensorType
+│   └── integrations/
+│       ├── ros2_bridge.py        # Publish signed Decisions on a ROS2 topic
+│       └── ros2_subscriber_example.py  # Verify them on the receiving side
 ├── shared/
-│   ├── auth.py                   # Authentication utilities
-│   ├── clock.py                  # Clock/FakeClock protocol
-│   ├── geo.py                    # Lat/lon ↔ ENU conversion
-│   ├── heartbeat.py              # Orchestrator heartbeat client
-│   ├── lifecycle.py              # Graceful shutdown (SIGTERM/SIGINT)
-│   ├── logging_setup.py          # Structured logging config
-│   ├── rate_limit.py             # SlidingWindowLimiter, CircuitBreaker
-│   └── utils.py                  # Misc helpers
-└── tests/
-    ├── conftest.py               # Shared fixtures (FakeClock, tracks, ROE)
-    ├── decision/                 # Decision layer tests
-    └── fusion/                   # Fusion layer tests
+│   ├── paths.py                  # ~/.kyvern, default chain path, ~/.kernel guard
+│   └── schemas.py                # RuntimeEvent
+├── scripts/                      # Demo chain generator, core-install smoke test
+└── tests/                        # audit, cli, decision, integrations, mcp, sandwich
 ```

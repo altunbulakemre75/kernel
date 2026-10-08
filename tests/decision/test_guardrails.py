@@ -134,3 +134,11 @@ def test_apply_guardrails_civilian_pattern_downgrades_engage():
     result = apply_guardrails(engage, track, friendly_zones=[])
     assert result.action == Action.ALERT
     assert "civilian-airliner-pattern" in result.guardrails_triggered
+
+
+def test_haversine_m_matches_known_distances():
+    from services.decision.guardrails import haversine_m
+
+    assert haversine_m(40.0, 33.0, 40.0, 33.0) == 0.0
+    # One degree of latitude on the WGS-84 equatorial radius used here is ~111.3 km.
+    assert abs(haversine_m(0.0, 0.0, 1.0, 0.0) - 111_319.5) < 1.0
