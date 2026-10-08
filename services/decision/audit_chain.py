@@ -298,10 +298,11 @@ def check_policy_binding(
         version = record.get("policy_version_id")
         if not version:
             check.unbound.append(i)
-        elif version in known:
+        elif isinstance(version, str) and version in known:
             check.per_policy[version] += 1
         else:
-            check.unknown[i] = version
+            # A tampered record may hold any JSON value here; it binds to no policy.
+            check.unknown[i] = str(version)
     return check
 
 

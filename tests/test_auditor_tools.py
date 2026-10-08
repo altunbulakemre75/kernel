@@ -89,11 +89,11 @@ def _verify(ws, *policies, extra=()):
     return _cli("cli.kyvern_verify", ws["chain"], *policy_args, "--pubkey", ws["pub"], *extra)
 
 
-def _report(ws, *policies):
+def _report(ws, *policies, extra=()):
     policy_args = [a for p in policies for a in ("--policy", p)]
     return _cli(
         "cli.kyvern_report", ws["chain"], *policy_args,
-        "--pubkey", ws["pub"], "--output", ws["pdf"],
+        "--pubkey", ws["pub"], "--output", ws["pdf"], *extra,
     )
 
 
@@ -225,3 +225,33 @@ def test_broken_chain_does_not_pass_the_policy_check(ws):
     assert "[chain: INVALID] [policy: FAILED]" in res.stdout
     text = _pdf_text(ws["pdf"])
     assert "Verifiable policy deployment failed: chain integrity is broken at index 1" in text
+
+
+@pytest.mark.parametrize("policy_id", [5, ["not", "text"]])
+def test_tools_survive_a_policy_id_that_is_not_text(ws, policy_id):
+    _decide(ws, 2, policy=ws["policy"])
+    _tamper(ws, 1, policy_version_id=policy_id)
+
+    res = _verify(ws, ws["policy"])
+    assert res.returncode == 1
+    assert "Traceback" not in res.stderr, res.stderr
+    assert "1 decision(s) bound to a policy not given with --policy" in res.stdout
+
+    res = _report(ws, ws["policy"])
+    assert res.returncode == 1
+    assert "Traceback" not in res.stderr, res.stderr
+    assert "[chain: INVALID] [policy: FAILED]" in res.stdout
+
+
+def test_report_prints_markup_like_text_as_text(ws):
+    _decide(ws, 1, policy=ws["policy"])
+    _tamper(ws, 0, policy_version_id="<b>evil</b>", timestamp_iso="<i>2026-10-08T00:00:00+00:00")
+
+    res = _report(ws, ws["policy"], extra=["--system-id", "R&D <lab>", "--operator", "<font>ops"])
+    assert res.returncode == 1
+    assert "Traceback" not in res.stderr, res.stderr
+    text = _pdf_text(ws["pdf"])
+    assert "System ID: R&D <lab>" in text
+    assert "Operator: <font>ops" in text
+    assert "Period: <i>2026-10/<i>2026-10" in text
+    assert "(<b>evil</b>)" in text
