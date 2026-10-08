@@ -33,11 +33,13 @@ def test_input_low_confidence_triggers_log():
 def test_input_single_tick_triggers_log():
     result = input_track_guardrail({"confidence": 0.9, "hits": 1, "latitude": 39.9, "longitude": 32.8})
     assert result.triggered
+    assert result.downgrade_to == Action.LOG
 
 
 def test_input_zero_coords_triggers_log():
     result = input_track_guardrail({"confidence": 0.9, "hits": 5, "latitude": 0.0, "longitude": 0.0})
     assert result.triggered
+    assert result.downgrade_to == Action.LOG
 
 
 def test_input_healthy_track_passes():
@@ -88,6 +90,7 @@ def test_fast_high_pattern_triggers_alert():
     track = {"vx": 150, "vy": 100, "altitude": 5000}
     result = civilian_pattern_guardrail(track)
     assert result.triggered
+    assert result.downgrade_to == Action.ALERT
 
 
 def test_slow_low_pattern_passes():
