@@ -110,6 +110,11 @@ def main() -> None:
         help="anchor receipts JSONL (default: <chain stem>.anchors.jsonl next to the chain, if present)",
     )
     parser.add_argument(
+        "--require-anchors", action="store_true",
+        help="fail unless the chain has at least one valid anchor receipt: without "
+             "receipts, entries deleted from the end of the chain cannot be detected",
+    )
+    parser.add_argument(
         "--tsa-root", action="append", default=None,
         help="PEM file with trusted TSA root certificate(s); repeatable (default: certifi bundle)",
     )
@@ -127,7 +132,8 @@ def main() -> None:
                 "policy_version_id": None, "policy_version_ids": [],
                 "decisions_per_policy": {}, "unbound_decisions": [],
                 "unknown_policy_decisions": {}, "key_ids": [], "reason": None,
-                "anchors": None, "errors": ["No decisions found in chain file"],
+                "anchors": None, "anchors_required": args.require_anchors,
+                "errors": ["No decisions found in chain file"],
             }))
         else:
             print(f"{RED_CROSS} No decisions found in chain file.")
@@ -181,6 +187,15 @@ def main() -> None:
     elif args.anchors:
         errors.append(f"Anchors file not found: {anchors_path}")
         anchors_ok = False
+    # Signatures and hash links cannot show that entries were deleted from the end of
+    # the chain; a receipt for an entry that is gone can.
+    anchors_missing = args.require_anchors and (anchor_report is None or anchor_report.valid == 0)
+    if anchors_missing:
+        errors.append(
+            "Anchors required (--require-anchors) but "
+            + (f"no receipts file {anchors_path}" if anchor_report is None else "no receipt is valid")
+        )
+        anchors_ok = False
 
     all_valid = is_valid_chain and policy_matches and anchors_ok
 
@@ -200,6 +215,7 @@ def main() -> None:
             "key_ids": key_ids,
             "reason": failure_reason,
             "anchors": asdict(anchor_report) if anchor_report else None,
+            "anchors_required": args.require_anchors,
             "errors": errors
         }
         print(json.dumps(out, indent=2))
@@ -228,7 +244,11 @@ def main() -> None:
     else:
         print(f"{RED_CROSS} Signature verification: FAILED")
 
-    if anchor_report is None:
+    if anchors_missing and anchor_report is None:
+        print(f"{RED_CROSS} Anchors: REQUIRED, none found (no {anchors_path.name})")
+    elif anchors_missing and not anchor_report.failures:
+        print(f"{RED_CROSS} Anchors: REQUIRED, none valid in {anchors_path.name}")
+    elif anchor_report is None:
         print(f"  Anchors: none (no {anchors_path.name})")
     elif anchor_report.failures:
         print(f"{RED_CROSS} Anchors: FAILED")

@@ -327,3 +327,39 @@ def test_rewrite_resigned_with_the_same_key_is_caught(anchored):
     assert res.returncode == 1
     assert "Signature verification: PASSED" in res.stdout
     assert "does not match the anchored hash" in res.stdout
+
+
+def test_deleting_an_anchored_entry_from_the_end_is_caught(anchored):
+    """The shorter chain verifies on its own; the receipt for the deleted entry does not."""
+    chain_path = anchored / "chain.jsonl"
+    first = chain_path.read_text(encoding="utf-8").splitlines()[0]
+    chain_path.write_text(first + "\n", encoding="utf-8")
+    res = _verify_anchored(anchored)
+    assert res.returncode == 1
+    assert "Chain integrity: VALID" in res.stdout
+    assert "Anchors: FAILED" in res.stdout
+
+
+def test_require_anchors_fails_without_a_receipts_file(anchored):
+    # Without receipts, deleting entries from the end of a chain cannot be detected.
+    (anchored / "chain.anchors.jsonl").unlink()
+    res = _verify_anchored(anchored, "--require-anchors")
+    assert res.returncode == 1
+    assert "Anchors: REQUIRED, none found" in res.stdout
+
+    data = json.loads(_verify_anchored(anchored, "--require-anchors", "--json").stdout)
+    assert data["anchors_required"] is True
+    assert any("--require-anchors" in e for e in data["errors"])
+
+
+def test_require_anchors_fails_on_a_receipts_file_without_a_valid_receipt(anchored):
+    (anchored / "chain.anchors.jsonl").write_text("", encoding="utf-8")
+    res = _verify_anchored(anchored, "--require-anchors")
+    assert res.returncode == 1
+    assert "Anchors: REQUIRED, none valid" in res.stdout
+
+
+def test_require_anchors_passes_with_a_valid_receipt(anchored):
+    res = _verify_anchored(anchored, "--require-anchors")
+    assert res.returncode == 0, res.stdout
+    assert json.loads(_verify_anchored(anchored, "--json").stdout)["anchors_required"] is False
