@@ -59,10 +59,11 @@ Decision summary:
 Audit hash: 5b64432b2dd0796f (verifiable against deployed policy)
 ```
 
-## EU AI Act Compliance Reports
+## EU AI Act evidence reports
 
-Generate a regulator-ready PDF with Article 12 (logging) and Article 14
-(human oversight) compliance evidence from any signed decision chain:
+Generate a PDF of checks run on a signed decision chain, mapped to the EU AI
+Act Articles they support: Article 12 (record-keeping) and Article 14 (human
+oversight):
 
 ```bash
 kyvern-report chain.jsonl \
@@ -73,10 +74,12 @@ kyvern-report chain.jsonl \
     --operator "Operations Team"
 ```
 
-The PDF covers: chain integrity verification, action and threat-level
-distribution, per-requirement attestation tables for Articles 12 and 14,
-policy version timeline, and a cryptographic fingerprint of the report
-content. See [EU AI Act compliance](compliance/eu_ai_act.md).
+The PDF covers chain integrity, the policy check, action and threat-level
+distribution, the Article 12 and 14 checks, the policy version timeline, and a
+fingerprint of the report content. Each check is computed from the chain
+(PASS/FAIL with counts) or marked NOT ASSESSED where a chain cannot show it,
+such as whether an operator can override the system. The report supports an
+assessment; it does not establish conformity. See [EU AI Act](compliance/eu_ai_act.md).
 
 ## MCP server (Claude Desktop)
 
@@ -134,7 +137,7 @@ including explicit non-defenses and what this means for compliance claims.
 
 ## Roadmap
 
-- [x] EU AI Act Article 12 & 14 compliance report generator (`cli/kyvern_report.py`)
+- [x] EU AI Act Article 12 & 14 evidence report (`cli/kyvern_report.py`)
 - [x] ROS2 publisher (`services/integrations/ros2_bridge.py`)
 - [ ] ROS2 action sink with feedback loop (planned)
 - [x] MCP server interface (`kyvern/mcp/`, `kyvern-mcp`)
