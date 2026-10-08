@@ -177,3 +177,21 @@ def test_report_checks_the_chain_against_the_policy(ws):
     assert "bound to a policy not given with --policy" in res.stderr
     text = _pdf_text(ws["pdf"])
     assert "Verifiable policy deployment failed" in text
+
+
+def test_chain_without_decisions_fails_the_policy_check(ws):
+    # Only RuntimeEvents (or a chain cut down to them): no Decision is bound to the policy.
+    _event(ws)
+
+    res = _verify(ws, ws["policy"])
+    assert res.returncode == 1, res.stdout
+    assert "Chain integrity: VALID (0 decisions, 1 runtime events, all signed)" in res.stdout
+    assert "Policy match: FAILED" in res.stdout
+    assert "no decisions in the chain to check against a policy" in res.stdout
+    assert json.loads(_verify(ws, ws["policy"], extra=["--json"]).stdout)["policy_match"] is False
+
+    res = _report(ws, ws["policy"])
+    assert res.returncode == 1
+    assert "[chain: VALID] [policy: FAILED]" in res.stdout
+    text = _pdf_text(ws["pdf"])
+    assert "Verifiable policy deployment failed: no decisions in the chain" in text

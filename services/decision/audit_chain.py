@@ -230,7 +230,7 @@ class PolicyCheck:
 
     Positions are offsets into the list passed to check_policy_binding(). RuntimeEvents
     are not checked: their policy_version_id only records the policy in force when the
-    event was appended.
+    event was appended. A chain with no Decision fails: nothing in it is bound to a policy.
     """
 
     per_policy: dict[str, int] = field(default_factory=dict)
@@ -238,11 +238,17 @@ class PolicyCheck:
     unknown: dict[int, str] = field(default_factory=dict)
 
     @property
+    def decision_count(self) -> int:
+        return sum(self.per_policy.values()) + len(self.unbound) + len(self.unknown)
+
+    @property
     def ok(self) -> bool:
-        return not self.unbound and not self.unknown
+        return self.decision_count > 0 and not self.unbound and not self.unknown
 
     def reason(self) -> str:
         """One line explaining a failed check; empty when it passed."""
+        if self.decision_count == 0:
+            return "no decisions in the chain to check against a policy"
         parts = []
         if self.unbound:
             parts.append(
