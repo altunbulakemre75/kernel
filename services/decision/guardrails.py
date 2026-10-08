@@ -12,18 +12,32 @@ This ensures a false-positive trigger never produces a dangerous action.
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
 
-from services.autonomy.geofence import haversine_m
 from services.decision.schemas import Action, Decision
 
 log = logging.getLogger(__name__)
 
 # Severity ordering (for downgrade logic)
 _SEVERITY = {Action.LOG: 0, Action.ALERT: 1, Action.HANDOFF: 2, Action.ENGAGE: 3}
+
+_EARTH_R_M = 6378137.0
+
+
+def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Great-circle distance between two points (metres)."""
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2))
+        * math.sin(dlon / 2) ** 2
+    )
+    return 2 * _EARTH_R_M * math.asin(math.sqrt(max(0.0, a)))
 
 
 @dataclass
