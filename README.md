@@ -58,7 +58,12 @@ kyvern-verify chain.jsonl --policy config/policies/default.yaml --pubkey ~/.kyve
 ```
 
 Repeat `--pubkey` to verify a chain signed by more than one key (for example
-after a key rotation); every entry records which key signed it.
+after a key rotation); every entry records which key signed it. Repeat
+`--policy` for a chain that spans a policy update: every Decision must be
+bound to one of the given policies. Decisions recorded without a policy
+(`run_graph()` / `decide_full()` called without `policy_path=`) cannot be
+checked against one, so `kyvern-verify` lists them and fails. RuntimeEvents
+are counted separately and are not checked against a policy.
 
 ### Anchoring the chain
 
@@ -151,8 +156,12 @@ components append their own evidence to the same signed chain as Kyvern
 Decisions:
 
 ```python
+from shared.paths import default_chain_path
 from shared.schemas import RuntimeEvent
-from services.decision.audit_chain import append_runtime_event
+from services.decision.audit_chain import append_runtime_event, load_or_create_keypair
+
+chain_path = default_chain_path()       # the chain run_graph() writes
+signing_key = load_or_create_keypair()  # ~/.kyvern/keys/signing.key
 
 event = RuntimeEvent(
     event_type="guardrail_downgrade",
@@ -161,8 +170,12 @@ event = RuntimeEvent(
     timestamp_iso="2026-05-20T12:00:00+00:00",
     payload={"reason": "speed_exceeded"},
 )
-append_runtime_event(event, chain_path, signing_key, policy_version_id="p_v1")
+append_runtime_event(event, chain_path, signing_key)
 ```
+
+`append_runtime_event()` also takes an optional `policy_version_id` to record
+which policy was in force; auditor tools show it but only check Decisions
+against a policy.
 
 Decisions from `run_graph()` are appended to the same chain automatically
 (`~/.kyvern/chain.jsonl` by default; override with `chain_path=` or

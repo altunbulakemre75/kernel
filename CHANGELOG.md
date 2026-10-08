@@ -7,7 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `kyvern-verify` and `kyvern-report` accept `--policy` more than once, for a
+  chain that spans a policy update. Every Decision must be bound to one of the
+  given policies; the output says how many Decisions each policy covers, and
+  lists Decisions recorded without a policy or under a policy that was not
+  given, with their chain positions
+- `kyvern-verify`, `kyvern-report` and their JSON output count Decisions and
+  RuntimeEvents separately; RuntimeEvents are listed by `event_type` and
+  `source` instead of as decisions with action `UNKNOWN`
+- `kyvern-report` checks the chain against `--policy`: the Article 14
+  "Verifiable policy deployment" row is computed instead of always PASS, and
+  the exit code is 1 when the policy check fails (the PDF is still written).
+  The status line adds `[policy: OK|FAILED]` after `[chain: ...]`
+- `append_runtime_event()`'s `policy_version_id` is optional; it is shown but
+  not checked against a policy
+
 ### Fixed
+- `kyvern-report` crashed on decisions recorded without a policy
+  (`policy_version_id` null) and wrote no PDF
+- MCP `verify_chain` reported a valid chain as `BROKEN` for any range that did
+  not start at entry 0; a range is now checked from its link to the entry
+  before it (`verify_chain()` and `describe_chain_failure()` take an optional
+  `prev_hash`)
 - The test suite runs with only the `dev` extra installed: fusion and MCP
   tests skip themselves when their extra is missing, instead of
   `tests/conftest.py` failing to import the fusion dependencies (numpy,

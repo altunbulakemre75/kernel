@@ -350,7 +350,7 @@ event = RuntimeEvent(
     timestamp_iso="2026-05-20T12:00:00+00:00",
     payload={"distance_m": 4.2, "object_class": "vehicle"},
 )
-signed = append_runtime_event(event, chain_path, signing_key, policy_version_id="p_v1")
+signed = append_runtime_event(event, chain_path, signing_key)  # policy_version_id= is optional
 ```
 
 The MCP `query_events` tool filters RuntimeEvents via its `event_type`
