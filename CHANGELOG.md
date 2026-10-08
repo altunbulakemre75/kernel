@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- A decision's `source` is `llm_advisor` only when the LLM advisor raised the
+  rule engine's action; it used to be `llm_advisor` whenever the LLM
+  answered. Whether the LLM was consulted is in `llm_provider` and
+  `llm_raw_response`
+- The Anthropic model for the LLM advisor is read from `KYVERN_LLM_MODEL`.
+  The pre-rename variables `NIZAM_LLM_MODEL` and
+  `NIZAM_DECISION_LLM_ENABLED` are no longer read; use `KYVERN_LLM_MODEL`
+  and `KYVERN_DECISION_LLM_ENABLED`
+- CI also runs the tests on Python 3.13
+
 ### Removed
 - The counter-UAS components moved to a separate private repository: sensor
   adapters (`services/detectors`), multi-sensor tracking (`services/fusion`,
