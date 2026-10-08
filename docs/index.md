@@ -34,8 +34,31 @@ Pre-1.0. Core engine and audit chain are battle-tested in a private
 deployment (separate codebase). This repository is the generalized,
 domain-neutral open-core extraction.
 
-Active areas: ROS2 adapter, MCP server interface, EU AI Act Article 12
-compliance reporting.
+Active areas: recording a system's own decisions, the ROS2 safety-controller
+demo, the MCP server interface, EU AI Act evidence reports.
+
+## Recording your own decisions
+
+Install from a clone of the repository (`pip install .`), then record a
+decision your system made:
+
+```python
+from kyvern import record_decision
+
+record_decision(
+    "stop",                                   # what your system did
+    source="safety_controller",               # who decided ("operator" for a person)
+    reasoning="obstacle at 0.4 m, closer than 0.5 m",
+    inputs={"obstacle_distance_m": 0.4},      # what it was based on (up to 64 KB)
+    rule_id="stop-on-obstacle",               # the rule in your policy that fired
+    policy_path="safety_policy.yaml",         # binds the decision to that policy version
+)
+```
+
+The policy is your own YAML file with a `rules:` list; Kyvern records the
+SHA-256 of its content with each decision. The decision is signed and
+appended to `~/.kyvern/chain.jsonl` (or `$KYVERN_CHAIN_PATH`) and can then be
+verified, anchored and reported on.
 
 ## Verifying decisions
 
