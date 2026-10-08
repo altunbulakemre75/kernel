@@ -1,4 +1,4 @@
-# EU AI Act Compliance — Kyvern Mapping
+# EU AI Act — what Kyvern's evidence supports
 
 > Source: Regulation (EU) 2024/1689, Official Journal of the European Union, 12 July 2024
 
@@ -15,20 +15,24 @@ logs sufficient to enable three specific accountability purposes:
 - **(c)** ensuring the monitoring under Article 26(5) (deployer
   operational obligations)
 
-**How Kyvern satisfies Article 12(2):**
+**What Kyvern records for Article 12(2):**
 
-| Requirement | Kyvern mechanism |
-|---|---|
-| Art.12(2)(a) — Risk identification logging (Art.79(1)) | Each decision records `threat_level`, `roe_reference`, and full `guardrails_triggered` trace; the signed chain is the national-level risk evidence record |
-| Art.12(2)(b) — Post-market monitoring support (Art.72) | All decisions are auto-logged with `policy_version_id` (SHA-256 of the policy file), enabling retrospective analysis against any deployed rule version |
-| Art.12(2)(c) — Operation monitoring (Art.26(5)) | `action`, `timestamp_iso`, `roe_reference`, `requires_operator_approval`, and `guardrail_reasoning` are recorded per decision; deployers can replay the full operational picture |
-| Automatic log generation | Every call to `sign_decision()` appends a tamper-evident record to the audit chain without human action |
-| Tamper-evident storage | Ed25519 signature + SHA-256 hash chain — any modification breaks the chain and is detected by `kyvern-verify` |
-| Standardised timestamps | All timestamps are ISO 8601 UTC |
+| Requirement | Kyvern mechanism | Report check |
+|---|---|---|
+| Art.12(2)(a) — Risk identification (Art.79(1)) | Each decision records `threat_level`, `roe_reference` and `guardrails_triggered` | `risk_fields` |
+| Art.12(2)(b) — Post-market monitoring (Art.72) | Each decision records `policy_version_id` (SHA-256 of the policy file it was made under) | `policy_recorded` |
+| Art.12(2)(c) — Operation monitoring (Art.26(5)) | Each decision records `action`, `timestamp_iso`, `requires_operator_approval` and `guardrail_reasoning` | `operation_fields` |
+| Tamper-evident records (Art.12(1)) | Ed25519 signature + SHA-256 hash link per entry; `kyvern-verify` detects any change, and RFC 3161 anchors (`kyvern-anchor`) detect a rewrite even by the key holder | `integrity` |
+| Timestamps | ISO 8601 in UTC | `timestamps` |
+| Automatic recording | `run_graph()` appends each decision before returning it, and raises if it cannot. Whether every decision of a system goes through Kyvern depends on the integration, so the report cannot show it | `automatic` (NOT ASSESSED) |
 
-Retention of the chain files (10-year requirement for high-risk systems)
-is the responsibility of the deployment operator. Kyvern does not manage
-storage lifetime.
+**Retention.** Article 19(1) (providers) and Article 26(6) (deployers) require
+automatically generated logs to be kept for a period appropriate to the
+system's purpose, **of at least six months**, unless other Union or national
+law says otherwise. (The ten-year period in Article 18 is for technical and
+quality documentation, not logs.) Keeping the chain files is the provider's
+and deployer's storage policy; Kyvern does not manage storage lifetime. The
+report shows the earliest entry in the chain and its age (`retention`, INFO).
 
 ### Article 12(3) — Remote biometric identification (out of scope for Kyvern, included for reference)
 
@@ -56,14 +60,32 @@ persons to effectively oversee operation, including the ability to:
 - override or interrupt the system
 - take informed decisions based on system output
 
-**How Kyvern satisfies Article 14:**
+**What the chain can show for Article 14.** Human oversight is mostly a
+property of the deployed system: who can see its output, stop it or override
+it. The chain shows only what was recorded:
 
-| Requirement | Kyvern mechanism |
-|---|---|
-| Human approval gate | Decisions with `requires_operator_approval: true` block escalation until a human authorises |
-| Override capability | Guardrail-downgrade-only pattern ensures the system can only make decisions safer; operator can always intervene |
-| Audit trail of interventions | `guardrails_triggered` and `guardrail_reasoning` are signed into every decision |
-| Policy transparency | Policies are human-authored YAML; every deployed version is SHA-256 identified |
+| Aspect | What Kyvern records | Report check |
+|---|---|---|
+| Approval before high-risk actions | Each decision records `requires_operator_approval`; ENGAGE decisions always set it. Enforcing the approval is the integration's job: Kyvern records that approval was required, not that it was given | `approval_flag` |
+| Human interventions | Decisions an operator made, if the integration records them with `source=operator` | `operator_decisions` (INFO, or NOT ASSESSED if none) |
+| Override or stop | Not visible in a chain | `override` (NOT ASSESSED) |
+| Automated safety downgrades | `guardrails_triggered` and `guardrail_reasoning`; guardrails only lower an action (see the threat model). These are automated checks, not human oversight | `guardrails` (INFO) |
+| Policy transparency | Policies are human-authored YAML; each decision records the SHA-256 of the policy it was made under, and `--policy` checks it | `policy` |
+
+## What the report's results mean
+
+Every row in the report's Article 12 and 14 tables is a check run on the
+chain:
+
+- **PASS / FAIL** — the check ran on the chain, with the counts as evidence.
+- **NOT ASSESSED** — the chain cannot show it; the row says why.
+- **N/A** — nothing to check (for example, no ENGAGE decisions).
+- **INFO** — a figure, not a pass/fail claim.
+
+If the chain fails integrity, the checks computed from its records are NOT
+ASSESSED: unverified records are not evidence. A PASS supports an assessment
+under the Article named; it does not establish conformity, which is assessed
+under Article 43.
 
 ## When to use `kyvern-report`
 
@@ -72,7 +94,7 @@ persons to effectively oversee operation, including the ability to:
 | **Scheduled audit** | Run monthly, store PDFs alongside chain files |
 | **Incident investigation** | Run against the chain segment covering the incident window using `--period` |
 | **Regulator request** | Generate report from the requested chain, provide PDF + chain file + public key |
-| **Pre-deployment review** | Run against a test chain to confirm the policy version produces expected compliance evidence |
+| **Pre-deployment review** | Run against a test chain to see which checks pass for the policy version you plan to deploy |
 
 ## Example
 
@@ -80,11 +102,11 @@ persons to effectively oversee operation, including the ability to:
 # Generate demo data
 python scripts/generate_demo_chain.py
 
-# Produce compliance report
+# Produce the evidence report
 kyvern-report /tmp/kyvern-demo/chain.jsonl \
     --policy config/policies/default.yaml \
     --pubkey /tmp/kyvern-demo/signing.pub \
-    --output compliance_report.pdf \
+    --output evidence_report.pdf \
     --system-id "AMR-Fleet-A" \
     --operator "Operations Team" \
     --period "2026-05-16/2026-05-16"

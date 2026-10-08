@@ -17,6 +17,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `NIZAM_DECISION_LLM_ENABLED` are no longer read; use `KYVERN_LLM_MODEL`
   and `KYVERN_DECISION_LLM_ENABLED`
 - CI also runs the tests on Python 3.13
+- `kyvern-report`'s Article 12 and 14 tables are checks run on the chain
+  instead of rows that always said PASS. Each row is PASS/FAIL with counts,
+  NOT ASSESSED where a chain cannot show it (automatic recording, operator
+  override, human interventions when none are recorded), N/A or INFO; rows
+  computed from the records of a chain that fails integrity are NOT
+  ASSESSED. Guardrail downgrades are reported as automated checks, not as
+  human interventions. The report fingerprint also covers each check's
+  result
+- The report, README and `docs/compliance/eu_ai_act.md` describe evidence
+  that supports an assessment, not compliance: the retention row says logs
+  must be kept for at least six months (Art. 19(1), 26(6)) instead of ten
+  years, and the docs no longer say that Kyvern blocks escalation until an
+  operator approves (it records that approval was required)
 
 ### Removed
 - The counter-UAS components moved to a separate private repository: sensor
