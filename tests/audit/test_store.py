@@ -99,6 +99,29 @@ def test_verify_chain_range_tampered(tampered_chain_file, signing_keypair):
     assert result.first_break["id"] == 1
 
 
+def test_verify_chain_range_starting_mid_chain(sample_chain_file, signing_keypair):
+    """A range that does not start at entry 0 is checked from its link to the entry before."""
+    _, _, pub_path = signing_keypair
+    store = AuditChainStore(sample_chain_file, public_key_path=pub_path)
+    store.load()
+    for start, end in ((1, None), (2, 3), (3, 3)):
+        result = store.verify_chain_range(start, end)
+        assert result.integrity == "OK", (start, end, result.first_break)
+        assert result.first_break is None
+
+
+def test_verify_chain_range_mid_chain_still_catches_tampering(tampered_chain_file, signing_keypair):
+    _, _, pub_path = signing_keypair
+    store = AuditChainStore(tampered_chain_file, public_key_path=pub_path)
+    store.load()
+    result = store.verify_chain_range(1, None)
+    assert result.integrity == "BROKEN"
+    assert result.first_break == {"id": 1, "reason": "bad signature"}
+    # The range after the tampered entry links to it by its (still recorded) payload hash,
+    # so on its own it verifies; the full-chain check above is what catches the edit.
+    assert store.verify_chain_range(2, None).integrity == "OK"
+
+
 def test_verify_chain_range_without_key_unknown(sample_chain_file):
     store = AuditChainStore(sample_chain_file, verify_on_query=False)
     store.load()

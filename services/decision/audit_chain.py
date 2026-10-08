@@ -3,8 +3,9 @@ import hashlib
 import json
 import os
 from collections.abc import Iterable, Iterator
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import serialization
@@ -12,6 +13,9 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from shared.paths import kyvern_home
 from shared.schemas import RuntimeEvent
+
+if TYPE_CHECKING:
+    from services.decision.policy_loader import LoadedPolicy
 
 
 def load_or_create_keypair() -> ed25519.Ed25519PrivateKey:
@@ -153,13 +157,21 @@ def verify_decision(decision: dict[str, Any], public_key: PublicKeys) -> bool:
     except (ValueError, TypeError):
         return False
 
-def verify_chain(decisions: list[dict[str, Any]], public_key: PublicKeys) -> tuple[bool, int | None]:
+def verify_chain(
+    decisions: list[dict[str, Any]],
+    public_key: PublicKeys,
+    prev_hash: str | None = None,
+) -> tuple[bool, int | None]:
     """Verify a contiguous slice of the audit chain.
 
     Handles mixed Decision + RuntimeEvent chains. `chain_index` is a single
     monotonically increasing counter shared across both record types — this
     function walks it linearly and verifies each entry's signature + hash-link.
     public_key may be a Keyring for chains signed by several keys.
+
+    prev_hash is the prev_hash the first entry must carry: None for a slice that
+    starts at genesis, else the payload_hash of the entry just before the slice.
+    Verifying a slice that does not start at genesis trusts that link.
 
     Returns:
         (True, None) if all entries verify.
@@ -168,8 +180,7 @@ def verify_chain(decisions: list[dict[str, Any]], public_key: PublicKeys) -> tup
     """
     if not decisions:
         return True, None
-        
-    prev_hash = None
+
     expected_index = decisions[0].get("chain_index", 0)
     
     for i, decision in enumerate(decisions):
@@ -189,20 +200,87 @@ def verify_chain(decisions: list[dict[str, Any]], public_key: PublicKeys) -> tup
 
 
 def describe_chain_failure(
-    records: list[dict[str, Any]], index: int, public_key: PublicKeys
+    records: list[dict[str, Any]],
+    index: int,
+    public_key: PublicKeys,
+    prev_hash: str | None = None,
 ) -> str:
-    """Explain why records[index] failed verify_chain()."""
+    """Explain why records[index] failed verify_chain() (called with the same prev_hash)."""
     record = records[index]
     expected_index = records[0].get("chain_index", 0) + index
     if record.get("chain_index") != expected_index:
         return f"chain_index gap: expected {expected_index}, found {record.get('chain_index')}"
-    expected_prev = None if index == 0 else records[index - 1].get("payload_hash")
+    expected_prev = prev_hash if index == 0 else records[index - 1].get("payload_hash")
     if record.get("prev_hash") != expected_prev:
         return "broken prev_hash link"
     rid = record.get("key_id")
     if rid is not None and not _candidate_keys(record, public_key):
         return f"signed by unknown key {rid}"
     return "bad signature"
+
+
+def record_type_of(record: dict[str, Any]) -> str:
+    """"runtime_event" or "decision"; records written before RuntimeEvent existed are Decisions."""
+    return "runtime_event" if record.get("record_type") == "runtime_event" else "decision"
+
+
+@dataclass
+class PolicyCheck:
+    """Whether every Decision in a chain is bound to one of the policies an auditor supplied.
+
+    Positions are offsets into the list passed to check_policy_binding(). RuntimeEvents
+    are not checked: their policy_version_id only records the policy in force when the
+    event was appended.
+    """
+
+    per_policy: dict[str, int] = field(default_factory=dict)
+    unbound: list[int] = field(default_factory=list)
+    unknown: dict[int, str] = field(default_factory=dict)
+
+    @property
+    def ok(self) -> bool:
+        return not self.unbound and not self.unknown
+
+    def reason(self) -> str:
+        """One line explaining a failed check; empty when it passed."""
+        parts = []
+        if self.unbound:
+            parts.append(
+                f"{len(self.unbound)} decision(s) not bound to any policy "
+                f"(recorded without policy_path) at {_positions(self.unbound)}"
+            )
+        if self.unknown:
+            versions = sorted({v[:16] for v in self.unknown.values()})
+            parts.append(
+                f"{len(self.unknown)} decision(s) bound to a policy not given with --policy "
+                f"({', '.join(versions)}) at {_positions(list(self.unknown))}"
+            )
+        return "; ".join(parts)
+
+
+def _positions(indices: list[int], limit: int = 10) -> str:
+    shown = ", ".join(str(i) for i in indices[:limit])
+    more = f" and {len(indices) - limit} more" if len(indices) > limit else ""
+    return f"[{shown}]{more}"
+
+
+def check_policy_binding(
+    records: list[dict[str, Any]], policies: "list[LoadedPolicy]"
+) -> PolicyCheck:
+    """Check that each Decision's policy_version_id matches one of `policies`."""
+    known = {p.version_id for p in policies}
+    check = PolicyCheck(per_policy={p.version_id: 0 for p in policies})
+    for i, record in enumerate(records):
+        if record_type_of(record) != "decision":
+            continue
+        version = record.get("policy_version_id")
+        if not version:
+            check.unbound.append(i)
+        elif version in known:
+            check.per_policy[version] += 1
+        else:
+            check.unknown[i] = version
+    return check
 
 
 def verify_decision_against_policy(decision: dict[str, Any], policy_path: str, public_key: PublicKeys) -> tuple[bool, str]:
@@ -243,9 +321,13 @@ def append_runtime_event(
     event: RuntimeEvent,
     chain_path: Path,
     signing_key: ed25519.Ed25519PrivateKey,
-    policy_version_id: str,
+    policy_version_id: str | None = None,
 ) -> RuntimeEvent:
     """Sign and append a RuntimeEvent to the JSONL audit chain.
+
+    policy_version_id records which policy was in force when the event was
+    appended. It is informational: auditor tools show it but only check
+    Decisions against a policy.
 
     All chain fields on the input event (signature, prev_hash, payload_hash,
     chain_index, key_id, policy_version_id) are overwritten by this function —

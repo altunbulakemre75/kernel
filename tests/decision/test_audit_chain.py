@@ -7,13 +7,16 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from services.decision.audit_chain import (
     Keyring,
     canonical_json,
+    check_policy_binding,
     describe_chain_failure,
     key_id,
+    record_type_of,
     sha256_hex,
     sign_decision,
     verify_chain,
     verify_decision,
 )
+from services.decision.policy_loader import LoadedPolicy
 
 
 @pytest.fixture
@@ -216,3 +219,72 @@ def test_describe_chain_failure_names_each_reason(sample_decision):
     tampered = _chain(sample_decision, [key, key, key])
     tampered[1]["reasoning"] = "rewritten"
     assert describe_chain_failure(tampered, 1, keys) == "bad signature"
+
+
+# ── slices that do not start at genesis ──────────────────────────────────────
+
+def test_verify_chain_slice_needs_the_link_into_it(sample_decision):
+    key = ed25519.Ed25519PrivateKey.generate()
+    chain = _chain(sample_decision, [key] * 4)
+    tail = chain[2:]
+    # Without the link into the slice, entry 2 looks like a broken genesis.
+    assert verify_chain(tail, key.public_key()) == (False, 0)
+    assert verify_chain(tail, key.public_key(), prev_hash=chain[1]["payload_hash"]) == (True, None)
+    assert verify_chain(tail, key.public_key(), prev_hash="00" * 32) == (False, 0)
+    assert describe_chain_failure(tail, 0, key.public_key(), prev_hash="00" * 32) == (
+        "broken prev_hash link"
+    )
+
+
+# ── policy binding ───────────────────────────────────────────────────────────
+
+def _policy(version_id):
+    return LoadedPolicy(
+        version_id=version_id, version_short=version_id[:16], path=f"{version_id}.yaml",
+        loaded_at=None, rules={}, raw_bytes=b"",
+    )
+
+
+def test_record_type_defaults_to_decision():
+    assert record_type_of({"action": "log"}) == "decision"
+    assert record_type_of({"record_type": "decision"}) == "decision"
+    assert record_type_of({"record_type": "runtime_event"}) == "runtime_event"
+
+
+def test_policy_binding_counts_decisions_per_policy():
+    records = [
+        {"policy_version_id": "a" * 64},
+        {"policy_version_id": "b" * 64},
+        {"policy_version_id": "a" * 64},
+    ]
+    check = check_policy_binding(records, [_policy("a" * 64), _policy("b" * 64)])
+    assert check.ok
+    assert check.per_policy == {"a" * 64: 2, "b" * 64: 1}
+    assert check.reason() == ""
+
+
+def test_policy_binding_reports_unbound_and_unknown_decisions():
+    records = [
+        {"policy_version_id": "a" * 64},
+        {"policy_version_id": None},
+        {"policy_version_id": "c" * 64},
+        {},
+    ]
+    check = check_policy_binding(records, [_policy("a" * 64)])
+    assert not check.ok
+    assert check.unbound == [1, 3]
+    assert check.unknown == {2: "c" * 64}
+    assert "2 decision(s) not bound to any policy" in check.reason()
+    assert "at [1, 3]" in check.reason()
+    assert "c" * 16 in check.reason()
+
+
+def test_policy_binding_ignores_runtime_events():
+    records = [
+        {"policy_version_id": "a" * 64},
+        {"record_type": "runtime_event", "policy_version_id": "p_v1"},
+        {"record_type": "runtime_event", "policy_version_id": None},
+    ]
+    check = check_policy_binding(records, [_policy("a" * 64)])
+    assert check.ok
+    assert check.per_policy == {"a" * 64: 1}
