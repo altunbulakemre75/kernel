@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   recording each change of action with `record_decision()`, as a ROS2 node
   (`/scan` in, `/safety/action` out) and as a scenario that runs without
   ROS2 and ends with `kyvern-verify` and `kyvern-report`
+- `kyvern-verify --require-anchors` fails a chain that has no valid RFC 3161
+  receipt. Without receipts, entries deleted from the end of a chain cannot
+  be detected (the shorter chain still verifies); the README and the threat
+  model now say so. The JSON output has an `anchors_required` key
 
 ### Changed
 - A decision's `source` is `llm_advisor` only when the LLM advisor raised the
