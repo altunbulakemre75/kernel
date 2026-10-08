@@ -58,9 +58,11 @@ recommendation.
 
 **(a) LLM advisory ceiling.** The LLM advisor is structurally prohibited from
 recommending ENGAGE — the highest-severity action. Its maximum proposal is
-HANDOFF. This is enforced in `llm_advisor.py` (`_reconcile_action`): the
-advisor can escalate LOG → ALERT → HANDOFF but nothing beyond. An LLM that
-returns ENGAGE is treated as a protocol violation, not a valid input.
+HANDOFF. This is enforced in `llm_graph.py` (`_reconcile_action`): the
+advisor can escalate LOG → ALERT → HANDOFF but nothing beyond, and cannot
+lower the rule engine's action. An LLM answer of ENGAGE (or of an unknown
+action) is ignored and the rule engine's action stands
+(`tests/decision/test_llm_graph.py`).
 
 **(b) Guardrail downgrade-only invariant.** Guardrails run *after* LLM
 reconciliation and can only reduce severity, never increase it. The

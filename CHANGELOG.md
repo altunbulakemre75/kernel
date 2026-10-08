@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the `fusion` extra. Kyvern's core did not depend on them;
   `haversine_m`, the one function the guardrails used, now lives in
   `services/decision/guardrails.py`
+- `services/decision/llm_advisor.py` (`query_llm_advisor`, `reconcile`):
+  nothing called it; `run_graph()` reconciles the LLM's answer in
+  `llm_graph._reconcile_action`
+- `kyvern/mcp/schemas.py`: Pydantic models no module imported (the MCP tools
+  return plain dicts)
 
 ### Fixed
 - `kyvern-verify`, `kyvern-report` and MCP `verify_chain` crashed on a
@@ -26,6 +31,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reports `UNKNOWN`. A range is taken by entry position, so an entry whose
   `chain_index` was removed or rewritten stays in the range and fails it
   (it used to drop out, and the range reported `OK`)
+- Tests: the LLM reconciliation `run_graph()` uses (`_reconcile_action`: no
+  ENGAGE, no downgrade) had no test, while five tests covered the unused
+  `llm_advisor.reconcile`; the friendly-zone test passed with the guardrail
+  switched off. Both now fail when the rule they guard is removed
+- Docs: `retrieve_roe` is a hook for a policy-retrieval module this
+  repository does not ship (it passes the state through), `classify` uses
+  the rule engine only, and the LLM ceiling is enforced in `llm_graph.py`
 
 ## [0.3.2] — 2026-10-08
 

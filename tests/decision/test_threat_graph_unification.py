@@ -61,7 +61,9 @@ def test_decide_full_applies_friendly_zone_guardrail():
     track = _track(latitude=40.001, longitude=33.001)  # inside zone
     decision = decide_full(track, rules, friendly_zones=zones,
                            inside_protected_zone=True)
-    assert decision.action != Action.ENGAGE
+    # Without the zone this track is HANDOFF; the friendly-zone guardrail caps it at ALERT.
+    assert decision.action == Action.ALERT
+    assert decision.guardrails_triggered == ["friendly-zone-OP"]
 
 
 def test_guardrail_reasoning_separate_from_reasoning():

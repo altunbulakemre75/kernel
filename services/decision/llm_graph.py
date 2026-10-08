@@ -1,12 +1,14 @@
 """5-node LangGraph state machine — LLM advisor flow.
 
 Falls back to pure Python sequential execution if LangGraph is not installed.
-Both paths return the same DecisionTrace → audit trail.
+Both paths return the same Decision and append it to the audit chain.
 
 Nodes:
-  1. classify     — classify the anomaly with rule engine + LLM
-  2. retrieve_roe — pull context via policy RAG
-  3. reason       — LLM action recommendation (context + policy)
+  1. classify     — rule engine: assess the track, match a policy rule
+  2. retrieve_roe — optional policy-retrieval hook: uses services.knowledge.roe_rag
+                    when that module is installed. This repository does not ship
+                    one, so the node passes the state through unchanged.
+  3. reason       — LLM advisor recommendation (only when KYVERN_DECISION_LLM_ENABLED=true)
   4. guardrail    — guardrails.apply_guardrails() downgrade
   5. finalize     — sign the Decision and append it to the audit chain (raises if it cannot)
 """
@@ -74,7 +76,7 @@ async def classify(state: GraphState) -> GraphState:
     return state
 
 
-# ── Node 2: retrieve_roe (RAG) ────────────────────────────────────
+# ── Node 2: retrieve_roe (optional RAG hook; see the module docstring) ──
 
 async def retrieve_roe(state: GraphState) -> GraphState:
     try:

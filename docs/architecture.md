@@ -29,12 +29,14 @@ that execute in a fixed order:
 | Sub-layer | Key files | Role |
 |-----------|-----------|------|
 | **Rule engine** | `rules.py` (`assess_threat`), `roe.py` (`evaluate_roe`) | Deterministic, weighted-score assessment. Factors: zone proximity, transponder presence, speed, heading, confidence. Thresholds map to `ThreatLevel` enum (LOW/MEDIUM/HIGH/CRITICAL). Policy rules are loaded from YAML (`config/policies/default.yaml`) via the `ROERule` Pydantic model. First matching enabled rule wins. |
-| **LLM advisor** | `llm_client.py` (`query_llm`), `llm_advisor.py`, `llm_graph.py` | Optional. Queries an LLM for an independent assessment. Provider fallback chain: Anthropic Claude → Ollama (local) → None. The advisor **cannot** recommend ENGAGE — only LOG, ALERT, or HANDOFF. Prompt injection defense is handled by `sanitize.py` (`sanitize_track_for_llm`), which applies allowlist filtering, control-char stripping, and injection-pattern detection before any track data reaches the LLM prompt. |
+| **LLM advisor** | `llm_client.py` (`query_llm`), `llm_graph.py` (`_reconcile_action`) | Optional. Queries an LLM for an independent assessment. Provider fallback chain: Anthropic Claude → Ollama (local) → None. The advisor **cannot** recommend ENGAGE — only LOG, ALERT, or HANDOFF. Prompt injection defense is handled by `sanitize.py` (`sanitize_track_for_llm`), which applies allowlist filtering, control-char stripping, and injection-pattern detection before any track data reaches the LLM prompt. |
 | **Guardrails** | `guardrails.py` (`apply_guardrails`) | Post-decision safety filters. Three implemented guardrails: `input_track_guardrail` (rejects low-confidence or single-tick tracks), `friendly_zone_guardrail` (blocks action inside protected areas), `civilian_pattern_guardrail` (detects civil transponder codes and airliner flight profiles). Guardrails can only **downgrade** — see §6. |
 
 The full pipeline is orchestrated by a 5-node state machine in
 `llm_graph.py` (`run_graph`): classify → retrieve_roe → reason →
-guardrail → finalize. When LangGraph is installed, it runs as a
+guardrail → finalize. `retrieve_roe` is a hook for a policy-retrieval
+(RAG) module that this repository does not ship; without one it passes
+the state through. When LangGraph is installed, it runs as a
 `StateGraph`; otherwise, it falls back to plain sequential `await` calls.
 Both paths produce the same `Decision` output.
 
@@ -311,7 +313,6 @@ kyvern/
 │   │   ├── audit_chain.py        # Sign/verify entries, keyring, policy binding, RuntimeEvent append
 │   │   ├── chain_writer.py       # ChainWriter: locked, fsynced appends
 │   │   ├── guardrails.py         # apply_guardrails, GuardrailResult, haversine_m
-│   │   ├── llm_advisor.py        # query_llm_advisor, reconcile
 │   │   ├── llm_client.py         # LLMResponse, query_llm, provider chain
 │   │   ├── llm_graph.py          # 5-node GraphState pipeline, run_graph
 │   │   ├── policy_loader.py      # load_policy, SHA-256 policy version id

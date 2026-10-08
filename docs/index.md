@@ -1,6 +1,6 @@
 # Kyvern
 
-[![Build](https://img.shields.io/github/actions/workflow/status/altunbulakemre75/kyvern/ci.yml?branch=main&label=build)](https://github.com/altunbulakemre75/kyvern/actions) [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/altunbulakemre75/kyvern/blob/main/LICENSE) [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](#verifying-decisions) [![Tests](https://img.shields.io/badge/tests-221%20passing-brightgreen)](#verifying-decisions) [![Status](https://img.shields.io/badge/status-alpha-orange)](#status) [![EU AI Act](https://img.shields.io/badge/EU%20AI%20Act-Article%2012%20%7C%2014-blue)](compliance/eu_ai_act.md)
+[![Build](https://img.shields.io/github/actions/workflow/status/altunbulakemre75/kyvern/ci.yml?branch=main&label=build)](https://github.com/altunbulakemre75/kyvern/actions) [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/altunbulakemre75/kyvern/blob/main/LICENSE) [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](#verifying-decisions) [![Status](https://img.shields.io/badge/status-alpha-orange)](#status) [![EU AI Act](https://img.shields.io/badge/EU%20AI%20Act-Article%2012%20%7C%2014-blue)](compliance/eu_ai_act.md)
 
 Decision provenance and accountability infrastructure for autonomous systems.
 
