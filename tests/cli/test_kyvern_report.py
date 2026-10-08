@@ -231,3 +231,132 @@ def test_report_version_matches_the_package_version():
     pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
     declared = re.search(r'^version\s*=\s*"([^"]+)"', pyproject, re.MULTILINE).group(1)
     assert VERSION == declared
+
+
+# ── checks: every row is computed from the chain, or says it cannot be ────────
+
+GENERATED_AT = datetime(2026, 10, 8, tzinfo=timezone.utc)
+
+
+def _decision(i, **overrides):
+    d = {
+        "action": "log", "threat_level": "low", "roe_reference": "rule_1",
+        "guardrails_triggered": [], "guardrail_reasoning": "",
+        "requires_operator_approval": False, "source": "rule_engine",
+        "timestamp_iso": datetime(2026, 1, 1, 12, i, tzinfo=timezone.utc).isoformat(),
+        "policy_version_id": "a" * 64, "chain_index": i,
+    }
+    d.update(overrides)
+    return d
+
+
+def _checks(records, chain_valid=True, broken_idx=None, policy_check="bound"):
+    from cli.kyvern_report import compute_checks
+    from services.decision.audit_chain import PolicyCheck
+
+    if policy_check == "bound":
+        decisions = sum(1 for r in records if r.get("record_type") != "runtime_event")
+        policy_check = PolicyCheck(per_policy={"a" * 64: decisions})
+    checks = compute_checks(
+        records, chain_valid=chain_valid, broken_idx=broken_idx,
+        policy_check=policy_check, generated_at=GENERATED_AT,
+    )
+    return {c.id: c for c in checks}
+
+
+def test_checks_on_a_complete_chain():
+    checks = _checks([_decision(i) for i in range(3)])
+    assert {key: c.status for key, c in checks.items()} == {
+        "integrity": "PASS", "risk_fields": "PASS", "policy_recorded": "PASS",
+        "operation_fields": "PASS", "timestamps": "PASS", "automatic": "NOT ASSESSED",
+        "retention": "INFO", "approval_flag": "N/A", "operator_decisions": "NOT ASSESSED",
+        "override": "NOT ASSESSED", "guardrails": "INFO", "policy": "PASS",
+    }
+    assert "2026-01-01" in checks["retention"].evidence
+
+
+def test_field_checks_count_the_decisions_missing_a_field():
+    records = [_decision(0), _decision(1, threat_level=None), _decision(2)]
+    del records[2]["guardrail_reasoning"]
+    checks = _checks(records)
+    assert checks["risk_fields"].status == "FAIL"
+    assert "1 of 3" in checks["risk_fields"].evidence
+    assert checks["operation_fields"].status == "FAIL"
+    assert "1 of 3" in checks["operation_fields"].evidence
+
+
+def test_policy_recorded_fails_for_a_decision_without_a_policy():
+    checks = _checks([_decision(0), _decision(1, policy_version_id=None)])
+    assert checks["policy_recorded"].status == "FAIL"
+
+
+def test_engage_decisions_must_be_flagged_for_operator_approval():
+    flagged = _checks([_decision(0, action="engage", requires_operator_approval=True)])
+    assert flagged["approval_flag"].status == "PASS"
+    assert "not that it was given" in flagged["approval_flag"].evidence
+    unflagged = _checks([_decision(0, action="engage")])
+    assert unflagged["approval_flag"].status == "FAIL"
+
+
+def test_operator_decisions_are_counted():
+    checks = _checks([_decision(0), _decision(1, source="operator")])
+    assert checks["operator_decisions"].status == "INFO"
+    assert "1 decision(s)" in checks["operator_decisions"].evidence
+
+
+def test_guardrail_downgrades_are_not_called_human_oversight():
+    checks = _checks([_decision(0, guardrails_triggered=["friendly-zone-OP"])])
+    assert checks["guardrails"].status == "INFO"
+    assert "automated" in checks["guardrails"].evidence
+
+
+def test_timestamps_must_be_iso_8601_in_utc():
+    assert _checks([_decision(0, timestamp_iso="2026-01-01T12:00:00+03:00")])["timestamps"].status == "FAIL"
+    assert _checks([_decision(0, timestamp_iso="yesterday")])["timestamps"].status == "FAIL"
+
+
+def test_a_broken_chain_makes_record_checks_not_assessed():
+    checks = _checks([_decision(i) for i in range(3)], chain_valid=False, broken_idx=1)
+    assert checks["integrity"].status == "FAIL"
+    assert "index 1" in checks["integrity"].evidence
+    for key in ("risk_fields", "policy_recorded", "operation_fields", "timestamps",
+                "retention", "approval_flag", "operator_decisions", "guardrails"):
+        assert checks[key].status == "NOT ASSESSED", key
+
+
+def test_a_chain_without_decisions_has_nothing_to_check_per_decision():
+    from services.decision.audit_chain import PolicyCheck
+
+    event = {"record_type": "runtime_event", "event_type": "x", "timestamp_iso": GENERATED_AT.isoformat()}
+    checks = _checks([event], policy_check=PolicyCheck())
+    for key in ("risk_fields", "policy_recorded", "operation_fields", "approval_flag"):
+        assert checks[key].status == "N/A", key
+    assert checks["policy"].status == "FAIL"
+
+
+def test_fingerprint_covers_the_check_results():
+    from cli.kyvern_report import compute_report_fingerprint
+
+    args = ([], True, "v", "sys", "period", "now")
+    assert compute_report_fingerprint(*args, checks={"integrity": "PASS"}) != (
+        compute_report_fingerprint(*args, checks={"integrity": "FAIL"})
+    )
+
+
+def test_report_wording_is_evidence_not_compliance(workspace):
+    import pypdf
+
+    out = workspace["tmp"] / "report.pdf"
+    res = _run(
+        str(workspace["chain_path"]),
+        "--policy", str(workspace["policy_path"]),
+        "--pubkey", str(workspace["pub_path"]),
+        "--output", str(out),
+    )
+    assert res.returncode == 0, res.stderr
+    text = " ".join(" ".join((p.extract_text() or "").split()) for p in pypdf.PdfReader(str(out)).pages)
+    assert "satisf" not in text.lower()
+    assert "10 years" not in text
+    assert "at least six months" in text
+    assert "does not establish conformity" in text
+    assert "NOT ASSESSED" in text

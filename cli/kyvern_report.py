@@ -1,8 +1,10 @@
-"""EU AI Act compliance report generator.
+"""EU AI Act evidence report.
 
-Produces a regulator-ready PDF from a signed Kyvern decision chain,
-attesting Article 12 (automatic logging) and Article 14 (human oversight)
-compliance evidence.
+Produces a PDF of checks run on a signed Kyvern decision chain, mapped to the
+EU AI Act Articles they support: Article 12 (record-keeping) and Article 14
+(human oversight). Each row is computed from the chain or says that the chain
+cannot show it. The report supports an assessment; it does not establish
+conformity (Article 43).
 """
 import argparse
 import base64
@@ -11,6 +13,7 @@ import importlib.metadata
 import json
 import sys
 from collections import Counter
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -96,10 +99,12 @@ def compute_report_fingerprint(
     generated_at: str,
     runtime_event_count: int = 0,
     policy_binding_ok: bool | None = None,
+    checks: dict[str, str] | None = None,
 ) -> str:
     canonical = json.dumps(
         {
             "chain_valid": chain_valid,
+            "checks": checks,
             "decision_count": len(decisions),
             "generated_at": generated_at,
             "period": period,
@@ -112,6 +117,185 @@ def compute_report_fingerprint(
         separators=(",", ":"),
     )
     return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+# ── Evidence checks ───────────────────────────────────────────────────────────
+
+PASS, FAIL, NOT_ASSESSED, NOT_APPLICABLE, INFO = "PASS", "FAIL", "NOT ASSESSED", "N/A", "INFO"
+
+
+@dataclass(frozen=True)
+class Check:
+    """One row of the Article 12/14 tables: a check run on the chain and its result.
+
+    status is PASS or FAIL when the check ran, NOT ASSESSED when the chain cannot
+    show it, N/A when there was nothing to check, INFO for a figure that is not a
+    pass/fail claim.
+    """
+
+    id: str
+    article: str   # "12" or "14": the table the row belongs to
+    label: str
+    supports: str  # the Article(s) this evidence supports
+    status: str
+    evidence: str
+
+
+def _parse_utc(ts: Any) -> datetime | None:
+    """The timestamp as an aware datetime, or None if it is not ISO 8601 with an offset."""
+    if not isinstance(ts, str):
+        return None
+    try:
+        # Python 3.10's fromisoformat does not accept a trailing "Z".
+        dt = datetime.fromisoformat(ts[:-1] + "+00:00" if ts.endswith("Z") else ts)
+    except ValueError:
+        return None
+    return dt if dt.utcoffset() is not None else None
+
+
+def _has_text(value: Any) -> bool:
+    return isinstance(value, str) and bool(value)
+
+
+def compute_checks(
+    records: list[dict[str, Any]],
+    *,
+    chain_valid: bool,
+    broken_idx: int | None,
+    policy_check: PolicyCheck | None,
+    generated_at: datetime,
+) -> list[Check]:
+    """Run the report's checks on the chain.
+
+    Records of a chain that failed integrity are not evidence, so the checks
+    computed from them are NOT ASSESSED.
+    """
+    decisions, events = split_records(records)
+    n = len(decisions)
+    unverified = "Chain integrity failed, so its records are unverified."
+    checks: list[Check] = []
+
+    def add(id_: str, article: str, label: str, supports: str, status: str, evidence: str) -> None:
+        checks.append(Check(id_, article, label, supports, status, evidence))
+
+    def per_decision(id_: str, label: str, supports: str, fields: str, has) -> None:
+        if not chain_valid:
+            add(id_, "12", label, supports, NOT_ASSESSED, unverified)
+        elif n == 0:
+            add(id_, "12", label, supports, NOT_APPLICABLE, "No decisions in the chain.")
+        else:
+            lacking = sum(1 for d in decisions if not has(d))
+            if lacking:
+                add(id_, "12", label, supports, FAIL, f"{lacking} of {n} decisions lack {fields}.")
+            else:
+                add(id_, "12", label, supports, PASS, f"All {n} decisions record {fields}.")
+
+    # Article 12: record-keeping
+    label = "Every entry signed and hash-linked"
+    if chain_valid:
+        add("integrity", "12", label, "Art.12(1)", PASS,
+            f"{len(records)} entries verified ({n} decisions, {len(events)} runtime events).")
+    else:
+        add("integrity", "12", label, "Art.12(1)", FAIL,
+            f"Chain broken at index {broken_idx}; entries from there on are unverified.")
+    per_decision(
+        "risk_fields", "Each decision records its threat level, rule reference and guardrails",
+        "Art.12(2)(a)", "threat_level, roe_reference and guardrails_triggered",
+        lambda d: _has_text(d.get("threat_level")) and "roe_reference" in d
+        and isinstance(d.get("guardrails_triggered"), list),
+    )
+    per_decision(
+        "policy_recorded", "Each decision records the policy version it was made under",
+        "Art.12(2)(b)", "policy_version_id", lambda d: _has_text(d.get("policy_version_id")),
+    )
+    per_decision(
+        "operation_fields",
+        "Each decision records its action, timestamp, approval flag and guardrail reasoning",
+        "Art.12(2)(c)",
+        "action, timestamp_iso, requires_operator_approval and guardrail_reasoning",
+        lambda d: _has_text(d.get("action")) and _has_text(d.get("timestamp_iso"))
+        and isinstance(d.get("requires_operator_approval"), bool) and "guardrail_reasoning" in d,
+    )
+    label = "Every entry's timestamp is ISO 8601 in UTC"
+    parsed = [_parse_utc(r.get("timestamp_iso")) for r in records]
+    if not chain_valid:
+        add("timestamps", "12", label, "Art.12(1)", NOT_ASSESSED, unverified)
+    else:
+        bad = sum(1 for dt in parsed if dt is None or dt.utcoffset().total_seconds() != 0)
+        if bad:
+            add("timestamps", "12", label, "Art.12(1)", FAIL,
+                f"{bad} of {len(records)} entries have a timestamp that is not ISO 8601 UTC.")
+        else:
+            add("timestamps", "12", label, "Art.12(1)", PASS, f"All {len(records)} entries.")
+    add("automatic", "12", "Records generated automatically, without human action",
+        "Art.12(1)", NOT_ASSESSED,
+        "The chain cannot show how its records were produced. run_graph() appends each "
+        "decision before returning it; whether every decision of the system is recorded "
+        "depends on the integration.")
+    label = "Logs kept for at least six months"
+    supports = "Art.19(1), Art.26(6)"
+    times = [dt.astimezone(timezone.utc) for dt in parsed if dt is not None]
+    if not chain_valid:
+        add("retention", "12", label, supports, NOT_ASSESSED, unverified)
+    elif not times:
+        add("retention", "12", label, supports, INFO, "No entry has a readable timestamp.")
+    else:
+        earliest = min(times)
+        add("retention", "12", label, supports, INFO,
+            f"Earliest entry {earliest:%Y-%m-%d} ({(generated_at - earliest).days} days before "
+            "this report). Keeping logs for at least six months is the provider's and the "
+            "deployer's storage policy; Kyvern does not manage it.")
+
+    # Article 14: human oversight
+    label = "ENGAGE decisions flagged as requiring operator approval"
+    engage = [d for d in decisions if str(d.get("action", "")).lower() == "engage"]
+    if not chain_valid:
+        add("approval_flag", "14", label, "Art.14", NOT_ASSESSED, unverified)
+    elif not engage:
+        add("approval_flag", "14", label, "Art.14", NOT_APPLICABLE,
+            "No ENGAGE decisions in the chain.")
+    else:
+        unflagged = sum(1 for d in engage if d.get("requires_operator_approval") is not True)
+        if unflagged:
+            add("approval_flag", "14", label, "Art.14", FAIL,
+                f"{unflagged} of {len(engage)} ENGAGE decisions are not flagged.")
+        else:
+            add("approval_flag", "14", label, "Art.14", PASS,
+                f"All {len(engage)} ENGAGE decisions are flagged. The chain records that "
+                "approval was required, not that it was given.")
+    label = "Human interventions recorded (decisions with source=operator)"
+    by_operator = sum(1 for d in decisions if d.get("source") == "operator")
+    if not chain_valid:
+        add("operator_decisions", "14", label, "Art.14", NOT_ASSESSED, unverified)
+    elif by_operator:
+        add("operator_decisions", "14", label, "Art.14", INFO,
+            f"{by_operator} decision(s) recorded with source=operator.")
+    else:
+        add("operator_decisions", "14", label, "Art.14", NOT_ASSESSED,
+            "No decision recorded with source=operator; interventions made outside Kyvern "
+            "are not visible in the chain.")
+    add("override", "14", "An operator can override or stop the system", "Art.14(4)",
+        NOT_ASSESSED, "A property of the deployed system; the chain cannot show it.")
+    label = "Guardrail downgrades recorded"
+    if not chain_valid:
+        add("guardrails", "14", label, "Art.14", NOT_ASSESSED, unverified)
+    elif n == 0:
+        add("guardrails", "14", label, "Art.14", NOT_APPLICABLE, "No decisions in the chain.")
+    else:
+        downgraded = sum(1 for d in decisions if d.get("guardrails_triggered"))
+        add("guardrails", "14", label, "Art.14", INFO,
+            f"{downgraded} of {n} decisions were downgraded by a guardrail (automated "
+            "checks, not human oversight).")
+    label = "Verifiable policy deployment: decisions bound to a supplied policy"
+    if policy_check is None:
+        add("policy", "14", label, "Art.14", NOT_ASSESSED, "No policy was supplied.")
+    elif policy_check.ok:
+        add("policy", "14", label, "Art.14", PASS,
+            f"All {policy_check.decision_count} decisions are bound to the supplied "
+            "policy version(s).")
+    else:
+        add("policy", "14", label, "Art.14", FAIL, policy_check.reason() + ".")
+    return checks
 
 
 # ── ReportLab helpers ─────────────────────────────────────────────────────────
@@ -154,6 +338,10 @@ def _styles() -> dict[str, ParagraphStyle]:
             "RPMono", parent=base["Normal"],
             fontName="Courier", fontSize=8, spaceAfter=4,
         ),
+        "cell": ParagraphStyle(
+            "RPCell", parent=base["Normal"],
+            fontName="Helvetica", fontSize=8.5, leading=10.5,
+        ),
     }
 
 
@@ -173,6 +361,7 @@ _BASE_TS = TableStyle([
     ("TOPPADDING",     (0, 0), (-1, -1), 4),
     ("BOTTOMPADDING",  (0, 0), (-1, -1), 4),
     ("LEFTPADDING",    (0, 0), (-1, -1), 6),
+    ("VALIGN",         (0, 0), (-1, -1), "TOP"),
 ])
 
 
@@ -228,12 +417,22 @@ def generate_pdf(
     approve_required = sum(1 for d in decisions if d.get("requires_operator_approval"))
     guardrail_triggered = sum(1 for d in decisions if d.get("guardrails_triggered"))
     guardrail_rate = f"{guardrail_triggered / n * 100:.1f}%" if n else "—"
+    try:
+        report_time = datetime.strptime(generated_at, "%Y-%m-%d %H:%M:%S UTC").replace(
+            tzinfo=timezone.utc,
+        )
+    except ValueError:
+        report_time = datetime.now(timezone.utc)
+    checks = compute_checks(
+        records, chain_valid=chain_valid, broken_idx=broken_idx,
+        policy_check=policy_check, generated_at=report_time,
+    )
 
     # ── Page 1: Cover ─────────────────────────────────────────────────────────
     story += [
         Spacer(1, 2.5 * cm),
         Paragraph("Decision Provenance Report", s["title"]),
-        Paragraph("EU AI Act Article 12 &amp; 14 Compliance Evidence", s["subtitle"]),
+        Paragraph("Evidence for EU AI Act Articles 12 &amp; 14", s["subtitle"]),
         _hr(),
         Spacer(1, 0.4 * cm),
         Paragraph(f"<b>Generated by:</b> Kyvern v{VERSION}", s["body"]),
@@ -246,7 +445,8 @@ def generate_pdf(
         Spacer(1, 1 * cm),
         _hr(),
         Paragraph(
-            "This report is cryptographically attested. See final page.",
+            "Checks run on a signed decision chain. They support, but do not establish, "
+            "conformity with the EU AI Act. The report's fingerprint is on the final page.",
             s["small"],
         ),
         PageBreak(),
@@ -284,53 +484,47 @@ def generate_pdf(
         ]
     story.append(PageBreak())
 
-    # ── Page 3: Article 12 ────────────────────────────────────────────────────
-    integrity_status = "✓ PASS" if chain_valid else "✗ FAIL"
-    integrity_evidence = (
-        f"Ed25519 chain verified ({len(records)} entries: {n} decisions, "
-        f"{len(events)} runtime events)"
-        if chain_valid
-        else f"Chain broken at index {broken_idx}"
-    )
-    art12_rows = [
-        ["Art.12(2)(a) — Risk identification logging (Art.79(1))",
-         "✓ PASS",
-         "threat_level, roe_reference, and guardrails_triggered recorded per decision"],
-        ["Art.12(2)(b) — Post-market monitoring support (Art.72)",
-         "✓ PASS",
-         f"All {n} decisions auto-logged; policy_version_id links each record to the "
-         "exact rule set in force"],
-        ["Art.12(2)(c) — Operation monitoring (Art.26(5))",
-         "✓ PASS",
-         "action, timestamp_iso, requires_operator_approval, and guardrail_reasoning "
-         "recorded per decision"],
-        ["Automatic log generation (no human action required)",
-         "✓ PASS",
-         f"sign_decision() called automatically; {n} records appended to chain"],
-        ["Tamper-evident storage",
-         integrity_status, integrity_evidence],
-        ["Timestamps in standardised format",
-         "✓ PASS", "ISO 8601 UTC throughout"],
-        ["Retention period (10 years, high-risk)",
-         "INFO", "Storage layer: external to Kyvern"],
-    ]
+    # ── Pages 3–4: Articles 12 and 14 ─────────────────────────────────────────
+    def check_table(article: str, with_supports: bool) -> Table:
+        header = ["Check", "Supports", "Result", "Evidence"] if with_supports else [
+            "Check", "Result", "Evidence",
+        ]
+        rows: list[list] = [header]
+        for c in checks:
+            if c.article != article:
+                continue
+            row = [Paragraph(escape(c.label), s["cell"])]
+            if with_supports:
+                row.append(Paragraph(escape(c.supports), s["cell"]))
+            row += [
+                Paragraph(f"<b>{c.status}</b>", s["cell"]),
+                Paragraph(escape(c.evidence), s["cell"]),
+            ]
+            rows.append(row)
+        widths = (
+            [5 * cm, 2.6 * cm, 2.4 * cm, 6.5 * cm] if with_supports
+            else [6 * cm, 2.4 * cm, 8.1 * cm]
+        )
+        return Table(rows, colWidths=widths, style=_BASE_TS, repeatRows=1)
+
     story += [
         Paragraph("EU AI Act Article 12 — Record-keeping", s["h2"]),
         _hr(),
         Paragraph(
-            "Article 12(2) requires high-risk AI systems to automatically generate "
-            "logs enabling risk identification (Art.79(1)), post-market monitoring "
-            "(Art.72), and operation monitoring (Art.26(5)). The table below maps "
-            "each Article 12(2) sub-requirement to observable evidence in this "
-            "decision chain.",
+            "Each row below is a check run on this chain. PASS and FAIL are the results "
+            "of that check; NOT ASSESSED means the chain cannot show it; N/A and INFO are "
+            "not pass/fail claims. A PASS is evidence that supports an assessment under "
+            "the Article named; it does not establish conformity, which is assessed under "
+            "Article 43.",
+            s["body"],
+        ),
+        Paragraph(
+            "Article 12(2) asks that the logs enable risk identification (Art.79(1)), "
+            "post-market monitoring (Art.72) and operation monitoring (Art.26(5)).",
             s["body"],
         ),
         Spacer(1, 0.3 * cm),
-        Table(
-            [["Requirement", "Status", "Evidence"]] + art12_rows,
-            colWidths=[7.5 * cm, 2.5 * cm, 5.5 * cm],
-            style=_BASE_TS,
-        ),
+        check_table("12", with_supports=True),
         Spacer(1, 0.4 * cm),
         Paragraph(
             "<b>Article 12(3) — out of scope for Kyvern:</b> Art.12(3) imposes "
@@ -350,41 +544,25 @@ def generate_pdf(
         PageBreak(),
     ]
 
-    # ── Page 4: Article 14 ────────────────────────────────────────────────────
-    if policy_check is None:
-        policy_status = "NOT CHECKED"
-    else:
-        policy_status = "✓ PASS" if policy_check.ok else "✗ FAIL"
-    art14_rows = [
-        ["Human approval before high-risk actions", "✓ PASS"],
-        ["Operator override capability",            "✓ PASS"],
-        ["Audit trail of human interventions",      "✓ PASS"],
-        ["Verifiable policy deployment",            policy_status],
-    ]
     story += [
         Paragraph("EU AI Act Article 14 — Human Oversight", s["h2"]),
         _hr(),
         Paragraph(
-            "Article 14 requires that high-risk AI systems allow natural persons "
-            "to effectively oversee their operation. Evidence is derived from the "
-            "signed decision chain.",
+            "Article 14 asks that natural persons can effectively oversee a high-risk AI "
+            "system. Most of that is a property of the deployed system; the checks below "
+            "show what this chain records about it.",
             s["body"],
         ),
         Paragraph(
-            f"Decisions requiring operator approval: <b>{approve_required}</b> of {n}",
+            f"Decisions flagged as requiring operator approval: <b>{approve_required}</b> of {n}",
             s["body"],
         ),
         Paragraph(
-            f"Guardrail interventions (action downgrade recorded): "
-            f"<b>{guardrail_triggered}</b>",
+            f"Automated guardrail downgrades: <b>{guardrail_triggered}</b> of {n}",
             s["body"],
         ),
         Spacer(1, 0.3 * cm),
-        Table(
-            [["Requirement", "Status"]] + art14_rows,
-            colWidths=[13 * cm, 3 * cm],
-            style=_BASE_TS,
-        ),
+        check_table("14", with_supports=False),
     ]
     if policy_check is not None and not policy_check.ok:
         story.append(Paragraph(
@@ -465,6 +643,7 @@ def generate_pdf(
         system_id, period, generated_at,
         runtime_event_count=len(events),
         policy_binding_ok=policy_check.ok if policy_check is not None else None,
+        checks={c.id: c.status for c in checks},
     )
     story += [
         Paragraph("Attestation", s["h2"]),
@@ -472,7 +651,8 @@ def generate_pdf(
         Paragraph(
             "The fingerprint below is a SHA-256 digest of the canonical report "
             "data (decision and runtime event counts, chain validity, policy "
-            "version(s) and binding check, period, system ID, generation timestamp). "
+            "version(s) and binding check, the result of each check, period, system ID, "
+            "generation timestamp). "
             "It provides tamper-evidence for this document.",
             s["body"],
         ),
