@@ -273,5 +273,11 @@ Apache 2.0.
 
 ## Contact
 
-Discussion on [Open Robotics Discourse](https://discourse.openrobotics.org/t/the-accountability-gap-in-ros2-where-does-why-did-the-robot-do-that-get-answered/54841)
-or open a GitHub issue.
+Questions, ideas, or trying Kyvern on your own robot:
+[GitHub Discussions](https://github.com/altunbulakemre75/kyvern/discussions).
+Bugs: open an issue. Security problems: report privately, see
+[SECURITY.md](SECURITY.md). Contributions: see
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
+The design discussion that started the ROS2 work is on
+[Open Robotics Discourse](https://discourse.openrobotics.org/t/the-accountability-gap-in-ros2-where-does-why-did-the-robot-do-that-get-answered/54841).

@@ -35,6 +35,12 @@ where   = ["."]
 include = ["services*", "kyvern*", "shared*", "cli*"]
 
 # ── Optional dependency groups ────────────────────────────────────────────────
+[project.urls]
+Homepage      = "https://github.com/altunbulakemre75/kyvern"
+Documentation = "https://altunbulakemre75.github.io/kyvern/"
+Changelog     = "https://github.com/altunbulakemre75/kyvern/blob/main/CHANGELOG.md"
+Issues        = "https://github.com/altunbulakemre75/kyvern/issues"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.4.0",

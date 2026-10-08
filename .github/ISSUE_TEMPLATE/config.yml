@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/altunbulakemre75/kyvern/security/advisories/new
+    about: Privately report a way to make a changed, deleted or forged record pass verification.
+  - name: Questions, ideas and pilots
+    url: https://github.com/altunbulakemre75/kyvern/discussions
+    about: Ask a question, or tell us about trying Kyvern on your own robot.
