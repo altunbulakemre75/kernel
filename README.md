@@ -85,6 +85,23 @@ verified offline without writing code:
 kyvern-verify chain.jsonl --policy config/policies/default.yaml --pubkey ~/.kyvern/keys/signing.pub
 ```
 
+**Output:**
+
+```text
+✓ Chain integrity: VALID (3 decisions, 1 runtime events, all signed)
+✓ Policy match: 5b64432b2dd0796f (default.yaml @ 2026-10-08 04:51 UTC): 3 decisions
+✓ Signature verification: PASSED (Ed25519)
+  Anchors: none (no chain.anchors.jsonl)
+
+Decision summary:
+  [0] 14:32:07  action=LOG     rule_id=POL-1  guardrails=[input-single-tick]
+  [1] 14:32:09  action=ALERT   rule_id=POL-2  guardrails=[]
+  [2] 14:32:12  event=sensor_anomaly source=imu_monitor
+  [3] 14:32:15  action=ALERT   rule_id=POL-2  guardrails=[]
+
+Audit hash: 5b64432b2dd0796f (verifiable against deployed policy)
+```
+
 Repeat `--pubkey` to verify a chain signed by more than one key (for example
 after a key rotation); every entry records which key signed it. Repeat
 `--policy` for a chain that spans a policy update: every Decision must be
@@ -101,6 +118,13 @@ external RFC 3161 authority (IdenTrust by default; `--tsa-url` and
 fails if an anchored entry was rewritten, even by someone holding the
 signing key.
 
+Anchors are also what detects entries **deleted from the end** of a chain:
+the shorter chain still verifies on its own, but the receipt for an entry
+that is gone does not. Run `kyvern-verify --require-anchors` to fail a chain
+that has no valid receipt. Entries written after the latest anchor can still
+be deleted or rewritten unnoticed until the next `kyvern-anchor` run, so
+anchor on a schedule and keep a copy of `chain.anchors.jsonl` off the host.
+
 ```bash
 # Linux/macOS, hourly (crontab -e)
 0 * * * * kyvern-anchor /var/lib/kyvern/chain.jsonl
@@ -109,23 +133,6 @@ signing key.
 ```bash
 # Windows, hourly
 schtasks /Create /SC HOURLY /TN "Kyvern anchor" /TR "kyvern-anchor C:\kyvern\chain.jsonl"
-```
-
-**Output:**
-
-```text
-✓ Chain integrity: VALID (3 decisions, 1 runtime events, all signed)
-✓ Policy match: 5b64432b2dd0796f (default.yaml @ 2026-10-08 04:51 UTC): 3 decisions
-✓ Signature verification: PASSED (Ed25519)
-  Anchors: none (no chain.anchors.jsonl)
-
-Decision summary:
-  [0] 14:32:07  action=LOG     rule_id=POL-1  guardrails=[input-single-tick]
-  [1] 14:32:09  action=ALERT   rule_id=POL-2  guardrails=[]
-  [2] 14:32:12  event=sensor_anomaly source=imu_monitor
-  [3] 14:32:15  action=ALERT   rule_id=POL-2  guardrails=[]
-
-Audit hash: 5b64432b2dd0796f (verifiable against deployed policy)
 ```
 
 ## EU AI Act evidence reports

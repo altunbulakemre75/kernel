@@ -39,6 +39,13 @@ kyvern-verify chain.jsonl --policy config/policies/default.yaml \
 The tamper is detectable; the original state is unrecoverable to the attacker
 without the signing private key.
 
+Deleting entries **from the end** of the chain is different: the shorter
+chain is still a valid chain, and signatures alone cannot show that anything
+is missing. Anchoring (see Recording Guarantees) detects it for anchored entries:
+the receipt for an entry that is gone fails verification. Run
+`kyvern-verify --require-anchors` so that a chain without a valid receipt
+fails instead of passing.
+
 **Result.** The attack surface shifts from the log file — low-protection,
 on-disk — to key management, which is HSM/KMS territory and a much harder
 problem for an insider. An attacker who cannot forge signatures cannot silently
@@ -107,8 +114,12 @@ an action more aggressive than the rule engine would have taken without it.
   in `chain.anchors.jsonl`. `kyvern-verify` checks every receipt against the
   chain: an anchored entry that was rewritten — even re-signed with the
   right key — no longer matches its receipt and verification fails. Limits:
-  - entries after the latest anchor can still be rewritten until the next
-    `kyvern-anchor` run, so run it on a schedule (for example hourly);
+  - entries after the latest anchor can still be rewritten or deleted until
+    the next `kyvern-anchor` run, so run it on a schedule (for example
+    hourly);
+  - without receipts nothing detects entries deleted from the end of the
+    chain; `kyvern-verify --require-anchors` fails a chain that has no valid
+    receipt;
   - the receipts file is the evidence: copy `chain.anchors.jsonl` off the
     host (log shipping, object storage), otherwise an attacker with host
     access can delete it;
