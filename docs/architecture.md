@@ -254,6 +254,19 @@ Ed25519 signature scheme, the same SHA-256 hash link, and the same
 have this field (backward compatibility — a record without
 `record_type` is read as a Decision).
 
+**Your own decisions.** A third record type, `RecordedDecision`
+(`record_type: "decision"`, in `shared/schemas.py`), holds a decision made
+by the user's own system — a robot's safety controller, a planner, an
+operator — appended with `kyvern.record_decision()`. The auditor tools
+treat it as a decision: it is counted with decisions and its
+`policy_version_id` is checked against `--policy`. Its fields are
+domain-neutral: `action`, `source` (who decided; `"operator"` for a
+person), `reasoning`, `inputs` (what the decision was based on, at most
+64 KB), `rule_id`, `subject_id`, `requires_operator_approval`,
+`timestamp_iso` (UTC), and `policy_version_id` / `policy_path` when
+`policy_path=` is given. A policy is any YAML file with a `rules:` list;
+its version id is the SHA-256 of its canonical content.
+
 **Use cases:**
 - Sensor anomaly reports (e.g. `event_type="sensor_anomaly"`,
   `source="lidar_monitor"`)
