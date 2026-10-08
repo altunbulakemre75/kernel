@@ -11,8 +11,12 @@ or court can read, is almost always reconstructed after the fact, by hand.
 
 Kyvern is the missing layer:
 
-- **Rule-first decision engine.** Every action traces back to a
-  human-authored policy. AI advises; rules decide.
+- **Records your system's own decisions.** `record_decision()` signs
+  what your robot, planner or operator decided, why, on which inputs and
+  under which version of your policy, into a verifiable chain. Your
+  decision logic stays yours.
+- **Optional rule-first decision engine.** Kyvern's own engine traces every
+  action back to a human-authored policy. AI advises; rules decide.
 - **Cryptographically signed audit chain.** Every decision is recorded
   with full provenance: which rule fired, which inputs triggered it,
   which guardrails ran, what was downgraded. Linked via Ed25519 signature.

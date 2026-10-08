@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 
+from kyvern import record_decision
 from kyvern.audit import AuditChainStore
 from services.decision.audit_chain import append_runtime_event, load_or_create_keypair
 from services.decision.policy_loader import clear_policy_cache, load_policy
@@ -355,6 +356,10 @@ print(json.dumps(results))
 def test_auditor_tools_survive_any_tampered_field(ws, tmp_path):
     _decide(ws, 1, policy=ws["policy"])
     _event(ws)
+    record_decision(
+        "stop", source="safety_controller", reasoning="obstacle at 0.4 m",
+        inputs={"obstacle_distance_m": 0.4}, rule_id="stop-on-obstacle", chain_path=ws["chain"],
+    )
     records = [json.loads(line) for line in ws["chain"].read_text(encoding="utf-8").splitlines()]
 
     cases, failures = {}, {}

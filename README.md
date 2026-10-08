@@ -11,8 +11,12 @@ or court can read, is almost always reconstructed after the fact, by hand.
 
 Kyvern is the missing layer:
 
-- **Rule-first decision engine.** Every action traces back to a
-  human-authored policy. AI advises; rules decide.
+- **Records your system's own decisions.** `record_decision()` signs
+  what your robot, planner or operator decided, why, on which inputs and
+  under which version of your policy, into a verifiable chain. Your
+  decision logic stays yours.
+- **Optional rule-first decision engine.** Kyvern's own engine traces every
+  action back to a human-authored policy. AI advises; rules decide.
 - **Cryptographically signed audit chain.** Every decision is recorded
   with full provenance: which rule fired, which inputs triggered it,
   which guardrails ran, what was downgraded. Linked via Ed25519 signature.
@@ -45,6 +49,31 @@ pip install .                 # core: decisions, audit chain, kyvern-verify/repo
 pip install ".[mcp]"          # + kyvern-mcp (Claude Desktop)
 pip install ".[llm]"          # + LLM advisor (LangGraph, Anthropic)
 pip install -r requirements.txt && pytest   # full development environment
+```
+
+Record a decision your system made:
+
+```python
+from kyvern import record_decision
+
+record_decision(
+    "stop",                                   # what your system did
+    source="safety_controller",               # who decided ("operator" for a person)
+    reasoning="obstacle at 0.4 m, closer than 0.5 m",
+    inputs={"obstacle_distance_m": 0.4},      # what it was based on (up to 64 KB)
+    rule_id="stop-on-obstacle",               # the rule in your policy that fired
+    policy_path="safety_policy.yaml",         # binds the decision to that policy version
+)
+```
+
+The policy is your own YAML file with a `rules:` list; Kyvern records the
+SHA-256 of its content with each decision. The decision is signed and
+appended to `~/.kyvern/chain.jsonl` (or `$KYVERN_CHAIN_PATH`), next to any
+decisions from Kyvern's own engine, and can then be verified, anchored and
+reported on:
+
+```bash
+kyvern-verify ~/.kyvern/chain.jsonl --policy safety_policy.yaml --pubkey ~/.kyvern/keys/signing.pub
 ```
 
 ## Verifying decisions
@@ -154,10 +183,11 @@ query, chain verification, and active-policy metadata. See
 
 ## Recording events from your existing stack
 
-You do not have to adopt Kyvern's decision engine to get a signed record.
-`RuntimeEvent` lets sensor monitors, guard middleware, or other upstream
-components append their own evidence to the same signed chain as Kyvern
-Decisions:
+Decisions your system makes go in with `record_decision()` (see
+[Quick start](#quick-start)) and are checked against your policy.
+Observations are different: `RuntimeEvent` lets sensor monitors, guard
+middleware, or other upstream components append their own evidence ("I
+observed this") to the same signed chain, without a policy check:
 
 ```python
 from shared.paths import default_chain_path

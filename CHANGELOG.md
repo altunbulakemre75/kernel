@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `kyvern.record_decision()` records a decision your own system made (a
+  robot's safety controller, a planner, an operator) into the signed chain:
+  the action, who decided, the reasoning, the inputs it was based on (up to
+  64 KB), the rule that fired and, with `policy_path=`, the version of your
+  policy. The record (`RecordedDecision`, `record_type: "decision"`) is
+  checked against `--policy` by `kyvern-verify` and `kyvern-report` like
+  any decision. A policy is any YAML file with a `rules:` list
+- `kyvern-verify` lists recorded decisions as
+  `action=STOP rule_id=... source=...`; `kyvern-report`'s Article 12 checks
+  ask them for inputs and reasoning instead of a threat level, and its
+  threat-level table covers only decisions that record one
+
 ### Changed
 - A decision's `source` is `llm_advisor` only when the LLM advisor raised the
   rule engine's action; it used to be `llm_advisor` whenever the LLM
@@ -45,6 +58,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `llm_graph._reconcile_action`
 - `kyvern/mcp/schemas.py`: Pydantic models no module imported (the MCP tools
   return plain dicts)
+- `AgentName`, `TaskRequest`, `AgentResult` and `OrchestratorResponse` from
+  `shared/schemas.py`: unused models from the private deployment's orchestrator
 
 ### Fixed
 - `kyvern-verify`, `kyvern-report` and MCP `verify_chain` crashed on a
