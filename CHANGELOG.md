@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-10-08
+
 ### Added
 - CONTRIBUTING.md, SECURITY.md (private vulnerability reporting through
   GitHub), CODE_OF_CONDUCT.md, issue and pull request templates, a NOTICE
@@ -240,7 +242,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial open-core extraction.
 
-[Unreleased]: https://github.com/altunbulakemre75/kyvern/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/altunbulakemre75/kyvern/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/altunbulakemre75/kyvern/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/altunbulakemre75/kyvern/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/altunbulakemre75/kyvern/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/altunbulakemre75/kyvern/compare/v0.2.0...v0.3.0
