@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- CONTRIBUTING.md, SECURITY.md (private vulnerability reporting through
+  GitHub), CODE_OF_CONDUCT.md, issue and pull request templates, a NOTICE
+  file, and project URLs in `pyproject.toml`
 - `kyvern.record_decision()` records a decision your own system made (a
   robot's safety controller, a planner, an operator) into the signed chain:
   the action, who decided, the reasoning, the inputs it was based on (up to
@@ -71,6 +74,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `shared/schemas.py`: unused models from the private deployment's orchestrator
 
 ### Fixed
+- `LICENSE` was not the Apache License 2.0 text: several definitions and
+  terms had been reworded or left out (GitHub could not identify it). It is
+  now the verbatim license text; the copyright notice is in `NOTICE`
 - `kyvern-verify`, `kyvern-report` and MCP `verify_chain` crashed on a
   tampered record holding a number, list or object in `timestamp_iso`,
   `key_id`, `chain_index`, `guardrails_triggered` or `roe_reference`; they now

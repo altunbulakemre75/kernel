@@ -1,0 +1,20 @@
+name: Feature request
+description: Something Kyvern should record, verify or report
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you are trying to do, and what is missing or getting in the way.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like
+  - type: textarea
+    id: context
+    attributes:
+      label: Your system
+      description: The robot or stack you would use it with (for example ROS2 on an AMR), if you can share it.
