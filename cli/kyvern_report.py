@@ -215,6 +215,16 @@ def compute_checks(
             else:
                 add(id_, "12", label, supports, PASS, f"All {n} decisions record {fields}.")
 
+    recorded = sum(1 for d in decisions if _is_recorded(d))
+
+    def fields_of(engine_fields: str, recorded_fields: str) -> str:
+        """The fields asked for, in the terms of the decisions this chain holds."""
+        if recorded == 0:
+            return engine_fields
+        if recorded == n:
+            return recorded_fields
+        return f"{engine_fields} (engine decisions) or {recorded_fields} (recorded decisions)"
+
     # Article 12: record-keeping
     label = "Every entry signed and hash-linked"
     if chain_valid:
@@ -226,8 +236,7 @@ def compute_checks(
     per_decision(
         "risk_fields", "Each decision records what it was based on",
         "Art.12(2)(a)",
-        "threat_level, roe_reference and guardrails_triggered (inputs and reasoning "
-        "for decisions recorded with record_decision())",
+        fields_of("threat_level, roe_reference and guardrails_triggered", "inputs and reasoning"),
         _has_risk_fields,
     )
     per_decision(
@@ -238,8 +247,10 @@ def compute_checks(
         "operation_fields",
         "Each decision records its action, timestamp, approval flag and who or what decided",
         "Art.12(2)(c)",
-        "action, timestamp_iso, requires_operator_approval and guardrail_reasoning "
-        "(source for decisions recorded with record_decision())",
+        fields_of(
+            "action, timestamp_iso, requires_operator_approval and guardrail_reasoning",
+            "action, timestamp_iso, requires_operator_approval and source",
+        ),
         _has_operation_fields,
     )
     label = "Every entry's timestamp is ISO 8601 in UTC"

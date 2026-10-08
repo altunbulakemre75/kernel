@@ -194,8 +194,12 @@ def test_report_checks_ask_recorded_decisions_for_inputs_and_reasoning(ws):
         )
     }
     assert checks["risk_fields"].status == "FAIL"
-    assert "1 of 2" in checks["risk_fields"].evidence
+    # A chain of recorded decisions is described in their own terms, without engine fields.
+    assert checks["risk_fields"].evidence == "1 of 2 decisions lack inputs and reasoning."
     assert checks["operation_fields"].status == "PASS"
+    assert checks["operation_fields"].evidence == (
+        "All 2 decisions record action, timestamp_iso, requires_operator_approval and source."
+    )
     assert checks["operator_decisions"].status == "INFO"
 
 

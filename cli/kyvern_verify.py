@@ -252,7 +252,7 @@ def main() -> None:
         elif d.get("record_type") == "decision":  # recorded with record_decision()
             action = str(d.get("action", "UNKNOWN")).upper()
             print(
-                f"  [{i}] {time_str}  action={action:<7} rule_id={d.get('rule_id')} "
+                f"  [{i}] {time_str}  action={action:<8} rule_id={d.get('rule_id')} "
                 f"source={d.get('source')}"
             )
         else:
