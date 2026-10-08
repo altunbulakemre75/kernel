@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 # ── Project metadata ──────────────────────────────────────────────────────────
 [project]
 name        = "kyvern"
-version     = "0.3.1"
+version     = "0.3.2"
 description = "Decision provenance and accountability infrastructure for autonomous systems"
 readme      = "README.md"
 license     = { text = "Apache-2.0" }
