@@ -26,9 +26,9 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
 
 @dataclass
 class LLMResponse:
-    action: str          # "log" | "alert" | "handoff"  (ENGAGE prohibited)
-    threat_level: str    # "low" | "medium" | "high" | "critical"
-    confidence: float
+    action: str                # "log" | "alert" | "handoff"  (ENGAGE prohibited)
+    threat_level: str | None   # "low" | "medium" | "high" | "critical"; None if invalid
+    confidence: float | None   # 0..1; None if invalid
     reasoning: str
     roe_reference: str | None
     raw: dict[str, Any]  # raw response — for audit trail
@@ -64,6 +64,66 @@ def _anthropic_model() -> str:
     return os.getenv("KYVERN_LLM_MODEL", DEFAULT_ANTHROPIC_MODEL)
 
 
+def _is_probability(value: Any) -> bool:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return 0.0 <= float(value) <= 1.0  # False for NaN
+    except OverflowError:  # an int too large for a float
+        return False
+
+
+def _assessment(answer: Any, provider: str, model: str) -> LLMResponse:
+    """The advisor's answer as an LLMResponse, whatever shape it came in.
+
+    Neither provider is guaranteed to follow DECISION_SCHEMA. A malformed answer is
+    still the advisor's answer: it is returned (no fallback to another provider) and
+    never raises. A value that does not fit the schema becomes None, and an action
+    that does not fit becomes "log", which can never raise the rule engine's action.
+    The reasoning starts with what did not fit, so the signed decision says so, and
+    `raw` keeps the answer as given.
+    """
+    problems: list[str] = []
+    if isinstance(answer, dict):
+        fields: dict[str, Any] = answer
+        raw = answer
+    else:
+        problems.append(f"not a JSON object ({type(answer).__name__})")
+        fields, raw = {}, {"invalid_answer": answer}
+    props = DECISION_SCHEMA["properties"]
+    checks = {
+        "action": lambda v: v in props["action"]["enum"],
+        "threat_level": lambda v: v in props["threat_level"]["enum"],
+        "confidence": _is_probability,
+        "reasoning": lambda v: isinstance(v, str),
+        "roe_reference": lambda v: isinstance(v, str),
+    }
+    values: dict[str, Any] = {}
+    for name, fits in checks.items():
+        if name not in fields:
+            if fields and name in DECISION_SCHEMA["required"]:
+                problems.append(f"{name} missing")
+            values[name] = None
+        elif not fits(fields[name]):
+            problems.append(f"{name} invalid: {fields[name]!r:.40}")
+            values[name] = None
+        else:
+            values[name] = fields[name]
+
+    reasoning = (values["reasoning"] or "")[:500]
+    if problems:
+        log.warning("%s answer did not match the schema: %s", provider, "; ".join(problems))
+        reasoning = f"[answer did not match the schema: {'; '.join(problems)}] {reasoning}".rstrip()
+    return LLMResponse(
+        action=values["action"] or "log",
+        threat_level=values["threat_level"],
+        confidence=float(values["confidence"]) if values["confidence"] is not None else None,
+        reasoning=reasoning,
+        roe_reference=values["roe_reference"],
+        raw=raw, provider=provider, model=model,
+    )
+
+
 async def _try_anthropic(prompt: str) -> LLMResponse | None:
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
@@ -76,7 +136,7 @@ async def _try_anthropic(prompt: str) -> LLMResponse | None:
 
     client = AsyncAnthropic(api_key=api_key)
     model = _anthropic_model()
-    tools = [{
+    tools: list[Any] = [{
         "name": "submit_assessment",
         "description": "Submit the advisor's assessment.",
         "input_schema": DECISION_SCHEMA,
@@ -94,13 +154,7 @@ async def _try_anthropic(prompt: str) -> LLMResponse | None:
 
     for block in msg.content:
         if block.type == "tool_use" and block.name == "submit_assessment":
-            d = dict(block.input)
-            return LLMResponse(
-                action=d["action"], threat_level=d["threat_level"],
-                confidence=float(d["confidence"]), reasoning=d["reasoning"],
-                roe_reference=d.get("roe_reference"),
-                raw=d, provider="anthropic", model=model,
-            )
+            return _assessment(block.input, "anthropic", model)
     return None
 
 
@@ -126,23 +180,8 @@ async def _try_ollama(prompt: str) -> LLMResponse | None:
     try:
         parsed = json.loads(response_text)
     except json.JSONDecodeError:
-        log.warning("Ollama JSON parse failed: %s", response_text[:200])
-        return None
-
-    # Schema validation (LLM sometimes returns values outside the enum)
-    action = parsed.get("action", "log")
-    if action not in ("log", "alert", "handoff"):
-        log.warning("Ollama returned invalid action: %s — downgrading to 'log'", action)
-        action = "log"
-
-    return LLMResponse(
-        action=action,
-        threat_level=parsed.get("threat_level", "low"),
-        confidence=float(parsed.get("confidence", 0.5)),
-        reasoning=str(parsed.get("reasoning", ""))[:500],
-        roe_reference=parsed.get("roe_reference"),
-        raw=parsed, provider="ollama", model=OLLAMA_MODEL,
-    )
+        parsed = response_text  # recorded as an answer that is not a JSON object
+    return _assessment(parsed, "ollama", OLLAMA_MODEL)
 
 
 async def query_llm(prompt: str) -> LLMResponse | None:

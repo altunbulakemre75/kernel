@@ -7,13 +7,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from services.decision.anchors import anchors_path_for, check_anchors, read_receipts
 from services.decision.audit_chain import (
     Keyring,
     check_policy_binding,
     describe_chain_failure,
+    load_public_key,
     record_type_of,
     verify_chain,
 )
@@ -62,11 +63,9 @@ def load_jsonl(path: str) -> list[dict[str, Any]]:
         sys.exit(1)
     return decisions
 
-def load_pubkey(path: str) -> Any:
+def load_pubkey(path: str) -> Ed25519PublicKey:
     try:
-        with open(path, "rb") as f:
-            pub_bytes = f.read()
-        return serialization.load_pem_public_key(pub_bytes)
+        return load_public_key(path)
     except FileNotFoundError:
         print(f"{RED_CROSS} Public key file not found: {path}")
         sys.exit(1)
@@ -84,16 +83,15 @@ def _policy_label(path: str) -> str:
     return f"{os.path.basename(path)} @ {when}"
 
 def main() -> None:
-    if sys.stdout.encoding.lower() != "utf-8":
-        try:
-            sys.stdout.reconfigure(encoding="utf-8")
-        except Exception:
-            pass
-    if sys.stderr.encoding.lower() != "utf-8":
-        try:
-            sys.stderr.reconfigure(encoding="utf-8")
-        except Exception:
-            pass
+    for stream in (sys.stdout, sys.stderr):
+        # Not isinstance(io.TextIOWrapper): on Windows colorama wraps the streams
+        # and passes reconfigure() through to them.
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None and (stream.encoding or "").lower() != "utf-8":
+            try:
+                reconfigure(encoding="utf-8")
+            except Exception:
+                pass
             
     parser = argparse.ArgumentParser(description="Verify a cryptographically signed decision chain.")
     parser.add_argument("chain_file", help="path to JSONL file with decisions")
@@ -146,6 +144,7 @@ def main() -> None:
     failure_reason = None
 
     if not is_valid_chain:
+        assert broken_idx is not None  # verify_chain names the failing entry
         failure_reason = describe_chain_failure(decisions, broken_idx, public_key)
         errors.append(f"Chain integrity broken at index {broken_idx}: {failure_reason}")
 
@@ -244,12 +243,13 @@ def main() -> None:
     else:
         print(f"{RED_CROSS} Signature verification: FAILED")
 
-    if anchors_missing and anchor_report is None:
-        print(f"{RED_CROSS} Anchors: REQUIRED, none found (no {anchors_path.name})")
+    if anchor_report is None:
+        if anchors_missing:
+            print(f"{RED_CROSS} Anchors: REQUIRED, none found (no {anchors_path.name})")
+        else:
+            print(f"  Anchors: none (no {anchors_path.name})")
     elif anchors_missing and not anchor_report.failures:
         print(f"{RED_CROSS} Anchors: REQUIRED, none valid in {anchors_path.name}")
-    elif anchor_report is None:
-        print(f"  Anchors: none (no {anchors_path.name})")
     elif anchor_report.failures:
         print(f"{RED_CROSS} Anchors: FAILED")
         for failure in anchor_report.failures:

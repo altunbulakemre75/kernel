@@ -10,6 +10,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from services.decision import anchors
 from services.decision.anchors import (
     AnchorError,
+    Unreadable,
     anchor_head,
     anchor_statement,
     anchors_path_for,
@@ -150,3 +151,63 @@ def test_check_anchors_reports_a_receipt_that_does_not_verify(chain):
     assert report.failures == ["receipt 0: fake says no"]
     assert report.latest_index is None
     assert report.unanchored_tail == 2
+
+
+def test_check_anchors_reports_malformed_receipts_instead_of_crashing(chain):
+    path, _ = chain
+    receipts = [
+        None,                                                   # a line that is not JSON
+        [1, 2],                                                 # JSON, but not an object
+        {"anchor": "fake", "chain_index": [1], "payload_hash": "ab"},
+        {"anchor": "fake", "chain_index": True, "payload_hash": "ab"},
+        {"anchor": "fake", "chain_index": 1},                   # no payload_hash
+    ]
+    report = check_anchors(_entries(path), receipts, {"fake": FakeAnchor()})
+    assert report.valid == 0
+    assert [f.split(":")[0] for f in report.failures] == [f"receipt {i}" for i in range(5)]
+    assert all("malformed" in f for f in report.failures)
+
+
+def test_check_anchors_survives_entries_with_an_unusable_chain_index(chain):
+    path, _ = chain
+    fake = FakeAnchor()
+    anchor_head(path, fake)
+    entries = _entries(path)
+    entries.append({"chain_index": [9]})
+    entries.append({"chain_index": "10"})
+    report = check_anchors(entries, read_receipts(anchors_path_for(path)), {"fake": fake})
+    assert report.valid == 1
+    assert report.failures == []
+
+
+def test_read_receipts_marks_unreadable_lines_with_their_line_number(tmp_path):
+    path = tmp_path / "chain.anchors.jsonl"
+    path.write_bytes(b'{"anchor": "fake", "chain_index": 0}\n\nnot json\n\xff\xfe\n')
+    first, bad_json, bad_utf8 = read_receipts(path)
+    assert first == {"anchor": "fake", "chain_index": 0}
+    assert isinstance(bad_json, Unreadable)
+    assert isinstance(bad_utf8, Unreadable)
+    assert (bad_json.line, bad_utf8.line) == (3, 4)
+    report = check_anchors([], [bad_json, bad_utf8], {})
+    assert report.failures[0].startswith("receipt 0 (line 3): not JSON")
+    assert report.failures[1].startswith("receipt 1 (line 4): not JSON")
+
+
+def test_read_receipts_accepts_a_byte_order_mark(tmp_path):
+    path = tmp_path / "chain.anchors.jsonl"
+    path.write_bytes(b'\xef\xbb\xbf{"anchor": "fake", "chain_index": 0}\n')
+    assert read_receipts(path) == [{"anchor": "fake", "chain_index": 0}]
+
+
+@pytest.mark.parametrize("content", [
+    b'{"anchor": "fake", "chain_index": 0}\ngarbage\n',         # a line that is not a receipt
+    b'{"anchor": "fake", "chain_index": 0, "payload_hash": "a',  # torn last write, no newline
+    b'{"anchor": "fake", "chain_index": 0}',                     # valid JSON, no final newline
+])
+def test_anchor_head_refuses_a_damaged_receipts_file(chain, content):
+    path, _ = chain
+    receipts = anchors_path_for(path)
+    receipts.write_bytes(content)
+    with pytest.raises(AnchorError, match="receipts file"):
+        anchor_head(path, FakeAnchor())
+    assert receipts.read_bytes() == content

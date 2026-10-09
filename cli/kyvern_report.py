@@ -14,12 +14,12 @@ import json
 import sys
 from collections import Counter
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from xml.sax.saxutils import escape
 
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -38,6 +38,7 @@ from services.decision.audit_chain import (
     Keyring,
     PolicyCheck,
     check_policy_binding,
+    load_public_key,
     record_type_of,
     verify_chain,
 )
@@ -258,7 +259,7 @@ def compute_checks(
     if not chain_valid:
         add("timestamps", "12", label, "Art.12(1)", NOT_ASSESSED, unverified)
     else:
-        bad = sum(1 for dt in parsed if dt is None or dt.utcoffset().total_seconds() != 0)
+        bad = sum(1 for dt in parsed if dt is None or dt.utcoffset() != timedelta(0))
         if bad:
             add("timestamps", "12", label, "Art.12(1)", FAIL,
                 f"{bad} of {len(records)} entries have a timestamp that is not ISO 8601 UTC.")
@@ -745,9 +746,9 @@ def _load_jsonl(path: str) -> list[dict[str, Any]]:
         sys.exit(1)
 
 
-def _load_pubkey(path: str):
+def _load_pubkey(path: str) -> Ed25519PublicKey:
     try:
-        return serialization.load_pem_public_key(Path(path).read_bytes())
+        return load_public_key(path)
     except FileNotFoundError:
         print(f"Error: public key not found: {path}", file=sys.stderr)
         sys.exit(1)

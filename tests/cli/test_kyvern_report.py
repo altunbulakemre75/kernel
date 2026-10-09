@@ -360,3 +360,22 @@ def test_report_wording_is_evidence_not_compliance(workspace):
     assert "at least six months" in text
     assert "does not establish conformity" in text
     assert "NOT ASSESSED" in text
+
+
+def test_report_rejects_a_key_that_is_not_ed25519(workspace):
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    p256 = workspace["tmp"] / "p256.pub"
+    p256.write_bytes(ec.generate_private_key(ec.SECP256R1()).public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ))
+    res = _run(
+        str(workspace["chain_path"]),
+        "--policy", str(workspace["policy_path"]),
+        "--pubkey", str(p256),
+        "--output", str(workspace["tmp"] / "report.pdf"),
+    )
+    assert res.returncode == 1
+    assert "is not an Ed25519 public key" in res.stderr
+    assert "Traceback" not in res.stderr

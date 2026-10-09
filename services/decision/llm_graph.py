@@ -79,8 +79,10 @@ async def classify(state: GraphState) -> GraphState:
 # ── Node 2: retrieve_roe (optional RAG hook; see the module docstring) ──
 
 async def retrieve_roe(state: GraphState) -> GraphState:
+    assert state.assessment is not None
     try:
-        from services.knowledge.roe_rag import ROERAG
+        # A hook for a policy-retrieval module this repository does not ship.
+        from services.knowledge.roe_rag import ROERAG  # pyright: ignore[reportMissingImports]
 
         rag = ROERAG()
         query = (

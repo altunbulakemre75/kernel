@@ -66,3 +66,8 @@ def test_publisher_start_stop():
     pub = KyvernDecisionPublisher(node_name="test_pub")
     pub.start()
     pub.stop()
+
+
+def test_publish_before_start_says_to_call_start():
+    with pytest.raises(RuntimeError, match=r"start\(\)"):
+        KyvernDecisionPublisher().publish(_signed())

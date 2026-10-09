@@ -3,6 +3,8 @@ import os
 from pathlib import Path
 
 import pytest
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
 
 from services.decision.audit_chain import load_or_create_keypair
 from shared.paths import LegacyHomeError, kyvern_home
@@ -53,6 +55,18 @@ def test_keypair_created_under_kyvern_dir(fake_home):
     load_or_create_keypair()
     assert (fake_home / ".kyvern" / "keys" / "signing.key").is_file()
     assert (fake_home / ".kyvern" / "keys" / "signing.pub").is_file()
+
+
+def test_keypair_refuses_a_key_that_is_not_ed25519(fake_home):
+    keys = fake_home / ".kyvern" / "keys"
+    keys.mkdir(parents=True)
+    (keys / "signing.key").write_bytes(ec.generate_private_key(ec.SECP256R1()).private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ))
+    with pytest.raises(ValueError, match="is not an Ed25519 private key"):
+        load_or_create_keypair()
 
 
 def test_suite_runs_with_an_isolated_home(isolated_home):

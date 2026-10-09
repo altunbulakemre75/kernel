@@ -363,3 +363,38 @@ def test_require_anchors_passes_with_a_valid_receipt(anchored):
     res = _verify_anchored(anchored, "--require-anchors")
     assert res.returncode == 0, res.stdout
     assert json.loads(_verify_anchored(anchored, "--json").stdout)["anchors_required"] is False
+
+
+def test_verify_rejects_a_key_that_is_not_ed25519(temp_workspace):
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    p256 = temp_workspace["pub_path"].parent / "p256.pub"
+    p256.write_bytes(ec.generate_private_key(ec.SECP256R1()).public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ))
+    res = run_cli(
+        str(temp_workspace["chain_path"]),
+        "--policy", str(temp_workspace["policy_path"]),
+        "--pubkey", str(p256),
+    )
+    assert res.returncode == 1
+    assert "is not an Ed25519 public key" in res.stdout
+    assert "Traceback" not in res.stderr
+
+
+def test_verify_reports_a_malformed_anchors_file(temp_workspace):
+    anchors = temp_workspace["chain_path"].parent / "chain.anchors.jsonl"
+    anchors.write_text('not json\n[1, 2]\n{"anchor": "rfc3161", "chain_index": [0]}\n',
+                       encoding="utf-8")
+    res = run_cli(
+        str(temp_workspace["chain_path"]),
+        "--policy", str(temp_workspace["policy_path"]),
+        "--pubkey", str(temp_workspace["pub_path"]),
+    )
+    assert res.returncode == 1
+    assert "Traceback" not in res.stderr
+    assert "Anchors: FAILED" in res.stdout
+    assert "receipt 0 (line 1): not JSON" in res.stdout
+    assert "receipt 1: malformed" in res.stdout
+    assert "receipt 2: malformed" in res.stdout

@@ -6,11 +6,12 @@ Raises SandwichSchemaError after all retries exhausted.
 """
 from pydantic import BaseModel, ValidationError
 
+from kyvern.sandwich.providers import AuditLog, LLMProvider
 from kyvern.sandwich.schemas import SandwichSchemaError
 
 
 class QLLMCaller:
-    def __init__(self, llm: object, audit_store: object, max_retries: int = 2) -> None:
+    def __init__(self, llm: LLMProvider, audit_store: AuditLog, max_retries: int = 2) -> None:
         self._llm = llm
         self._audit = audit_store
         self._max_retries = max_retries
@@ -32,8 +33,14 @@ class QLLMCaller:
                 f"Content:\n{content}\n\nTask: {extraction_prompt}"
             )},
         ]
-        last_error: str | None = None
+        if schema is None:
+            resp = self._llm.complete(messages, response_format=None)
+            self._audit.log("q_llm_call", {
+                "ref_id": ref_id, "schema_name": None, "attempt": 0,
+            })
+            return resp if isinstance(resp, str) else str(resp)
 
+        last_error: str | None = None
         for attempt in range(self._max_retries + 1):
             if attempt > 0 and last_error:
                 messages.append({"role": "assistant", "content": "[invalid response]"})
@@ -43,16 +50,9 @@ class QLLMCaller:
                 })
 
             resp = self._llm.complete(messages, response_format=schema)
-
-            if schema is None:
-                self._audit.log("q_llm_call", {
-                    "ref_id": ref_id, "schema_name": None, "attempt": attempt,
-                })
-                return resp if isinstance(resp, str) else str(resp)
-
             try:
-                if isinstance(resp, BaseModel):
-                    validated = resp
+                if isinstance(resp, BaseModel):  # validated again: model_construct() skips it
+                    validated = schema.model_validate(resp.model_dump(warnings=False))
                 elif isinstance(resp, str):
                     validated = schema.model_validate_json(resp)
                 elif isinstance(resp, dict):
@@ -78,7 +78,7 @@ class QLLMCaller:
 
         self._audit.log("schema_failed", {
             "ref_id": ref_id,
-            "schema_name": schema.__name__ if schema else None,
+            "schema_name": schema.__name__,
         })
         raise SandwichSchemaError(
             f"Q-LLM failed to produce valid {schema.__name__} after "

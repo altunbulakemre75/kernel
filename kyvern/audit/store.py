@@ -191,9 +191,10 @@ class AuditChainStore:
                 first_break=None,
                 integrity="OK",
             )
-        broken_id = start + broken_idx if broken_idx is not None else None
+        assert broken_idx is not None  # verify_chain names the failing entry
+        broken_id = start + broken_idx
         return ChainVerifyResult(
-            verified_count=broken_idx if broken_idx is not None else 0,
+            verified_count=broken_idx,
             total_count=len(slice_events),
             first_break={
                 "id": broken_id,

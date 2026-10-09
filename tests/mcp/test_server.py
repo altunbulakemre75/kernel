@@ -114,3 +114,25 @@ def test_build_app_with_two_pubkeys(sample_chain_file, signing_keypair, tmp_path
         policy=None, verify_on_query=True,
     )
     assert app is not None
+
+
+def test_run_reports_a_bad_key_without_a_traceback(sample_chain_file, tmp_path, monkeypatch, capsys):
+    import sys
+
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    from kyvern.mcp.server import run
+
+    p256 = tmp_path / "p256.pub"
+    p256.write_bytes(ec.generate_private_key(ec.SECP256R1()).public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ))
+    monkeypatch.setattr(sys, "argv", [
+        "kyvern-mcp", "--chain-file", str(sample_chain_file), "--pubkey", str(p256),
+    ])
+    with pytest.raises(SystemExit) as exc:
+        run()
+    assert exc.value.code == 1
+    assert "kyvern-mcp: " in capsys.readouterr().err

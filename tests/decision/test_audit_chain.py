@@ -2,7 +2,8 @@ import base64
 import copy
 
 import pytest
-from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec, ed25519
 
 from services.decision.audit_chain import (
     Keyring,
@@ -190,6 +191,19 @@ def test_missing_key_is_reported_as_unknown(sample_decision):
     assert describe_chain_failure(chain, 2, only_k1) == (
         f"signed by unknown key {key_id(k2.public_key())}"
     )
+
+
+def test_keyring_rejects_a_key_that_is_not_ed25519(tmp_path):
+    good, bad = tmp_path / "good.pub", tmp_path / "p256.pub"
+    for path, key in ((good, ed25519.Ed25519PrivateKey.generate()),
+                      (bad, ec.generate_private_key(ec.SECP256R1()))):
+        path.write_bytes(key.public_key().public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        ))
+    assert len(Keyring.from_pem_files([good]).ids()) == 1
+    with pytest.raises(ValueError, match=r"p256\.pub is not an Ed25519 public key"):
+        Keyring.from_pem_files([good, bad])
 
 
 def test_record_without_key_id_still_verifies(sample_decision):

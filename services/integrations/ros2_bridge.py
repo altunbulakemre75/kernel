@@ -8,6 +8,8 @@ without depending on a custom kyvern_msgs package.
 rclpy is imported lazily (inside methods) so this module is importable
 on non-ROS hosts (Windows, CI without ROS2).
 """
+# rclpy and std_msgs come from a ROS2 install, not from pip.
+# pyright: reportMissingImports=false
 import json
 from typing import Any
 
@@ -26,8 +28,8 @@ class KyvernDecisionPublisher:
         self.node_name = node_name
         self.topic = topic
         self.qos_reliability = qos_reliability
-        self._node = None
-        self._pub = None
+        self._node: Any = None  # rclpy.node.Node once started
+        self._pub: Any = None
         self._initialized_rclpy = False
 
     def start(self) -> None:
@@ -51,6 +53,8 @@ class KyvernDecisionPublisher:
         self._pub = self._node.create_publisher(String, self.topic, qos)
 
     def publish(self, decision: dict[str, Any]) -> None:
+        if self._pub is None:
+            raise RuntimeError("call start() before publish()")
         from std_msgs.msg import String
 
         msg = String()
