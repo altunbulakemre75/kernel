@@ -336,3 +336,53 @@ def test_integration_real_llm():
     assert isinstance(result, dict)
     valid, _ = store.verify(sk.public_key())
     assert valid
+
+
+# ── Failures that are not schema violations ───────────────────────────────────
+
+class _FailingAuditStore(InMemoryAuditStore):
+    """Fails to write the first event of a given type, like a full disk would."""
+
+    def __init__(self, fail_on: str) -> None:
+        super().__init__()
+        self._fail_on = fail_on
+
+    def log(self, event_type: str, data: dict) -> dict:
+        if event_type == self._fail_on:
+            self._fail_on = ""
+            raise OSError("audit disk full")
+        return super().log(event_type, data)
+
+
+def test_an_audit_failure_is_not_recorded_as_a_schema_violation():
+    store = _FailingAuditStore(fail_on="q_llm_call")
+    q_llm = MockLLMProvider([EmailSummary(subject="Meeting", urgent=True)] * 3)
+    sandwich = Sandwich(
+        privileged_llm=MockLLMProvider([_make_plan(), _make_decision()]),
+        quarantined_llm=q_llm,
+        audit_store=store,
+    )
+    with pytest.raises(OSError, match="audit disk full"):
+        sandwich.run(
+            task="Summarize email",
+            untrusted_inputs={"email": "hello"},
+            output_schema=EmailSummary,
+        )
+    assert "schema_violation" not in store.event_types()
+    assert len(q_llm.calls) == 1  # a valid answer is not thrown away and asked for again
+
+
+def test_schema_error_keeps_the_last_validation_error_as_its_cause():
+    from pydantic import ValidationError
+
+    sandwich, _ = _make_sandwich(
+        p_responses=[_make_plan()],
+        q_responses=['{"bad": 1}', '{"bad": 2}', '{"bad": 3}'],
+    )
+    with pytest.raises(SandwichSchemaError) as exc:
+        sandwich.run(
+            task="Summarize email",
+            untrusted_inputs={"email": "hello"},
+            output_schema=EmailSummary,
+        )
+    assert isinstance(exc.value.__cause__, ValidationError)

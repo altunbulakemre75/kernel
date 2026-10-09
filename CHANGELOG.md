@@ -37,6 +37,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   it is a schema violation and retried. A privileged answer of the wrong
   type fails validation (logged as `p_llm_schema_failed`) instead of an
   `AttributeError` later
+- `kyvern-report --signingkey` with a key it cannot use (missing, not PEM,
+  encrypted, or not Ed25519) stops with "cannot load signing key" and exit
+  code 1. It used to write the report anyway and say "Ed25519 report
+  signature: not provided (no --signingkey supplied)", which was false; a
+  key that was not Ed25519 left the signature line out altogether
+- Sandwich: only an answer that does not fit the schema is logged as a
+  `schema_violation` and retried. Any other error, such as the audit store
+  failing to write, used to be logged as a schema violation too (an event
+  that never happened) and the valid answer thrown away; it now propagates.
+  `SandwichSchemaError` keeps the last validation error as its cause
+- `kyvern-verify --anchors FILE` with a FILE that does not exist printed a
+  neutral "Anchors: none" line and exited 1 with no visible reason; it now
+  prints "✗ Anchors: FAILED, FILE not found"
+- `kyvern-verify` no longer ticks an empty receipts file ("✓ Anchors: 0
+  valid"); it says "Anchors: none (… holds no receipts)", as for a missing
+  file
 - `KyvernDecisionPublisher.publish()` before `start()` says to call
   `start()` first instead of failing on a missing `std_msgs` or `None`
 

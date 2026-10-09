@@ -398,3 +398,17 @@ def test_verify_reports_a_malformed_anchors_file(temp_workspace):
     assert "receipt 0 (line 1): not JSON" in res.stdout
     assert "receipt 1: malformed" in res.stdout
     assert "receipt 2: malformed" in res.stdout
+
+
+def test_verify_says_why_it_fails_when_the_given_anchors_file_is_missing(anchored):
+    res = _verify_anchored(anchored, "--anchors", str(anchored / "elsewhere.anchors.jsonl"))
+    assert res.returncode == 1
+    assert "Anchors: FAILED, elsewhere.anchors.jsonl not found" in res.stdout
+
+
+def test_verify_does_not_tick_an_empty_receipts_file(anchored):
+    (anchored / "chain.anchors.jsonl").write_text("", encoding="utf-8")
+    res = _verify_anchored(anchored)
+    assert res.returncode == 0, res.stdout
+    assert "Anchors: 0 valid" not in res.stdout
+    assert "Anchors: none (chain.anchors.jsonl holds no receipts)" in res.stdout
