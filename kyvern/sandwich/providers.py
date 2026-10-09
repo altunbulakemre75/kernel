@@ -13,6 +13,13 @@ class LLMProvider(Protocol):
     ) -> "str | BaseModel": ...
 
 
+@runtime_checkable
+class AuditLog(Protocol):
+    """Where the Sandwich logs each step; InMemoryAuditStore is one."""
+
+    def log(self, event_type: str, data: dict) -> dict: ...
+
+
 class MockLLMProvider:
     """Deterministic mock: returns pre-configured responses in sequence.
 

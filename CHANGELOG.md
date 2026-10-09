@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `run_graph` with an exception. Claude's and Ollama's answers go through
   the same check: an invalid value gets a safe default (an action outside
   the schema becomes `log`), and the answer is still recorded as given
+- Sandwich: a quarantined LLM answer that is a pydantic model of another
+  schema is validated against the requested schema (a schema violation,
+  retried) instead of being passed on as valid; a privileged LLM answer of
+  the wrong type fails validation instead of an `AttributeError` later
 
 ## [0.4.0] — 2026-10-08
 

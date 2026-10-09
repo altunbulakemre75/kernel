@@ -118,6 +118,38 @@ def test_schema_failure():
     assert "schema_failed" in store.event_types()
 
 
+class Unrelated(BaseModel):
+    note: str
+
+
+def test_q_llm_model_of_another_schema_is_a_violation():
+    """A Q-LLM answer that is a pydantic model of the wrong schema is not accepted as valid."""
+    sandwich, store = _make_sandwich(
+        p_responses=[_make_plan()],
+        q_responses=[Unrelated(note="a"), Unrelated(note="b"), Unrelated(note="c")],
+    )
+    with pytest.raises(SandwichSchemaError):
+        sandwich.run(
+            task="Summarize email",
+            untrusted_inputs={"email": "hello"},
+            output_schema=EmailSummary,
+        )
+    assert store.event_types().count("schema_violation") == 3
+
+
+def test_p_llm_answer_of_another_schema_is_rejected():
+    """A P-LLM plan of the wrong type fails validation instead of crashing later."""
+    from pydantic import ValidationError
+
+    sandwich, _ = _make_sandwich(p_responses=[Unrelated(note="plan")], q_responses=[])
+    with pytest.raises(ValidationError):
+        sandwich.run(
+            task="Summarize email",
+            untrusted_inputs={"email": "hello"},
+            output_schema=EmailSummary,
+        )
+
+
 # ── Test 4: audit chain integrity ────────────────────────────────────────────
 
 def test_audit_chain():

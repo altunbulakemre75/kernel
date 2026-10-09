@@ -6,11 +6,11 @@ Untrusted inputs live in a ReferenceStore accessible only to the Q-LLM caller.
 import re
 import time
 from collections.abc import Callable
-from typing import Any
+from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
-from kyvern.sandwich.providers import InMemoryAuditStore
+from kyvern.sandwich.providers import AuditLog, InMemoryAuditStore, LLMProvider
 from kyvern.sandwich.quarantined import QLLMCaller
 from kyvern.sandwich.references import ReferenceStore
 from kyvern.sandwich.schemas import (
@@ -24,6 +24,8 @@ from kyvern.sandwich.schemas import (
 _TOKENS_PER_CHAR = 4
 _REF_RE = re.compile(r"^\$[A-Z_]+_\d+$")
 
+M = TypeVar("M", bound=BaseModel)
+
 
 class Sandwich:
     """Dual-LLM Sandwich orchestrator.
@@ -35,26 +37,26 @@ class Sandwich:
 
     def __init__(
         self,
-        privileged_llm: object,
-        quarantined_llm: object,
-        audit_store: "object | None" = None,
+        privileged_llm: LLMProvider,
+        quarantined_llm: LLMProvider,
+        audit_store: "AuditLog | None" = None,
         max_tokens: int = 8000,
         max_schema_retries: int = 2,
     ) -> None:
         self._p_llm = privileged_llm
         self._q_llm = quarantined_llm
-        self._store = audit_store if audit_store is not None else InMemoryAuditStore()
+        self._store: AuditLog = audit_store if audit_store is not None else InMemoryAuditStore()
         self._max_tokens = max_tokens
         self._max_schema_retries = max_schema_retries
 
     @property
-    def audit_store(self) -> object:
+    def audit_store(self) -> AuditLog:
         return self._store
 
     def _estimated_tokens(self, text: str) -> int:
         return len(text) // _TOKENS_PER_CHAR
 
-    def _p_llm_call(self, messages: list[dict], schema: type[BaseModel]) -> BaseModel:
+    def _p_llm_call(self, messages: list[dict], schema: type[M]) -> M:
         prompt_hash = hash_text(str(messages))
         resp = self._p_llm.complete(messages, response_format=schema)
         response_hash = hash_text(str(resp))
@@ -67,9 +69,9 @@ class Sandwich:
             return resp
         if isinstance(resp, str):
             return schema.model_validate_json(resp)
-        if isinstance(resp, dict):
-            return schema.model_validate(resp)
-        return resp
+        if isinstance(resp, BaseModel):  # a model, but of another schema
+            return schema.model_validate(resp.model_dump())
+        return schema.model_validate(resp)
 
     def run(
         self,
