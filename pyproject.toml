@@ -47,7 +47,7 @@ dev = [
     "pytest-asyncio>=0.23.0",
     "pytest-cov>=4.1.0",
     "ruff>=0.4.0",
-    "mypy>=1.10.0",
+    "pyright>=1.1.400",
     "pypdf>=4.0.0",   # PDF assertions in the report tests
 ]
 
@@ -81,11 +81,11 @@ target-version = "py310"
 select = ["E", "F", "I", "UP", "B", "C4", "PT"]
 ignore = ["E501"]
 
-# ── Mypy ──────────────────────────────────────────────────────────────────────
-[tool.mypy]
-python_version        = "3.10"
-strict                = false
-ignore_missing_imports = true
+# ── Pyright ───────────────────────────────────────────────────────────────────
+[tool.pyright]
+include          = ["kyvern", "cli", "services", "shared"]
+pythonVersion    = "3.10"
+typeCheckingMode = "standard"
 
 # ── Pytest ────────────────────────────────────────────────────────────────────
 [tool.pytest.ini_options]

@@ -23,11 +23,12 @@ python -m venv .venv            # then activate it
 pip install -r requirements.txt # editable install with every extra
 pytest
 ruff check .
+pyright                         # type check of kyvern, cli, services and shared
 ```
 
-CI runs the tests on Python 3.10–3.13, checks that the core install
-(`pip install .`, no extras) works, and runs the tests with only the `dev`
-extra installed. Tests that need an extra skip themselves without it.
+CI runs ruff and the tests on Python 3.10–3.13, type-checks with pyright,
+checks that the core install (`pip install .`, no extras) works, and runs
+the tests with only the `dev` extra installed. Tests that need an extra skip themselves without it.
 
 ## Making a change
 

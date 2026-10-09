@@ -26,6 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   schema is validated against the requested schema (a schema violation,
   retried) instead of being passed on as valid; a privileged LLM answer of
   the wrong type fails validation instead of an `AttributeError` later
+- `KyvernDecisionPublisher.publish()` before `start()` says to call
+  `start()` first instead of failing on a missing `std_msgs` or `None`
+
+### Changed
+- CI type-checks `kyvern`, `cli`, `services` and `shared` with pyright; the
+  `dev` extra installs pyright instead of mypy, which CI never ran
 
 ## [0.4.0] — 2026-10-08
 

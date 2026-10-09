@@ -7,6 +7,8 @@ Run standalone:
     python -m services.integrations.ros2_subscriber_example \\
         --pubkey /tmp/kyvern-demo/signing.pub
 """
+# rclpy and std_msgs come from a ROS2 install, not from pip.
+# pyright: reportMissingImports=false
 import argparse
 import json
 import sys
@@ -17,13 +19,6 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
 
-def _load_pubkey(path: str):
-    from cryptography.hazmat.primitives import serialization
-
-    with open(path, "rb") as f:
-        return serialization.load_pem_public_key(f.read())
-
-
 class KyvernDecisionVerifier:
     def __init__(
         self,
@@ -31,10 +26,12 @@ class KyvernDecisionVerifier:
         node_name: str = "kyvern_decision_verifier",
         topic: str = "/kyvern/decisions",
     ) -> None:
-        self.public_key = _load_pubkey(public_key_path)
+        from services.decision.audit_chain import load_public_key
+
+        self.public_key = load_public_key(public_key_path)
         self.node_name = node_name
         self.topic = topic
-        self._node = None
+        self._node: Any = None  # rclpy.node.Node once started
 
     def start(self) -> None:
         import rclpy

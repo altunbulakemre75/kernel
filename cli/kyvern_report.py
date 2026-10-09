@@ -14,7 +14,7 @@ import json
 import sys
 from collections import Counter
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from xml.sax.saxutils import escape
@@ -259,7 +259,7 @@ def compute_checks(
     if not chain_valid:
         add("timestamps", "12", label, "Art.12(1)", NOT_ASSESSED, unverified)
     else:
-        bad = sum(1 for dt in parsed if dt is None or dt.utcoffset().total_seconds() != 0)
+        bad = sum(1 for dt in parsed if dt is None or dt.utcoffset() != timedelta(0))
         if bad:
             add("timestamps", "12", label, "Art.12(1)", FAIL,
                 f"{bad} of {len(records)} entries have a timestamp that is not ISO 8601 UTC.")
