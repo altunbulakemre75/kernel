@@ -47,6 +47,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   failing to write, used to be logged as a schema violation too (an event
   that never happened) and the valid answer thrown away; it now propagates.
   `SandwichSchemaError` keeps the last validation error as its cause
+- `kyvern-verify --anchors FILE` with a FILE that does not exist printed a
+  neutral "Anchors: none" line and exited 1 with no visible reason; it now
+  prints "✗ Anchors: FAILED, FILE not found"
+- `kyvern-verify` no longer ticks an empty receipts file ("✓ Anchors: 0
+  valid"); it says "Anchors: none (… holds no receipts)", as for a missing
+  file
 - `KyvernDecisionPublisher.publish()` before `start()` says to call
   `start()` first instead of failing on a missing `std_msgs` or `None`
 

@@ -244,7 +244,9 @@ def main() -> None:
         print(f"{RED_CROSS} Signature verification: FAILED")
 
     if anchor_report is None:
-        if anchors_missing:
+        if args.anchors:  # a receipts file was named and is not there
+            print(f"{RED_CROSS} Anchors: FAILED, {anchors_path.name} not found")
+        elif anchors_missing:
             print(f"{RED_CROSS} Anchors: REQUIRED, none found (no {anchors_path.name})")
         else:
             print(f"  Anchors: none (no {anchors_path.name})")
@@ -254,6 +256,8 @@ def main() -> None:
         print(f"{RED_CROSS} Anchors: FAILED")
         for failure in anchor_report.failures:
             print(f"  {failure}")
+    elif anchor_report.valid == 0:  # an emptied receipts file is no better than none
+        print(f"  Anchors: none ({anchors_path.name} holds no receipts)")
     else:
         line = f"{GREEN_CHECK} Anchors: {anchor_report.valid} valid"
         if anchor_report.latest_index is not None:
