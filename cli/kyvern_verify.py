@@ -1,15 +1,22 @@
 import argparse
 import json
 import os
+import re
 import sys
 from dataclasses import asdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
-from services.decision.anchors import anchors_path_for, check_anchors, read_receipts
+from services.decision.anchors import (
+    anchors_path_for,
+    check_anchor_lag,
+    check_anchors,
+    format_duration,
+    read_receipts,
+)
 from services.decision.audit_chain import (
     Keyring,
     check_policy_binding,
@@ -73,6 +80,17 @@ def load_pubkey(path: str) -> Ed25519PublicKey:
         print(f"{RED_CROSS} Invalid public key in {path}: {e}")
         sys.exit(1)
 
+def _duration(value: str) -> timedelta:
+    """argparse type for --max-lag: 90s, 15m, 2h or 1d."""
+    match = re.fullmatch(r"(\d+)([smhd])", value.strip())
+    if not match or int(match.group(1)) == 0:
+        raise argparse.ArgumentTypeError(
+            f"{value!r} is not a positive duration such as 90s, 15m, 2h or 1d"
+        )
+    unit = {"s": "seconds", "m": "minutes", "h": "hours", "d": "days"}[match.group(2)]
+    return timedelta(**{unit: int(match.group(1))})
+
+
 def _policy_label(path: str) -> str:
     """Policy file name and modification time, for the human-readable output."""
     try:
@@ -113,6 +131,12 @@ def main() -> None:
              "receipts, entries deleted from the end of the chain cannot be detected",
     )
     parser.add_argument(
+        "--max-lag", type=_duration, default=None, metavar="DURATION",
+        help="fail if an anchored entry's timestamp is more than DURATION (90s, 15m, 2h, 1d) "
+             "before the first receipt that covers it, or after it: a receipt proves when an "
+             "entry existed, so this bounds how far an entry can have been backdated",
+    )
+    parser.add_argument(
         "--tsa-root", action="append", default=None,
         help="PEM file with trusted TSA root certificate(s); repeatable (default: certifi bundle)",
     )
@@ -130,7 +154,7 @@ def main() -> None:
                 "policy_version_id": None, "policy_version_ids": [],
                 "decisions_per_policy": {}, "unbound_decisions": [],
                 "unknown_policy_decisions": {}, "key_ids": [], "reason": None,
-                "anchors": None, "anchors_required": args.require_anchors,
+                "anchors": None, "anchors_required": args.require_anchors, "anchor_lag": None,
                 "errors": ["No decisions found in chain file"],
             }))
         else:
@@ -196,6 +220,14 @@ def main() -> None:
         )
         anchors_ok = False
 
+    lag_report = None
+    if args.max_lag is not None and anchor_report is not None and anchor_report.anchored:
+        lag_report = check_anchor_lag(decisions, anchor_report.anchored, args.max_lag)
+        for failure in lag_report.failures:
+            errors.append(f"Anchor lag: {failure}")
+        if lag_report.failures:
+            anchors_ok = False
+
     all_valid = is_valid_chain and policy_matches and anchors_ok
 
     if args.json:
@@ -215,6 +247,7 @@ def main() -> None:
             "reason": failure_reason,
             "anchors": asdict(anchor_report) if anchor_report else None,
             "anchors_required": args.require_anchors,
+            "anchor_lag": asdict(lag_report) if lag_report else None,
             "errors": errors
         }
         print(json.dumps(out, indent=2))
@@ -267,6 +300,21 @@ def main() -> None:
                 "entries not yet anchored"
             )
         print(line)
+
+    if args.max_lag is not None:
+        limit = format_duration(args.max_lag.total_seconds())
+        if lag_report is None:
+            print("  Anchor lag: not measured (no valid receipt)")
+        elif lag_report.failures:
+            print(f"{RED_CROSS} Anchor lag: FAILED (max {limit})")
+            for failure in lag_report.failures:
+                print(f"  {failure}")
+        else:
+            line = f"{GREEN_CHECK} Anchor lag: every anchored entry within {limit} of its timestamp"
+            if lag_report.worst is not None:
+                index, lag = lag_report.worst
+                line += f" (largest: {format_duration(lag)}, entry {index})"
+            print(line)
 
     print("\nDecision summary:")
     for i, d in enumerate(decisions):

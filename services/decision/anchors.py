@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import json
 import os
+from bisect import bisect_left
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -163,6 +165,7 @@ class AnchorReport:
     latest_index: int | None
     latest_time: str | None
     unanchored_tail: int
+    anchored: list[tuple[int, str | None]]  # (chain_index, anchored_at) of each valid receipt
 
 
 def check_anchors(
@@ -178,6 +181,7 @@ def check_anchors(
     by_index = {e["chain_index"]: e for e in entries if _is_index(e.get("chain_index"))}
     valid = 0
     failures: list[str] = []
+    anchored: list[tuple[int, str | None]] = []
     latest: tuple[int, str | None] | None = None
 
     for i, receipt in enumerate(receipts):
@@ -215,6 +219,7 @@ def check_anchors(
             failures.append(f"receipt {i}: {result.reason}")
             continue
         valid += 1
+        anchored.append((n, result.anchored_at))
         if latest is None or n > latest[0]:
             latest = (n, result.anchored_at)
 
@@ -230,4 +235,108 @@ def check_anchors(
         latest_index=latest_index,
         latest_time=latest[1] if latest else None,
         unanchored_tail=unanchored_tail,
+        anchored=anchored,
     )
+
+
+# ── Anchor lag ────────────────────────────────────────────────────────────────
+
+_LISTED = 3  # failures listed one by one before the rest are counted
+
+
+@dataclass(frozen=True)
+class LagReport:
+    max_lag_s: float
+    checked: int                     # anchored entries whose lag was measured
+    worst: tuple[int, float] | None  # (chain_index, lag in seconds; negative: dated after)
+    failures: list[str]
+
+
+def format_duration(seconds: float) -> str:
+    """90061 -> "1d 1h": the two largest non-zero units, whole seconds."""
+    left = round(abs(seconds))
+    parts = []
+    for unit, size in (("d", 86400), ("h", 3600), ("m", 60), ("s", 1)):
+        count, left = divmod(left, size)
+        if count:
+            parts.append(f"{count}{unit}")
+    return " ".join(parts[:2]) or "0s"
+
+
+def _utc(value: Any) -> datetime | None:
+    """An ISO 8601 timestamp with an offset as an aware datetime; None otherwise."""
+    if not isinstance(value, str):
+        return None
+    try:
+        # Python 3.10's fromisoformat does not accept a trailing "Z".
+        moment = datetime.fromisoformat(value[:-1] + "+00:00" if value.endswith("Z") else value)
+    except ValueError:
+        return None
+    return moment if moment.utcoffset() is not None else None
+
+
+def check_anchor_lag(
+    entries: list[dict[str, Any]],
+    anchored: list[tuple[int, str | None]],
+    max_lag: timedelta,
+) -> LagReport:
+    """How far each anchored entry's own timestamp is from the first receipt covering it.
+
+    A receipt proves that an entry existed when the receipt was issued, not at the time
+    the entry claims: an entry written today, dated last month and anchored today shows
+    a month's lag. Bounding the lag bounds how far an entry can have been backdated.
+    An entry dated after the receipt that covers it is impossible on correct clocks and
+    fails beyond the same limit. A receipt for entry n covers every entry up to n (they
+    are hash-linked); entries after the latest receipt are not measured.
+    """
+    times = sorted((n, t) for n, t in ((n, _utc(at)) for n, at in anchored) if t is not None)
+    indices = [n for n, _ in times]
+    first_cover: list[datetime] = []  # first_cover[i]: earliest receipt among times[i:]
+    for _, moment in reversed(times):
+        first_cover.append(min(moment, first_cover[-1]) if first_cover else moment)
+    first_cover.reverse()
+
+    limit = max_lag.total_seconds()
+    checked = 0
+    worst: tuple[int, float] | None = None
+    late: list[str] = []
+    other: list[str] = []
+    for entry in entries:
+        k = entry.get("chain_index")
+        if not isinstance(k, int) or isinstance(k, bool):
+            continue  # verify_chain() fails such an entry
+        pos = bisect_left(indices, k)
+        if pos == len(indices):
+            continue  # after the latest receipt
+        receipt_time = first_cover[pos]
+        stamp = _utc(entry.get("timestamp_iso"))
+        if stamp is None:
+            other.append(f"entry {k}: no UTC timestamp to measure the lag from")
+            continue
+        checked += 1
+        lag = (receipt_time - stamp).total_seconds()
+        if worst is None or abs(lag) > abs(worst[1]):
+            worst = (k, lag)
+        at = receipt_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        if lag > limit:
+            late.append(
+                f"entry {k} was first anchored {format_duration(lag)} after its timestamp "
+                f"({entry.get('timestamp_iso')}, receipt {at})"
+            )
+        elif -lag > limit:
+            other.append(
+                f"entry {k} is dated {format_duration(lag)} after the receipt that covers it ({at})"
+            )
+
+    failures = sorted(late + other, key=lambda f: int(f.split()[1].rstrip(":")))
+    if len(failures) > _LISTED + 1:
+        rest = failures[_LISTED:]
+        failures = failures[:_LISTED]
+        if all(f in late for f in rest):
+            failures.append(
+                f"and {len(rest)} more entries anchored more than "
+                f"{format_duration(limit)} after their timestamp"
+            )
+        else:
+            failures.append(f"and {len(rest)} more entries that fail the lag check")
+    return LagReport(max_lag_s=limit, checked=checked, worst=worst, failures=failures)

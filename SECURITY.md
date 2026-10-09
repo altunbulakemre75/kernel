@@ -22,7 +22,8 @@ GitHub release, crediting you unless you prefer otherwise.
 - A modified, deleted, reordered or forged entry that `kyvern-verify` accepts,
   with the documented options (for deletion from the end of a chain:
   `--require-anchors`)
-- RFC 3161 anchor receipts accepted when they should not be
+- RFC 3161 anchor receipts accepted when they should not be, including an
+  anchored entry dated further from its receipt than `--max-lag` allows
 - Crashes or wrong results on crafted chain or receipt files in
   `kyvern-verify`, `kyvern-report` or `kyvern-mcp`
 - Handling of the signing key (`~/.kyvern/keys`)
