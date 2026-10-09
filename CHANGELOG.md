@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- A public or signing key that is not Ed25519 (an RSA or P-256 key, say) is
+  rejected with "… is not an Ed25519 public key" by `kyvern-verify`,
+  `kyvern-report` and `kyvern-mcp`, and with "… is not an Ed25519 private
+  key" when it is `~/.kyvern/keys/signing.key`; they used to stop with a
+  Python traceback
+- A malformed receipts file (a line that is not JSON, a receipt that is not
+  an object or has no integer `chain_index` or `payload_hash` string) fails
+  `kyvern-verify` with "receipt N: malformed" for each such receipt instead
+  of a Python traceback
+
 ## [0.4.0] — 2026-10-08
 
 ### Added

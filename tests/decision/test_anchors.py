@@ -150,3 +150,36 @@ def test_check_anchors_reports_a_receipt_that_does_not_verify(chain):
     assert report.failures == ["receipt 0: fake says no"]
     assert report.latest_index is None
     assert report.unanchored_tail == 2
+
+
+def test_check_anchors_reports_malformed_receipts_instead_of_crashing(chain):
+    path, _ = chain
+    receipts = [
+        None,                                                   # a line that is not JSON
+        [1, 2],                                                 # JSON, but not an object
+        {"anchor": "fake", "chain_index": [1], "payload_hash": "ab"},
+        {"anchor": "fake", "chain_index": True, "payload_hash": "ab"},
+        {"anchor": "fake", "chain_index": 1},                   # no payload_hash
+    ]
+    report = check_anchors(_entries(path), receipts, {"fake": FakeAnchor()})
+    assert report.valid == 0
+    assert [f.split(":")[0] for f in report.failures] == [f"receipt {i}" for i in range(5)]
+    assert all("malformed" in f for f in report.failures)
+
+
+def test_check_anchors_survives_entries_with_an_unusable_chain_index(chain):
+    path, _ = chain
+    fake = FakeAnchor()
+    anchor_head(path, fake)
+    entries = _entries(path)
+    entries.append({"chain_index": [9]})
+    entries.append({"chain_index": "10"})
+    report = check_anchors(entries, read_receipts(anchors_path_for(path)), {"fake": fake})
+    assert report.valid == 1
+    assert report.failures == []
+
+
+def test_read_receipts_keeps_an_unreadable_line_as_none(tmp_path):
+    path = tmp_path / "chain.anchors.jsonl"
+    path.write_text('{"anchor": "fake", "chain_index": 0}\nnot json\n\n', encoding="utf-8")
+    assert read_receipts(path) == [{"anchor": "fake", "chain_index": 0}, None]

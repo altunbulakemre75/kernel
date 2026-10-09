@@ -26,7 +26,10 @@ def load_or_create_keypair() -> ed25519.Ed25519PrivateKey:
     if os.path.exists(priv_path):
         with open(priv_path, "rb") as f:
             priv_bytes = f.read()
-        return serialization.load_pem_private_key(priv_bytes, password=None)
+        key = serialization.load_pem_private_key(priv_bytes, password=None)
+        if not isinstance(key, ed25519.Ed25519PrivateKey):
+            raise ValueError(f"{priv_path} is not an Ed25519 private key")
+        return key
     
     private_key = ed25519.Ed25519PrivateKey.generate()
     
@@ -51,6 +54,14 @@ def load_or_create_keypair() -> ed25519.Ed25519PrivateKey:
     return private_key
 
 
+def load_public_key(path: str | Path) -> ed25519.Ed25519PublicKey:
+    """The Ed25519 public key in a PEM file; ValueError for any other kind of key."""
+    key = serialization.load_pem_public_key(Path(path).read_bytes())
+    if not isinstance(key, ed25519.Ed25519PublicKey):
+        raise ValueError(f"{path} is not an Ed25519 public key")
+    return key
+
+
 def key_id(public_key: ed25519.Ed25519PublicKey) -> str:
     """First 16 hex chars of SHA-256 over the raw 32-byte public key."""
     raw = public_key.public_bytes(
@@ -68,7 +79,7 @@ class Keyring:
 
     @classmethod
     def from_pem_files(cls, paths: Iterable[str | Path]) -> "Keyring":
-        return cls(serialization.load_pem_public_key(Path(p).read_bytes()) for p in paths)
+        return cls(load_public_key(p) for p in paths)
 
     def get(self, kid: str) -> ed25519.Ed25519PublicKey | None:
         return self._keys.get(kid)

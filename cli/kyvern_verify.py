@@ -7,13 +7,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from services.decision.anchors import anchors_path_for, check_anchors, read_receipts
 from services.decision.audit_chain import (
     Keyring,
     check_policy_binding,
     describe_chain_failure,
+    load_public_key,
     record_type_of,
     verify_chain,
 )
@@ -62,11 +63,9 @@ def load_jsonl(path: str) -> list[dict[str, Any]]:
         sys.exit(1)
     return decisions
 
-def load_pubkey(path: str) -> Any:
+def load_pubkey(path: str) -> Ed25519PublicKey:
     try:
-        with open(path, "rb") as f:
-            pub_bytes = f.read()
-        return serialization.load_pem_public_key(pub_bytes)
+        return load_public_key(path)
     except FileNotFoundError:
         print(f"{RED_CROSS} Public key file not found: {path}")
         sys.exit(1)

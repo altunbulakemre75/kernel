@@ -64,15 +64,26 @@ def anchors_path_for(chain_path: Path) -> Path:
     return chain_path.with_name(chain_path.stem + ".anchors.jsonl")
 
 
-def read_receipts(anchors_path: Path) -> list[dict[str, Any]]:
+def read_receipts(anchors_path: Path) -> list[Any]:
+    """The receipts in a receipts file, one per non-empty line; None for a line that is
+    not JSON. check_anchors() reports anything that is not a well-formed receipt."""
     path = Path(anchors_path)
     if not path.exists():
         return []
-    return [
-        json.loads(line)
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    ]
+    receipts: list[Any] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            receipts.append(json.loads(line))
+        except ValueError:
+            receipts.append(None)
+    return receipts
+
+
+def _is_index(value: Any) -> bool:
+    """A usable chain_index: an int, and not a bool (True == 1 in Python)."""
+    return isinstance(value, int) and not isinstance(value, bool)
 
 
 def append_receipt(anchors_path: Path, receipt: dict[str, Any]) -> None:
@@ -94,7 +105,7 @@ def anchor_head(chain_path: Path, anchor: Anchor) -> dict[str, Any] | None:
         return None
     anchors_path = anchors_path_for(chain_path)
     receipts = read_receipts(anchors_path)
-    if receipts and (
+    if receipts and isinstance(receipts[-1], dict) and (
         receipts[-1].get("chain_index") == head["chain_index"]
         and receipts[-1].get("payload_hash") == head["payload_hash"]
     ):
@@ -121,18 +132,32 @@ class AnchorReport:
 
 def check_anchors(
     entries: list[dict[str, Any]],
-    receipts: list[dict[str, Any]],
+    receipts: list[Any],
     anchors: Mapping[str, Anchor],
 ) -> AnchorReport:
-    """Check every receipt against the chain entries and its anchor."""
-    by_index = {e.get("chain_index"): e for e in entries}
+    """Check every receipt against the chain entries and its anchor.
+
+    The receipts file is untrusted input: a receipt that is not an object with an
+    integer chain_index and a payload_hash string is a failure, never an exception.
+    """
+    by_index = {e["chain_index"]: e for e in entries if _is_index(e.get("chain_index"))}
     valid = 0
     failures: list[str] = []
     latest: tuple[int, str | None] | None = None
 
     for i, receipt in enumerate(receipts):
-        n = receipt.get("chain_index")
-        anchor = anchors.get(receipt.get("anchor"))
+        if not (
+            isinstance(receipt, dict)
+            and _is_index(receipt.get("chain_index"))
+            and isinstance(receipt.get("payload_hash"), str)
+        ):
+            failures.append(
+                f"receipt {i}: malformed (needs an integer chain_index and a payload_hash string)"
+            )
+            continue
+        n: int = receipt["chain_index"]
+        payload_hash: str = receipt["payload_hash"]
+        anchor = anchors.get(str(receipt.get("anchor")))
         if anchor is None:
             failures.append(f"receipt {i}: unknown anchor type '{receipt.get('anchor')}'")
             continue
@@ -140,8 +165,8 @@ def check_anchors(
         if entry is None:
             failures.append(f"receipt {i}: chain entry {n} is missing")
             continue
-        result = anchor.verify(anchor_statement(n, receipt.get("payload_hash")), receipt)
-        if entry.get("payload_hash") != receipt.get("payload_hash"):
+        result = anchor.verify(anchor_statement(n, payload_hash), receipt)
+        if entry.get("payload_hash") != payload_hash:
             when = result.anchored_at if result.ok else "it was anchored"
             failures.append(
                 f"receipt {i}: chain entry {n} does not match the anchored hash "
@@ -158,7 +183,8 @@ def check_anchors(
     latest_index = latest[0] if latest else None
     unanchored_tail = sum(
         1 for e in entries
-        if latest_index is None or e.get("chain_index", -1) > latest_index
+        if latest_index is None
+        or (_is_index(e.get("chain_index")) and e["chain_index"] > latest_index)
     )
     return AnchorReport(
         valid=valid,
