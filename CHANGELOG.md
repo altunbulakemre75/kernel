@@ -12,20 +12,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rejected with "… is not an Ed25519 public key" by `kyvern-verify`,
   `kyvern-report` and `kyvern-mcp`, and with "… is not an Ed25519 private
   key" when it is `~/.kyvern/keys/signing.key`; they used to stop with a
-  Python traceback
-- A malformed receipts file (a line that is not JSON, a receipt that is not
-  an object or has no integer `chain_index` or `payload_hash` string) fails
-  `kyvern-verify` with "receipt N: malformed" for each such receipt instead
-  of a Python traceback
+  Python traceback. `kyvern-mcp` reports a missing chain or key file the
+  same way
+- A damaged receipts file fails `kyvern-verify` with a message per receipt
+  instead of a Python traceback: "receipt N (line L): not JSON" for a line
+  that is not JSON or not UTF-8, "receipt N: malformed" for one that is not
+  an object with an integer `chain_index` and a `payload_hash` string. A
+  UTF-8 byte order mark (as PowerShell 5.1 writes) is accepted.
+  `kyvern-anchor` refuses to append to a damaged receipts file, or to one
+  whose last line has no newline (an interrupted write), so a new receipt is
+  never joined to a broken line
 - An LLM advisor answer with a missing or invalid field (no `threat_level`,
-  a `confidence` that is not a number between 0 and 1, say) no longer stops
-  `run_graph` with an exception. Claude's and Ollama's answers go through
-  the same check: an invalid value gets a safe default (an action outside
-  the schema becomes `log`), and the answer is still recorded as given
-- Sandwich: a quarantined LLM answer that is a pydantic model of another
-  schema is validated against the requested schema (a schema violation,
-  retried) instead of being passed on as valid; a privileged LLM answer of
-  the wrong type fails validation instead of an `AttributeError` later
+  a `confidence` that is not a number between 0 and 1, an answer that is not
+  a JSON object) no longer stops `run_graph` with an exception. Claude's and
+  Ollama's answers go through the same check: a value that does not fit the
+  schema is dropped (an action becomes `log`, which never raises the rule
+  engine's action), the decision's reasoning says which fields did not fit,
+  a warning is logged, and `llm_raw_response` keeps the answer as given. A
+  bad answer is still the advisor's answer: Kyvern does not fall back to
+  another provider after it
+- Sandwich: every LLM answer that is a pydantic model is validated against
+  the requested schema, including instances built with `model_construct()`.
+  A quarantined answer of another schema used to be passed on as valid; now
+  it is a schema violation and retried. A privileged answer of the wrong
+  type fails validation (logged as `p_llm_schema_failed`) instead of an
+  `AttributeError` later
 - `KyvernDecisionPublisher.publish()` before `start()` says to call
   `start()` first instead of failing on a missing `std_msgs` or `None`
 

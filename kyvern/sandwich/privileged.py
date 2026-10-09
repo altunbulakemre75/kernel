@@ -8,7 +8,7 @@ import time
 from collections.abc import Callable
 from typing import Any, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from kyvern.sandwich.providers import AuditLog, InMemoryAuditStore, LLMProvider
 from kyvern.sandwich.quarantined import QLLMCaller
@@ -65,13 +65,18 @@ class Sandwich:
             "response_hash": response_hash,
             "schema": schema.__name__,
         })
-        if isinstance(resp, schema):
-            return resp
-        if isinstance(resp, str):
-            return schema.model_validate_json(resp)
-        if isinstance(resp, BaseModel):  # a model, but of another schema
-            return schema.model_validate(resp.model_dump())
-        return schema.model_validate(resp)
+        try:
+            if isinstance(resp, str):
+                return schema.model_validate_json(resp)
+            if isinstance(resp, BaseModel):  # validated again: model_construct() skips it
+                return schema.model_validate(resp.model_dump(warnings=False))
+            return schema.model_validate(resp)
+        except ValidationError as exc:
+            self._store.log("p_llm_schema_failed", {
+                "schema": schema.__name__,
+                "errors": str(exc)[:500],
+            })
+            raise
 
     def run(
         self,

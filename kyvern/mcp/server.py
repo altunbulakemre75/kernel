@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
@@ -90,12 +91,16 @@ def build_app(
 
 def run() -> None:
     ns = parse_args()
-    app = build_app(
-        chain_file=ns.chain_file,
-        pubkey=ns.pubkey,
-        policy=ns.policy,
-        verify_on_query=ns.verify_on_query,
-    )
+    try:
+        app = build_app(
+            chain_file=ns.chain_file,
+            pubkey=ns.pubkey,
+            policy=ns.policy,
+            verify_on_query=ns.verify_on_query,
+        )
+    except (KyvernMCPError, OSError, ValueError) as exc:
+        print(f"kyvern-mcp: {exc}", file=sys.stderr)
+        sys.exit(1)
     app.run(transport="stdio")
 
 

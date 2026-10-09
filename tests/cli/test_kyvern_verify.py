@@ -395,5 +395,6 @@ def test_verify_reports_a_malformed_anchors_file(temp_workspace):
     assert res.returncode == 1
     assert "Traceback" not in res.stderr
     assert "Anchors: FAILED" in res.stdout
-    for i in range(3):
-        assert f"receipt {i}: malformed" in res.stdout
+    assert "receipt 0 (line 1): not JSON" in res.stdout
+    assert "receipt 1: malformed" in res.stdout
+    assert "receipt 2: malformed" in res.stdout

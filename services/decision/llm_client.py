@@ -26,9 +26,9 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
 
 @dataclass
 class LLMResponse:
-    action: str          # "log" | "alert" | "handoff"  (ENGAGE prohibited)
-    threat_level: str    # "low" | "medium" | "high" | "critical"
-    confidence: float
+    action: str                # "log" | "alert" | "handoff"  (ENGAGE prohibited)
+    threat_level: str | None   # "low" | "medium" | "high" | "critical"; None if invalid
+    confidence: float | None   # 0..1; None if invalid
     reasoning: str
     roe_reference: str | None
     raw: dict[str, Any]  # raw response — for audit trail
@@ -64,39 +64,63 @@ def _anthropic_model() -> str:
     return os.getenv("KYVERN_LLM_MODEL", DEFAULT_ANTHROPIC_MODEL)
 
 
-def _assessment(answer: Any, provider: str, model: str) -> LLMResponse | None:
-    """The advisor's answer as an LLMResponse; None if it is not a JSON object.
-
-    Neither provider is guaranteed to follow DECISION_SCHEMA, and a malformed answer
-    must not stop the decision: missing or invalid values get a safe default
-    (an action outside the schema becomes "log", which can never raise the rule
-    engine's action). The answer is kept as given in `raw`.
-    """
-    if not isinstance(answer, dict):
-        log.warning("%s answer is not an object — ignored", provider)
-        return None
-    schema = DECISION_SCHEMA["properties"]
-    action = answer.get("action", "log")
-    if action not in schema["action"]["enum"]:
-        log.warning("%s returned invalid action: %s — downgrading to 'log'", provider, action)
-        action = "log"
-    threat_level = answer.get("threat_level", "low")
-    if threat_level not in schema["threat_level"]["enum"]:
-        threat_level = "low"
+def _is_probability(value: Any) -> bool:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
     try:
-        confidence = float(answer.get("confidence", 0.5))
-    except (TypeError, ValueError):
-        confidence = 0.5
-    if not 0.0 <= confidence <= 1.0:
-        confidence = 0.5
-    roe_reference = answer.get("roe_reference")
+        return 0.0 <= float(value) <= 1.0  # False for NaN
+    except OverflowError:  # an int too large for a float
+        return False
+
+
+def _assessment(answer: Any, provider: str, model: str) -> LLMResponse:
+    """The advisor's answer as an LLMResponse, whatever shape it came in.
+
+    Neither provider is guaranteed to follow DECISION_SCHEMA. A malformed answer is
+    still the advisor's answer: it is returned (no fallback to another provider) and
+    never raises. A value that does not fit the schema becomes None, and an action
+    that does not fit becomes "log", which can never raise the rule engine's action.
+    The reasoning starts with what did not fit, so the signed decision says so, and
+    `raw` keeps the answer as given.
+    """
+    problems: list[str] = []
+    if isinstance(answer, dict):
+        fields: dict[str, Any] = answer
+        raw = answer
+    else:
+        problems.append(f"not a JSON object ({type(answer).__name__})")
+        fields, raw = {}, {"invalid_answer": answer}
+    props = DECISION_SCHEMA["properties"]
+    checks = {
+        "action": lambda v: v in props["action"]["enum"],
+        "threat_level": lambda v: v in props["threat_level"]["enum"],
+        "confidence": _is_probability,
+        "reasoning": lambda v: isinstance(v, str),
+        "roe_reference": lambda v: isinstance(v, str),
+    }
+    values: dict[str, Any] = {}
+    for name, fits in checks.items():
+        if name not in fields:
+            if fields and name in DECISION_SCHEMA["required"]:
+                problems.append(f"{name} missing")
+            values[name] = None
+        elif not fits(fields[name]):
+            problems.append(f"{name} invalid: {fields[name]!r:.40}")
+            values[name] = None
+        else:
+            values[name] = fields[name]
+
+    reasoning = (values["reasoning"] or "")[:500]
+    if problems:
+        log.warning("%s answer did not match the schema: %s", provider, "; ".join(problems))
+        reasoning = f"[answer did not match the schema: {'; '.join(problems)}] {reasoning}".rstrip()
     return LLMResponse(
-        action=action,
-        threat_level=threat_level,
-        confidence=confidence,
-        reasoning=str(answer.get("reasoning", ""))[:500],
-        roe_reference=roe_reference if isinstance(roe_reference, str) else None,
-        raw=answer, provider=provider, model=model,
+        action=values["action"] or "log",
+        threat_level=values["threat_level"],
+        confidence=float(values["confidence"]) if values["confidence"] is not None else None,
+        reasoning=reasoning,
+        roe_reference=values["roe_reference"],
+        raw=raw, provider=provider, model=model,
     )
 
 
@@ -156,9 +180,7 @@ async def _try_ollama(prompt: str) -> LLMResponse | None:
     try:
         parsed = json.loads(response_text)
     except json.JSONDecodeError:
-        log.warning("Ollama JSON parse failed: %s", response_text[:200])
-        return None
-
+        parsed = response_text  # recorded as an answer that is not a JSON object
     return _assessment(parsed, "ollama", OLLAMA_MODEL)
 
 

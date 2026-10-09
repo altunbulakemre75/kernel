@@ -99,37 +99,54 @@ def _fake_ollama(monkeypatch, answer):
 
 
 @pytest.mark.asyncio
-async def test_anthropic_answer_missing_fields_is_completed_with_defaults(monkeypatch):
+async def test_anthropic_answer_missing_fields_is_kept_and_flagged(monkeypatch, caplog):
     from services.decision.llm_client import query_llm
 
     _fake_anthropic(monkeypatch, {"action": "alert"})
     r = await query_llm("prompt")
     assert r is not None
-    assert (r.provider, r.action, r.threat_level, r.confidence, r.reasoning) == (
-        "anthropic", "alert", "low", 0.5, ""
-    )
+    assert (r.provider, r.action, r.threat_level, r.confidence) == ("anthropic", "alert", None, None)
     assert r.raw == {"action": "alert"}
+    assert r.reasoning.startswith("[answer did not match the schema: ")
+    for missing in ("threat_level", "confidence", "reasoning"):
+        assert missing in r.reasoning
+    assert "did not match the schema" in caplog.text
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("provider", ["anthropic", "ollama"])
-async def test_invalid_answer_values_are_replaced_not_raised(monkeypatch, provider):
+@pytest.mark.parametrize("confidence", ["very", True, 1.5, 10**400],
+                         ids=["text", "bool", "above_1", "too_large_for_float"])
+async def test_invalid_answer_values_are_flagged_not_raised(monkeypatch, provider, confidence):
     from services.decision.llm_client import query_llm
 
-    answer = {"action": "engage", "threat_level": "apocalyptic", "confidence": "very",
-              "reasoning": 42, "roe_reference": ["R1"]}
+    answer = {"action": "engage", "threat_level": "apocalyptic", "confidence": confidence,
+              "reasoning": None, "roe_reference": ["R1"]}
     (_fake_anthropic if provider == "anthropic" else _fake_ollama)(monkeypatch, answer)
     r = await query_llm("prompt")
     assert r is not None
-    assert (r.provider, r.action, r.threat_level, r.confidence, r.reasoning, r.roe_reference) == (
-        provider, "log", "low", 0.5, "42", None
+    assert (r.provider, r.action, r.threat_level, r.confidence, r.roe_reference) == (
+        provider, "log", None, None, None
     )
+    for field in ("action", "threat_level", "confidence", "reasoning", "roe_reference"):
+        assert field in r.reasoning
+    assert r.raw == answer
 
 
 @pytest.mark.asyncio
-async def test_anthropic_answer_that_is_not_an_object_counts_as_no_answer(monkeypatch):
-    from services.decision.llm_client import query_llm
+async def test_an_answer_that_is_not_an_object_is_recorded_not_skipped(monkeypatch):
+    """A bad answer is the advisor's answer: no fallback to another provider, no 'not consulted'."""
+    from services.decision import llm_client
 
     _fake_anthropic(monkeypatch, ["alert"])
-    monkeypatch.setattr("services.decision.llm_client.OLLAMA_URL", "http://localhost:1")
-    assert await query_llm("prompt") is None
+    asked_ollama = []
+
+    async def _ollama(prompt):
+        asked_ollama.append(prompt)
+
+    monkeypatch.setattr(llm_client, "_try_ollama", _ollama)
+    r = await llm_client.query_llm("prompt")
+    assert asked_ollama == []
+    assert r is not None
+    assert (r.provider, r.action, r.raw) == ("anthropic", "log", {"invalid_answer": ["alert"]})
+    assert "not a JSON object" in r.reasoning

@@ -64,20 +64,55 @@ def anchors_path_for(chain_path: Path) -> Path:
     return chain_path.with_name(chain_path.stem + ".anchors.jsonl")
 
 
+@dataclass(frozen=True)
+class Unreadable:
+    """A line of a receipts file that is not JSON (or not UTF-8)."""
+    line: int
+    reason: str
+
+
 def read_receipts(anchors_path: Path) -> list[Any]:
-    """The receipts in a receipts file, one per non-empty line; None for a line that is
-    not JSON. check_anchors() reports anything that is not a well-formed receipt."""
+    """The receipts in a receipts file, one per non-empty line, as parsed JSON or
+    Unreadable. check_anchors() reports anything that is not a well-formed receipt."""
     path = Path(anchors_path)
     if not path.exists():
         return []
     receipts: list[Any] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for n, line in enumerate(path.read_bytes().splitlines(), start=1):
+        if n == 1:
+            line = line.removeprefix(b"\xef\xbb\xbf")  # a BOM, as PowerShell 5.1 writes
         if not line.strip():
             continue
         try:
-            receipts.append(json.loads(line))
-        except ValueError:
-            receipts.append(None)
+            receipts.append(json.loads(line.decode("utf-8")))
+        except (ValueError, RecursionError) as exc:  # UnicodeDecodeError is a ValueError
+            receipts.append(Unreadable(n, str(exc)))
+    return receipts
+
+
+def _receipts_to_append_to(anchors_path: Path) -> list[dict[str, Any]]:
+    """The receipts in `anchors_path`; AnchorError if a new receipt must not be added to it.
+
+    kyvern-verify reports a damaged receipts file, but appending to one could join the
+    new receipt to a torn line and lose it, so anchoring stops until it is repaired.
+    """
+    receipts = read_receipts(anchors_path)
+    for i, receipt in enumerate(receipts):
+        if isinstance(receipt, Unreadable):
+            raise AnchorError(
+                f"receipts file {anchors_path} line {receipt.line} is not JSON "
+                f"({receipt.reason}); repair it before anchoring"
+            )
+        if not isinstance(receipt, dict):
+            raise AnchorError(
+                f"receipts file {anchors_path} entry {i} is not a receipt; "
+                "repair it before anchoring"
+            )
+    if receipts and not Path(anchors_path).read_bytes().endswith(b"\n"):
+        raise AnchorError(
+            f"receipts file {anchors_path} does not end with a newline (an interrupted "
+            "write?); repair it before anchoring"
+        )
     return receipts
 
 
@@ -104,8 +139,8 @@ def anchor_head(chain_path: Path, anchor: Anchor) -> dict[str, Any] | None:
     if head is None:
         return None
     anchors_path = anchors_path_for(chain_path)
-    receipts = read_receipts(anchors_path)
-    if receipts and isinstance(receipts[-1], dict) and (
+    receipts = _receipts_to_append_to(anchors_path)
+    if receipts and (
         receipts[-1].get("chain_index") == head["chain_index"]
         and receipts[-1].get("payload_hash") == head["payload_hash"]
     ):
@@ -146,6 +181,9 @@ def check_anchors(
     latest: tuple[int, str | None] | None = None
 
     for i, receipt in enumerate(receipts):
+        if isinstance(receipt, Unreadable):
+            failures.append(f"receipt {i} (line {receipt.line}): not JSON: {receipt.reason}")
+            continue
         if not (
             isinstance(receipt, dict)
             and _is_index(receipt.get("chain_index"))

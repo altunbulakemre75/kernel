@@ -51,10 +51,8 @@ class QLLMCaller:
 
             resp = self._llm.complete(messages, response_format=schema)
             try:
-                if isinstance(resp, schema):
-                    validated = resp
-                elif isinstance(resp, BaseModel):  # a model, but of another schema
-                    validated = schema.model_validate(resp.model_dump())
+                if isinstance(resp, BaseModel):  # validated again: model_construct() skips it
+                    validated = schema.model_validate(resp.model_dump(warnings=False))
                 elif isinstance(resp, str):
                     validated = schema.model_validate_json(resp)
                 elif isinstance(resp, dict):
