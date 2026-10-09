@@ -42,6 +42,23 @@ v0.4.0 (2026-10-08) records a system's own decisions (`record_decision()`),
 adds a ROS2 safety-controller example, and makes the EU AI Act report a set
 of checks computed from the chain. See [`CHANGELOG.md`](CHANGELOG.md).
 
+## See it catch tampering
+
+[`examples/tamper_demo`](examples/tamper_demo/README.md) records a robot's
+safety decisions, anchors the log with an RFC 3161 Time Stamping Authority,
+then attacks copies of it:
+
+| Attack | Signatures alone | Kyvern |
+|--------|------------------|--------|
+| Change STOP to CONTINUE in the file | caught | caught (Ed25519 signature) |
+| Insider with the key rewrites a decision and re-signs the rest | **pass** | caught (RFC 3161 receipt) |
+| Insider with the key deletes the latest decisions | **pass** | caught (RFC 3161 receipt) |
+| Insider with the key adds a decision dated 30 days ago | **pass** | caught (`--max-lag`) |
+
+```bash
+python examples/tamper_demo/run_demo.py   # --offline: the first attack only
+```
+
 ## Quick start
 
 Kyvern is not on PyPI yet; install from a clone of this repository.

@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   can have been backdated. The JSON output has an `anchor_lag` report, and
   `check_anchors()` lists each valid receipt in `anchored`. Suggested by
   JakPot42 (Sentinel Ledger) on ROS Discourse
+- `examples/tamper_demo`: a robot's safety decisions, anchored, then four
+  attacks on copies of the log (edit a decision; an insider with the key
+  rewrites and re-signs, deletes the latest decisions, or adds a backdated
+  one), each with what signatures alone would say and what `kyvern-verify`
+  says. The three insider attacks pass a signature check; the receipts and
+  `--max-lag` catch them. `--offline` runs the first attack only
 
 ### Fixed
 - A public or signing key that is not Ed25519 (an RSA or P-256 key, say) is
