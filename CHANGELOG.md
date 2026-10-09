@@ -42,6 +42,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   code 1. It used to write the report anyway and say "Ed25519 report
   signature: not provided (no --signingkey supplied)", which was false; a
   key that was not Ed25519 left the signature line out altogether
+- Sandwich: only an answer that does not fit the schema is logged as a
+  `schema_violation` and retried. Any other error, such as the audit store
+  failing to write, used to be logged as a schema violation too (an event
+  that never happened) and the valid answer thrown away; it now propagates.
+  `SandwichSchemaError` keeps the last validation error as its cause
 - `KyvernDecisionPublisher.publish()` before `start()` says to call
   `start()` first instead of failing on a missing `std_msgs` or `None`
 
