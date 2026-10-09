@@ -37,6 +37,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   it is a schema violation and retried. A privileged answer of the wrong
   type fails validation (logged as `p_llm_schema_failed`) instead of an
   `AttributeError` later
+- `kyvern-report --signingkey` with a key it cannot use (missing, not PEM,
+  encrypted, or not Ed25519) stops with "cannot load signing key" and exit
+  code 1. It used to write the report anyway and say "Ed25519 report
+  signature: not provided (no --signingkey supplied)", which was false; a
+  key that was not Ed25519 left the signature line out altogether
 - `KyvernDecisionPublisher.publish()` before `start()` says to call
   `start()` first instead of failing on a missing `std_msgs` or `None`
 

@@ -15,11 +15,13 @@ import sys
 from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from typing import Any
 from xml.sax.saxutils import escape
 
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+    Ed25519PrivateKey,
+    Ed25519PublicKey,
+)
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -38,6 +40,7 @@ from services.decision.audit_chain import (
     Keyring,
     PolicyCheck,
     check_policy_binding,
+    load_private_key,
     load_public_key,
     record_type_of,
     verify_chain,
@@ -435,7 +438,7 @@ def generate_pdf(
     operator: str,
     period: str,
     generated_at: str,
-    signing_key: Any = None,
+    signing_key: Ed25519PrivateKey | None = None,
     policy_check: PolicyCheck | None = None,
 ) -> None:
     """Build the PDF. `decisions` is every chain record; RuntimeEvents are reported
@@ -703,18 +706,14 @@ def generate_pdf(
         Paragraph(f"<b>Generation timestamp (UTC):</b> {generated_at}", s["body"]),
     ]
     if signing_key is not None:
-        try:
-            sig = signing_key.sign(fingerprint.encode())
-            sig_b64 = base64.b64encode(sig).decode()
-            story += [
-                Spacer(1, 0.3 * cm),
-                Paragraph(
-                    "<b>Ed25519 signature of report fingerprint:</b>", s["body"],
-                ),
-                Paragraph(sig_b64, s["mono"]),
-            ]
-        except Exception:
-            pass
+        sig_b64 = base64.b64encode(signing_key.sign(fingerprint.encode())).decode()
+        story += [
+            Spacer(1, 0.3 * cm),
+            Paragraph(
+                "<b>Ed25519 signature of report fingerprint:</b>", s["body"],
+            ),
+            Paragraph(sig_b64, s["mono"]),
+        ]
     else:
         story.append(Paragraph(
             "Ed25519 report signature: not provided (no --signingkey supplied).",
@@ -800,15 +799,12 @@ def main() -> None:
 
     signing_key = None
     if args.signingkey:
+        # A report that silently goes out unsigned would say "not provided", which is false.
         try:
-            from cryptography.hazmat.primitives.serialization import (
-                load_pem_private_key,
-            )
-            signing_key = load_pem_private_key(
-                Path(args.signingkey).read_bytes(), password=None,
-            )
-        except Exception:
-            pass
+            signing_key = load_private_key(args.signingkey)
+        except (OSError, ValueError, TypeError) as e:  # TypeError: an encrypted key
+            print(f"Error: cannot load signing key {args.signingkey}: {e}", file=sys.stderr)
+            sys.exit(1)
 
     generate_pdf(
         decisions=decisions,

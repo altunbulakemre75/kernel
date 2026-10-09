@@ -24,12 +24,7 @@ def load_or_create_keypair() -> ed25519.Ed25519PrivateKey:
     pub_path = os.path.join(keys_dir, "signing.pub")
     
     if os.path.exists(priv_path):
-        with open(priv_path, "rb") as f:
-            priv_bytes = f.read()
-        key = serialization.load_pem_private_key(priv_bytes, password=None)
-        if not isinstance(key, ed25519.Ed25519PrivateKey):
-            raise ValueError(f"{priv_path} is not an Ed25519 private key")
-        return key
+        return load_private_key(priv_path)
     
     private_key = ed25519.Ed25519PrivateKey.generate()
     
@@ -52,6 +47,14 @@ def load_or_create_keypair() -> ed25519.Ed25519PrivateKey:
         f.write(pub_bytes)
 
     return private_key
+
+
+def load_private_key(path: str | Path) -> ed25519.Ed25519PrivateKey:
+    """The unencrypted Ed25519 private key in a PEM file; ValueError for any other key."""
+    key = serialization.load_pem_private_key(Path(path).read_bytes(), password=None)
+    if not isinstance(key, ed25519.Ed25519PrivateKey):
+        raise ValueError(f"{path} is not an Ed25519 private key")
+    return key
 
 
 def load_public_key(path: str | Path) -> ed25519.Ed25519PublicKey:

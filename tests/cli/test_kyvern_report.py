@@ -379,3 +379,58 @@ def test_report_rejects_a_key_that_is_not_ed25519(workspace):
     assert res.returncode == 1
     assert "is not an Ed25519 public key" in res.stderr
     assert "Traceback" not in res.stderr
+
+
+def _signing_key_args(workspace, key_path):
+    out = workspace["tmp"] / "report.pdf"
+    return out, (
+        str(workspace["chain_path"]),
+        "--policy", str(workspace["policy_path"]),
+        "--pubkey", str(workspace["pub_path"]),
+        "--output", str(out),
+        "--signingkey", str(key_path),
+    )
+
+
+def _pem_private(key):
+    return key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+
+
+def test_report_signs_with_an_ed25519_signing_key(workspace):
+    import base64
+    import re
+
+    import pypdf
+
+    key = ed25519.Ed25519PrivateKey.generate()
+    key_path = workspace["tmp"] / "report.key"
+    key_path.write_bytes(_pem_private(key))
+    out, args = _signing_key_args(workspace, key_path)
+    res = _run(*args)
+    assert res.returncode == 0, res.stderr
+    text = "".join(p.extract_text() or "" for p in pypdf.PdfReader(str(out)).pages)
+    assert "Ed25519 signature of report fingerprint" in text
+    fingerprint = re.search(r"Report fingerprint \(SHA-256\):\s*([0-9a-f]{64})", text).group(1)
+    signature = re.search(r"Ed25519 signature of report fingerprint:\s*(\S+)", text).group(1)
+    key.public_key().verify(base64.b64decode(signature), fingerprint.encode())
+
+
+@pytest.mark.parametrize("problem", ["missing", "not_ed25519", "garbage"])
+def test_report_fails_when_the_signing_key_cannot_be_used(workspace, problem):
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    key_path = workspace["tmp"] / "report.key"
+    if problem == "not_ed25519":
+        key_path.write_bytes(_pem_private(ec.generate_private_key(ec.SECP256R1())))
+    elif problem == "garbage":
+        key_path.write_bytes(b"not a key")
+    out, args = _signing_key_args(workspace, key_path)
+    res = _run(*args)
+    assert res.returncode == 1
+    assert "cannot load signing key" in res.stderr
+    assert "Traceback" not in res.stderr
+    assert not out.exists()
