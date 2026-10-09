@@ -64,6 +64,42 @@ def _anthropic_model() -> str:
     return os.getenv("KYVERN_LLM_MODEL", DEFAULT_ANTHROPIC_MODEL)
 
 
+def _assessment(answer: Any, provider: str, model: str) -> LLMResponse | None:
+    """The advisor's answer as an LLMResponse; None if it is not a JSON object.
+
+    Neither provider is guaranteed to follow DECISION_SCHEMA, and a malformed answer
+    must not stop the decision: missing or invalid values get a safe default
+    (an action outside the schema becomes "log", which can never raise the rule
+    engine's action). The answer is kept as given in `raw`.
+    """
+    if not isinstance(answer, dict):
+        log.warning("%s answer is not an object — ignored", provider)
+        return None
+    schema = DECISION_SCHEMA["properties"]
+    action = answer.get("action", "log")
+    if action not in schema["action"]["enum"]:
+        log.warning("%s returned invalid action: %s — downgrading to 'log'", provider, action)
+        action = "log"
+    threat_level = answer.get("threat_level", "low")
+    if threat_level not in schema["threat_level"]["enum"]:
+        threat_level = "low"
+    try:
+        confidence = float(answer.get("confidence", 0.5))
+    except (TypeError, ValueError):
+        confidence = 0.5
+    if not 0.0 <= confidence <= 1.0:
+        confidence = 0.5
+    roe_reference = answer.get("roe_reference")
+    return LLMResponse(
+        action=action,
+        threat_level=threat_level,
+        confidence=confidence,
+        reasoning=str(answer.get("reasoning", ""))[:500],
+        roe_reference=roe_reference if isinstance(roe_reference, str) else None,
+        raw=answer, provider=provider, model=model,
+    )
+
+
 async def _try_anthropic(prompt: str) -> LLMResponse | None:
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
@@ -76,7 +112,7 @@ async def _try_anthropic(prompt: str) -> LLMResponse | None:
 
     client = AsyncAnthropic(api_key=api_key)
     model = _anthropic_model()
-    tools = [{
+    tools: list[Any] = [{
         "name": "submit_assessment",
         "description": "Submit the advisor's assessment.",
         "input_schema": DECISION_SCHEMA,
@@ -94,13 +130,7 @@ async def _try_anthropic(prompt: str) -> LLMResponse | None:
 
     for block in msg.content:
         if block.type == "tool_use" and block.name == "submit_assessment":
-            d = dict(block.input)
-            return LLMResponse(
-                action=d["action"], threat_level=d["threat_level"],
-                confidence=float(d["confidence"]), reasoning=d["reasoning"],
-                roe_reference=d.get("roe_reference"),
-                raw=d, provider="anthropic", model=model,
-            )
+            return _assessment(block.input, "anthropic", model)
     return None
 
 
@@ -129,20 +159,7 @@ async def _try_ollama(prompt: str) -> LLMResponse | None:
         log.warning("Ollama JSON parse failed: %s", response_text[:200])
         return None
 
-    # Schema validation (LLM sometimes returns values outside the enum)
-    action = parsed.get("action", "log")
-    if action not in ("log", "alert", "handoff"):
-        log.warning("Ollama returned invalid action: %s — downgrading to 'log'", action)
-        action = "log"
-
-    return LLMResponse(
-        action=action,
-        threat_level=parsed.get("threat_level", "low"),
-        confidence=float(parsed.get("confidence", 0.5)),
-        reasoning=str(parsed.get("reasoning", ""))[:500],
-        roe_reference=parsed.get("roe_reference"),
-        raw=parsed, provider="ollama", model=OLLAMA_MODEL,
-    )
+    return _assessment(parsed, "ollama", OLLAMA_MODEL)
 
 
 async def query_llm(prompt: str) -> LLMResponse | None:

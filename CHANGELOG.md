@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   an object or has no integer `chain_index` or `payload_hash` string) fails
   `kyvern-verify` with "receipt N: malformed" for each such receipt instead
   of a Python traceback
+- An LLM advisor answer with a missing or invalid field (no `threat_level`,
+  a `confidence` that is not a number between 0 and 1, say) no longer stops
+  `run_graph` with an exception. Claude's and Ollama's answers go through
+  the same check: an invalid value gets a safe default (an action outside
+  the schema becomes `log`), and the answer is still recorded as given
 
 ## [0.4.0] — 2026-10-08
 
