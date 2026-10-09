@@ -120,6 +120,11 @@ an action more aggressive than the rule engine would have taken without it.
   - without receipts nothing detects entries deleted from the end of the
     chain; `kyvern-verify --require-anchors` fails a chain that has no valid
     receipt;
+  - a receipt proves when an entry existed, not the time the entry claims,
+    so someone holding the signing key could write a backdated entry and
+    anchor it later; `kyvern-verify --max-lag DURATION` fails an anchored
+    entry dated more than DURATION before (or after) the first receipt that
+    covers it, which bounds the backdating to about one anchoring interval;
   - the receipts file is the evidence: copy `chain.anchors.jsonl` off the
     host (log shipping, object storage), otherwise an attacker with host
     access can delete it;

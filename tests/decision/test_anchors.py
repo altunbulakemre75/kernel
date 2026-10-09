@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import timedelta
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric import ed25519
@@ -15,6 +16,7 @@ from services.decision.anchors import (
     anchor_statement,
     anchors_path_for,
     append_receipt,
+    check_anchor_lag,
     check_anchors,
     read_receipts,
 )
@@ -211,3 +213,66 @@ def test_anchor_head_refuses_a_damaged_receipts_file(chain, content):
     with pytest.raises(AnchorError, match="receipts file"):
         anchor_head(path, FakeAnchor())
     assert receipts.read_bytes() == content
+
+
+# ── check_anchor_lag ──────────────────────────────────────────────────────────
+
+def _dated(*stamps):
+    return [{"chain_index": i, "timestamp_iso": ts} for i, ts in enumerate(stamps)]
+
+
+def test_check_anchors_lists_each_valid_receipt(chain):
+    path, writer = chain
+    fake = FakeAnchor()
+    anchor_head(path, fake)
+    writer.append({"n": 2})
+    anchor_head(path, fake)
+    report = check_anchors(_entries(path), read_receipts(anchors_path_for(path)), {"fake": fake})
+    assert report.anchored == [(1, "2026-10-07T12:00:00Z"), (2, "2026-10-07T12:00:00Z")]
+
+
+def test_lag_is_measured_from_the_first_receipt_that_covers_an_entry():
+    entries = _dated("2026-10-07T10:00:00Z", "2026-10-07T11:00:00+00:00", "2026-10-07T11:30:00Z")
+    # entry 2 is covered only by the later receipt; entries 0 and 1 by the earlier one too
+    anchored = [(2, "2026-10-08T12:00:00Z"), (1, "2026-10-07T12:00:00Z")]
+    lag = check_anchor_lag(entries, anchored, timedelta(hours=2))
+    assert lag.checked == 3
+    assert lag.worst == (2, 24.5 * 3600)
+    assert len(lag.failures) == 1
+    assert lag.failures[0].startswith("entry 2 was first anchored 1d 30m after its timestamp")
+
+
+def test_lag_within_the_limit_passes():
+    entries = _dated("2026-10-07T11:59:00Z", "2026-10-07T11:59:30Z")
+    lag = check_anchor_lag(entries, [(1, "2026-10-07T12:00:00Z")], timedelta(minutes=5))
+    assert lag.failures == []
+    assert lag.worst == (0, 60.0)
+
+
+def test_an_entry_dated_after_the_receipt_that_covers_it_fails():
+    entries = _dated("2026-10-07T12:20:00Z")
+    lag = check_anchor_lag(entries, [(0, "2026-10-07T12:00:00Z")], timedelta(minutes=5))
+    assert lag.failures == [
+        "entry 0 is dated 20m after the receipt that covers it (2026-10-07T12:00:00Z)"
+    ]
+
+
+def test_an_anchored_entry_without_a_utc_timestamp_fails():
+    entries = [{"chain_index": 0, "timestamp_iso": "2026-10-07T12:00:00"}, {"chain_index": 1}]
+    lag = check_anchor_lag(entries, [(1, "2026-10-07T12:00:00Z")], timedelta(hours=1))
+    assert [f.split(":")[0] for f in lag.failures] == ["entry 0", "entry 1"]
+    assert all("no UTC timestamp" in f for f in lag.failures)
+
+
+def test_entries_after_the_latest_receipt_are_not_measured():
+    entries = _dated("2026-10-07T12:00:00Z", "2020-01-01T00:00:00Z")
+    lag = check_anchor_lag(entries, [(0, "2026-10-07T12:00:00Z")], timedelta(minutes=1))
+    assert lag.checked == 1
+    assert lag.failures == []
+
+
+def test_many_late_entries_are_summarised():
+    entries = _dated(*["2026-10-01T00:00:00Z"] * 10)
+    lag = check_anchor_lag(entries, [(9, "2026-10-07T00:00:00Z")], timedelta(days=1))
+    assert len(lag.failures) == 4
+    assert lag.failures[-1] == "and 7 more entries anchored more than 1d after their timestamp"

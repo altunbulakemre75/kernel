@@ -412,3 +412,36 @@ def test_verify_does_not_tick_an_empty_receipts_file(anchored):
     assert res.returncode == 0, res.stdout
     assert "Anchors: 0 valid" not in res.stdout
     assert "Anchors: none (chain.anchors.jsonl holds no receipts)" in res.stdout
+
+
+
+# ── --max-lag (fixture: entries dated 12:00:00/12:00:01, receipt at 11:45:02) ──
+
+def test_max_lag_passes_when_every_anchored_entry_is_within_it(anchored):
+    res = _verify_anchored(anchored, "--max-lag", "1h")
+    assert res.returncode == 0, res.stdout
+    assert "Anchor lag: every anchored entry within 1h of its timestamp" in res.stdout
+
+
+def test_max_lag_fails_an_entry_dated_after_its_receipt(anchored):
+    res = _verify_anchored(anchored, "--max-lag", "10m")
+    assert res.returncode == 1
+    assert "Anchor lag: FAILED (max 10m)" in res.stdout
+    assert "entry 0 is dated 14m 58s after the receipt that covers it" in res.stdout
+    data = json.loads(_verify_anchored(anchored, "--max-lag", "10m", "--json").stdout)
+    assert data["anchor_lag"]["max_lag_s"] == 600
+    assert any(e.startswith("Anchor lag: entry 0") for e in data["errors"])
+
+
+def test_max_lag_without_receipts_is_not_measured(anchored):
+    (anchored / "chain.anchors.jsonl").unlink()
+    res = _verify_anchored(anchored, "--max-lag", "1h")
+    assert res.returncode == 0, res.stdout
+    assert "Anchor lag: not measured (no valid receipt)" in res.stdout
+
+
+@pytest.mark.parametrize("value", ["1x", "h", "-5m", "0s"])
+def test_max_lag_rejects_a_bad_duration(anchored, value):
+    res = _verify_anchored(anchored, "--max-lag", value)
+    assert res.returncode == 2
+    assert "--max-lag" in res.stderr

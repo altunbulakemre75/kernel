@@ -127,6 +127,12 @@ that has no valid receipt. Entries written after the latest anchor can still
 be deleted or rewritten unnoticed until the next `kyvern-anchor` run, so
 anchor on a schedule and keep a copy of `chain.anchors.jsonl` off the host.
 
+A receipt proves when an entry existed, not the time the entry claims: an
+entry written today but dated last month is anchored with a month's lag.
+`kyvern-verify --max-lag 2h` fails any anchored entry whose timestamp is more
+than two hours from the first receipt that covers it, which bounds how far an
+entry can have been backdated. Set it a little above your anchoring interval.
+
 ```bash
 # Linux/macOS, hourly (crontab -e)
 0 * * * * kyvern-anchor /var/lib/kyvern/chain.jsonl
