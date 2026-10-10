@@ -434,3 +434,20 @@ def test_report_fails_when_the_signing_key_cannot_be_used(workspace, problem):
     assert "cannot load signing key" in res.stderr
     assert "Traceback" not in res.stderr
     assert not out.exists()
+
+
+
+def test_report_reports_a_line_that_is_not_a_json_object(workspace):
+    chain_path = workspace["chain_path"]
+    chain_path.write_text(chain_path.read_text(encoding="utf-8") + "[1, 2]\n", encoding="utf-8")
+    out = workspace["tmp"] / "report.pdf"
+    res = _run(
+        str(chain_path),
+        "--policy", str(workspace["policy_path"]),
+        "--pubkey", str(workspace["pub_path"]),
+        "--output", str(out),
+    )
+    assert res.returncode == 1
+    assert "is not a JSON object" in res.stderr
+    assert "Traceback" not in res.stderr
+    assert not out.exists()

@@ -302,3 +302,29 @@ def test_policy_binding_ignores_runtime_events():
     check = check_policy_binding(records, [_policy("a" * 64)])
     assert check.ok
     assert check.per_policy == {"a" * 64: 1}
+
+
+
+# ── read_chain ────────────────────────────────────────────────────────────────
+
+@pytest.mark.parametrize(("content", "message"), [
+    (b'{"chain_index": 0}\n\n[1, 2]\n', "line 3 is not a JSON object"),
+    (b'{"chain_index": 0}\n"text"\n', "line 2 is not a JSON object"),
+    (b'{"chain_index": 0}\n{"chain_index": \n', "line 2 is not valid JSON"),
+    (b'{"chain_index": 0}\n{"a": "\xff"}\n', "line 2 is not valid JSON"),
+])
+def test_read_chain_names_the_first_bad_line(tmp_path, content, message):
+    from services.decision.audit_chain import ChainFormatError, read_chain
+
+    path = tmp_path / "chain.jsonl"
+    path.write_bytes(content)
+    with pytest.raises(ChainFormatError, match=message):
+        read_chain(path)
+
+
+def test_read_chain_skips_empty_lines(tmp_path):
+    from services.decision.audit_chain import read_chain
+
+    path = tmp_path / "chain.jsonl"
+    path.write_bytes(b'{"chain_index": 0}\n\n  \n{"chain_index": 1}\n')
+    assert read_chain(path) == [{"chain_index": 0}, {"chain_index": 1}]
