@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-10-10
+
 ### Added
 - `kyvern-verify --max-lag DURATION` (`90s`, `15m`, `2h`, `1d`): a receipt
   proves when an entry existed, not the time the entry claims, so an entry
@@ -75,6 +77,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - CI type-checks `kyvern`, `cli`, `services` and `shared` with pyright; the
   `dev` extra installs pyright instead of mypy, which CI never ran
+- Python API: `LLMResponse.threat_level` and `.confidence` are None when the
+  advisor's value did not fit the schema (they used to be filled in with
+  "low" and 0.5); `read_receipts()` returns an `Unreadable(line, reason)`
+  for a line that is not JSON; `AnchorReport` has a new `anchored` field
 
 ## [0.4.0] — 2026-10-08
 
@@ -311,7 +317,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial open-core extraction.
 
-[Unreleased]: https://github.com/altunbulakemre75/kyvern/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/altunbulakemre75/kyvern/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/altunbulakemre75/kyvern/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/altunbulakemre75/kyvern/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/altunbulakemre75/kyvern/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/altunbulakemre75/kyvern/compare/v0.3.0...v0.3.1
