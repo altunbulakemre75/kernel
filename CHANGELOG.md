@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- A record holding NaN or Infinity (in `inputs`, say) is refused with
+  `AuditWriteError` and nothing is appended. Python wrote such values as a
+  bare `NaN`/`Infinity`, which is not JSON: only Python could read the entry
+  back, so no verifier in another language could check the chain
 - A chain line that is valid JSON but not an object (`[1, 2]`, say) stopped
   `kyvern-verify` and `kyvern-report` with a Python traceback and broke
   `kyvern-mcp`'s queries. All three now read the chain with

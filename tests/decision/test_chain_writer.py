@@ -125,3 +125,15 @@ def test_open_without_a_path_uses_the_env_override(tmp_path, monkeypatch):
     monkeypatch.setenv("KYVERN_CHAIN_PATH", str(target))
     ChainWriter.open().append({"n": 1})
     assert len(_lines(target)) == 1
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_a_value_json_cannot_represent_is_refused(tmp_path, signing_key, value):
+    """NaN and Infinity would be written as bare NaN/Infinity, which only Python parses."""
+    path = tmp_path / "chain.jsonl"
+    writer = ChainWriter(path, signing_key)
+    writer.append({"n": 0})
+    before = path.read_bytes()
+    with pytest.raises(AuditWriteError, match="NaN or Infinity"):
+        writer.append({"inputs": {"distance_m": value}})
+    assert path.read_bytes() == before
