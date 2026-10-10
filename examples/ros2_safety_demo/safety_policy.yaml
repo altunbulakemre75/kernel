@@ -1,7 +1,8 @@
 # Safety policy of the demo robot. The rules are the robot's own:
 # SafetyController applies the first rule whose limit the closest obstacle is
-# below. Kyvern records the SHA-256 of this file's content with every decision,
-# and `kyvern-verify --policy safety_policy.yaml` checks it.
+# below. Kyvern records a SHA-256 of these rules with every decision (of the
+# parsed YAML, so editing this comment does not change it), and
+# `kyvern-verify --policy safety_policy.yaml` checks it.
 rules:
   - id: stop-on-obstacle
     action: stop

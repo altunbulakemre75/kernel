@@ -88,8 +88,9 @@ record_decision(
 )
 ```
 
-The policy is your own YAML file with a `rules:` list; Kyvern records the
-SHA-256 of its content with each decision. The decision is signed and
+The policy is your own YAML file with a `rules:` list; Kyvern records a
+SHA-256 of its rules (the parsed YAML, so comments and key order do not
+change it) with each decision. The decision is signed and
 appended to `~/.kyvern/chain.jsonl` (or `$KYVERN_CHAIN_PATH`), next to any
 decisions from Kyvern's own engine, and can then be verified, anchored and
 reported on:
@@ -131,6 +132,11 @@ bound to one of the given policies. Decisions recorded without a policy
 (`run_graph()` / `decide_full()` called without `policy_path=`) cannot be
 checked against one, so `kyvern-verify` lists them and fails. RuntimeEvents
 are counted separately and are not checked against a policy.
+
+To check a chain without Kyvern, in another language or your own tool,
+[`docs/verification-spec.md`](docs/verification-spec.md) gives the record
+format, the exact bytes that are hashed and signed, the checks and test
+vectors.
 
 ### Anchoring the chain
 
