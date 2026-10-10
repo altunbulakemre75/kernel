@@ -55,13 +55,11 @@ class AuditChainStore:
         if not self._chain_file.exists():
             from kyvern.mcp.errors import KyvernMCPError
             raise KyvernMCPError(f"chain file not found at {self._chain_file}")
-        from services.decision.audit_chain import ChainFormatError, read_chain
+        from services.decision.audit_chain import read_chain
 
-        try:
-            self._events = read_chain(self._chain_file)
-        except ChainFormatError as exc:
-            from kyvern.mcp.errors import KyvernMCPError
-            raise KyvernMCPError(f"cannot read {self._chain_file}: {exc}") from exc
+        # ChainFormatError (a ValueError) names the bad line. It is not wrapped in
+        # KyvernMCPError: kyvern.audit is core, and kyvern.mcp needs the mcp extra.
+        self._events = read_chain(self._chain_file)
         self._mtime = self._chain_file.stat().st_mtime
         self._last_check_monotonic = time.monotonic()
 

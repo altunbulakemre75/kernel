@@ -265,10 +265,10 @@ def test_verify_chain_range_reports_the_reason(tampered_chain_file, signing_keyp
 def test_store_refuses_a_line_that_is_not_a_json_object(sample_chain_file):
     import pytest
 
-    from kyvern.mcp.errors import KyvernMCPError
+    from services.decision.audit_chain import ChainFormatError
 
     with open(sample_chain_file, "a", encoding="utf-8") as f:
         f.write("[1, 2]\n")
     store = AuditChainStore(chain_file=sample_chain_file)
-    with pytest.raises(KyvernMCPError, match="is not a JSON object"):
+    with pytest.raises(ChainFormatError, match="is not a JSON object"):
         store.load()
