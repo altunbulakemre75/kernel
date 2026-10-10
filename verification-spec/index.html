@@ -1,0 +1,1362 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://altunbulakemre75.github.io/kyvern/verification-spec/">
+      
+      
+        <link rel="prev" href="../threat-model/">
+      
+      
+        <link rel="next" href="../compliance/eu_ai_act/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Verification spec - Kyvern</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#chain-format-and-verification-spec-v1" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Kyvern" class="md-header__button md-logo" aria-label="Kyvern" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Kyvern
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Verification spec
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/altunbulakemre75/kyvern" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    altunbulakemre75/kyvern
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Kyvern" class="md-nav__button md-logo" aria-label="Kyvern" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Kyvern
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/altunbulakemre75/kyvern" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    altunbulakemre75/kyvern
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../threat-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Threat Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verification spec
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verification spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#records" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Records
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#canonical-form" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Canonical form
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keys
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verifying-a-chain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verifying a chain
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#policy-binding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Policy binding
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#anchors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Anchors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-verification-shows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What verification shows
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-vectors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test vectors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Versions
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compliance
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Compliance
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../compliance/eu_ai_act/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EU AI Act
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integrations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Integrations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../integrations/ros2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ROS2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../integrations/mcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Patterns
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Patterns
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../patterns/dual_llm_sandwich/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dual-LLM Sandwich
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../pilots/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pilots
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#records" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Records
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#canonical-form" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Canonical form
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keys
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verifying-a-chain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verifying a chain
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#policy-binding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Policy binding
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#anchors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Anchors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-verification-shows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What verification shows
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-vectors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test vectors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Versions
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="chain-format-and-verification-spec-v1">Chain format and verification (spec v1)<a class="headerlink" href="#chain-format-and-verification-spec-v1" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p>Status: describes Kyvern 0.5. Anchor statement version <code>kyvern_anchor: 1</code>.</p>
+</blockquote>
+<p>This document is for anyone who wants to check a Kyvern chain <strong>without
+Kyvern</strong>: an auditor's own script, another logging system, a verifier in a
+language other than Python. It says what is in the files, which bytes are
+hashed and signed, and the checks <code>kyvern-verify</code> runs, in enough detail to
+write an independent verifier. The <a href="#test-vectors">test vectors</a> at the end
+let you check your implementation byte for byte.</p>
+<p>The key words MUST, MUST NOT, SHOULD and MAY are used as in RFC 2119.</p>
+<h2 id="files">Files<a class="headerlink" href="#files" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>chain.jsonl</code></td>
+<td>The chain: one record per line, UTF-8, <code>\n</code> line ends</td>
+</tr>
+<tr>
+<td><code>&lt;chain stem&gt;.anchors.jsonl</code></td>
+<td>RFC 3161 receipts, one per line, next to the chain (<code>chain.anchors.jsonl</code>)</td>
+</tr>
+<tr>
+<td><code>*.pub</code></td>
+<td>Ed25519 public keys, PEM (<code>SubjectPublicKeyInfo</code>)</td>
+</tr>
+<tr>
+<td>policy YAML</td>
+<td>The decision policy, any YAML mapping with a <code>rules:</code> list</td>
+</tr>
+</tbody>
+</table>
+<p>Each line of <code>chain.jsonl</code> is one JSON object. Empty lines are ignored. A line
+that is not a JSON object makes the chain fail verification.</p>
+<h2 id="records">Records<a class="headerlink" href="#records" title="Permanent link">&para;</a></h2>
+<p>A record is a JSON object. These fields take part in verification:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>chain_index</code></td>
+<td>integer</td>
+<td>Position in the chain: 0 for the first record, then +1 per record</td>
+</tr>
+<tr>
+<td><code>prev_hash</code></td>
+<td>string or null</td>
+<td><code>payload_hash</code> of the previous record; null for the first</td>
+</tr>
+<tr>
+<td><code>key_id</code></td>
+<td>string</td>
+<td>Which key signed it (see <a href="#keys">Keys</a>); absent in records written before Kyvern 0.3</td>
+</tr>
+<tr>
+<td><code>payload_hash</code></td>
+<td>string</td>
+<td>Lowercase hex SHA-256 of the record's canonical form</td>
+</tr>
+<tr>
+<td><code>signature</code></td>
+<td>string</td>
+<td>Base64 (RFC 4648, with padding) Ed25519 signature of the canonical form</td>
+</tr>
+<tr>
+<td><code>timestamp_iso</code></td>
+<td>string</td>
+<td>When the record says it was made: ISO 8601 with a UTC offset</td>
+</tr>
+<tr>
+<td><code>record_type</code></td>
+<td>string</td>
+<td><code>"runtime_event"</code>, <code>"decision"</code>, or absent (a decision from Kyvern's own engine)</td>
+</tr>
+<tr>
+<td><code>policy_version_id</code></td>
+<td>string or null</td>
+<td>The policy a decision was made under (see <a href="#policy-binding">Policy binding</a>)</td>
+</tr>
+</tbody>
+</table>
+<p>Every other field (<code>action</code>, <code>source</code>, <code>reasoning</code>, <code>inputs</code>, ...) is covered
+by the signature but not interpreted by verification. A verifier MUST keep
+fields it does not know: they are part of the signed bytes.</p>
+<h2 id="canonical-form">Canonical form<a class="headerlink" href="#canonical-form" title="Permanent link">&para;</a></h2>
+<p>The canonical form of a record is the bytes that are hashed and signed:</p>
+<ol>
+<li>Remove the <code>signature</code> and <code>payload_hash</code> members. Every other member,
+   including <code>key_id</code>, <code>prev_hash</code> and <code>chain_index</code>, stays.</li>
+<li>Serialise as JSON, exactly as Python's
+   <code>json.dumps(obj, separators=(",", ":"), sort_keys=True)</code> does:<ul>
+<li>no whitespace between tokens;</li>
+<li>object members sorted by key, comparing keys by Unicode code point, at
+  every level of nesting;</li>
+<li>strings escape <code>"</code> and <code>\</code> as <code>\"</code> and <code>\\</code>, the control characters
+  <code>\b \f \n \r \t</code> by name, other characters below U+0020 and <strong>every
+  character above U+007E</strong> as <code>\uXXXX</code> (lowercase hex), and characters
+  outside the Basic Multilingual Plane as a UTF-16 surrogate pair
+  (<code>"🤖"</code> → <code>"\ud83e\udd16"</code>); <code>/</code> is not escaped;</li>
+<li><code>true</code>, <code>false</code>, <code>null</code>;</li>
+<li>integers in decimal, any size;</li>
+<li>other numbers as Python's <code>repr(float)</code>: the shortest digits that
+  round-trip, with a <code>.0</code> for integral values (<code>2.0</code>), and exponent
+  notation when the decimal exponent is below -4 or at least 16, with a
+  sign and at least two exponent digits (<code>1e-05</code>, <code>1e+16</code>).</li>
+</ul>
+</li>
+<li>Encode as UTF-8 (after step 2 the bytes are all ASCII).</li>
+</ol>
+<p>This is <strong>not</strong> RFC 8785 (JCS): JCS sorts by UTF-16 code units, writes
+non-ASCII characters unescaped and formats numbers the ECMAScript way. Do not
+substitute it.</p>
+<p>Kyvern 0.5 writes the record lines themselves with
+<code>json.dumps(record, separators=(",", ":"))</code>. Re-serialise the parsed record
+as above rather than hashing the line as found in the file. A record MUST NOT
+contain NaN or infinities, which JSON cannot represent; Kyvern refuses to
+append such a record (from 0.5.1).</p>
+<h2 id="keys">Keys<a class="headerlink" href="#keys" title="Permanent link">&para;</a></h2>
+<p>Signatures are Ed25519 (RFC 8032) over the canonical form, not over its hash.</p>
+<p><code>key_id</code> is the first 16 hex characters of the SHA-256 of the raw 32-byte
+public key. A verifier is given a set of trusted public keys (<code>--pubkey</code>,
+repeatable):</p>
+<ul>
+<li>a record <strong>with</strong> <code>key_id</code> MUST verify under the trusted key with that id;
+  a <code>key_id</code> that matches no trusted key, or is not a string, fails;</li>
+<li>a record <strong>without</strong> <code>key_id</code> (written before Kyvern 0.3) MAY verify under
+  any trusted key.</li>
+</ul>
+<h2 id="verifying-a-chain">Verifying a chain<a class="headerlink" href="#verifying-a-chain" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>expected_index = records[0].chain_index      # MUST be an integer (not a boolean)
+prev = null                                   # or the payload_hash before a sub-range
+for i, r in enumerate(records):
+    r.chain_index == expected_index           else fail at i: "chain_index gap"
+    r.prev_hash == prev                       else fail at i: "broken prev_hash link"
+    c = canonical(r)
+    r.payload_hash == hex(sha256(c))          else fail at i: "bad signature"
+    ed25519_verify(key_for(r), base64(r.signature), c)
+                                              else fail at i: "bad signature"
+                                              (or "signed by unknown key &lt;id&gt;")
+    prev = r.payload_hash
+    expected_index += 1
+</code></pre></div>
+<p>The chain is valid when every record passes. Report the first failing
+position; every later record is unverified. An empty chain is not a valid
+chain to report on: <code>kyvern-verify</code> fails it.</p>
+<p>A sub-range that does not start at the first record is verified the same way
+with <code>prev</code> set to the <code>payload_hash</code> of the record before it, which that
+check then trusts.</p>
+<h2 id="policy-binding">Policy binding<a class="headerlink" href="#policy-binding" title="Permanent link">&para;</a></h2>
+<p>A policy's version id is the lowercase hex SHA-256 of the canonical form (as
+<a href="#canonical-form">above</a>, with no members removed) of the policy YAML parsed
+as data. Comments, key order and formatting do not change it. Kyvern parses
+the YAML with PyYAML's <code>safe_load</code> (YAML 1.1); keep policies to strings,
+numbers, booleans, null, lists and mappings so that every YAML parser reads
+the same data.</p>
+<p>Given one or more policies, every <strong>decision</strong> (a record whose <code>record_type</code>
+is not <code>"runtime_event"</code>) MUST have a <code>policy_version_id</code> equal to the
+version id of one of them. Runtime events are not checked. A chain with no
+decision fails the check, since nothing in it is bound to a policy. When the
+chain itself fails verification, the policy ids it records are unverified.</p>
+<h2 id="anchors">Anchors<a class="headerlink" href="#anchors" title="Permanent link">&para;</a></h2>
+<p>An anchor is independent evidence that a record existed at a given time.
+Kyvern 0.5 has one kind, <code>rfc3161</code>: a timestamp token from an RFC 3161 Time
+Stamping Authority (TSA).</p>
+<p><strong>Statement.</strong> The bytes an anchor certifies for record <code>n</code> are the canonical
+form of</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="nt">"chain_index"</span><span class="p">:</span><span class="w"> </span><span class="kc">n</span><span class="p">,</span><span class="w"> </span><span class="nt">"kyvern_anchor"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"payload_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;payload_hash of record n&gt;"</span><span class="p">}</span>
+</code></pre></div>
+<p>that is, <code>{"chain_index":n,"kyvern_anchor":1,"payload_hash":"..."}</code>.</p>
+<p><strong>Request.</strong> <code>kyvern-anchor</code> sends an RFC 3161 <code>TimeStampReq</code> whose message
+imprint is the SHA-256 of the statement, with a random nonce and
+<code>certReq = true</code>. Only that hash leaves the machine.</p>
+<p><strong>Receipt.</strong> Each line of the receipts file is a JSON object:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>anchor</code></td>
+<td><code>"rfc3161"</code></td>
+</tr>
+<tr>
+<td><code>chain_index</code></td>
+<td>The anchored record's position (integer)</td>
+</tr>
+<tr>
+<td><code>payload_hash</code></td>
+<td>The anchored record's <code>payload_hash</code> (string)</td>
+</tr>
+<tr>
+<td><code>anchored_at</code></td>
+<td>The token's <code>genTime</code>, as <code>YYYY-MM-DDTHH:MM:SSZ</code> (informational)</td>
+</tr>
+<tr>
+<td><code>tsa_url</code></td>
+<td>Where the token came from (informational)</td>
+</tr>
+<tr>
+<td><code>token</code></td>
+<td>Base64 of the DER <code>TimeStampResp</code> as the TSA returned it</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Checking a receipt.</strong> For each line of the receipts file:</p>
+<ol>
+<li>It MUST be a JSON object with an integer <code>chain_index</code> and a string
+   <code>payload_hash</code>, and its <code>anchor</code> MUST be a known kind. Otherwise it is a
+   failure ("malformed", "not JSON", "unknown anchor type").</li>
+<li>The chain MUST contain a record with that <code>chain_index</code> ("chain entry n is
+   missing" otherwise: entries were deleted).</li>
+<li>The record's <code>payload_hash</code> MUST equal the receipt's ("does not match the
+   anchored hash" otherwise: the record was rewritten after it was anchored,
+   whoever holds the signing key).</li>
+<li>The token MUST verify: its message imprint is the SHA-256 of the
+   statement built from the receipt, and its signature chains to a trusted
+   TSA root. The time anchored is the token's <code>genTime</code>, not <code>anchored_at</code>.</li>
+</ol>
+<p>A valid receipt for record <code>n</code> covers records <code>0..n</code>, which are hash-linked to
+it. Records after the latest valid receipt are not covered ("not yet
+anchored").</p>
+<p><strong>Required anchors.</strong> Signatures alone cannot show that records were deleted
+from the end of a chain: the shorter chain is still valid. With
+<code>--require-anchors</code>, a chain with no valid receipt fails.</p>
+<p><strong>Maximum lag.</strong> A receipt proves when a record existed, not the time the
+record claims. With <code>--max-lag D</code>, for every covered record, let <code>t</code> be its
+<code>timestamp_iso</code> and <code>T</code> the earliest <code>genTime</code> among the valid receipts that
+cover it. The record fails if <code>T - t &gt; D</code> (anchored long after the time it
+claims: possibly backdated) or <code>t - T &gt; D</code> (dated after the receipt that
+covers it, impossible on correct clocks). A covered record without a usable
+UTC <code>timestamp_iso</code> fails. Records that no receipt covers are not measured.</p>
+<h2 id="what-verification-shows">What verification shows<a class="headerlink" href="#what-verification-shows" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Valid chain:</strong> every record is as it was signed, in order, by a trusted
+  key. Anyone holding a trusted signing key can still write a valid chain.</li>
+<li><strong>Valid receipts:</strong> the anchored records existed, as they are now, at the
+  receipt's time. That holds even against someone who holds the signing
+  key.</li>
+<li><strong>Within <code>--max-lag</code>:</strong> the covered records were not dated more than the
+  lag away from the time they demonstrably existed.</li>
+</ul>
+<p>Verification does not show that every decision the system made was recorded,
+or that a record's content is true. The receipts file is the evidence for
+the second and third points: keep a copy of it off the machine that writes
+the chain.</p>
+<h2 id="test-vectors">Test vectors<a class="headerlink" href="#test-vectors" title="Permanent link">&para;</a></h2>
+<p>The vectors are in <code>tests/fixtures/spec/</code> and are rebuilt by
+<code>scripts/generate_spec_vectors.py</code>. <code>tests/test_spec_vectors.py</code> checks that
+the implementation reproduces them and that the values below are current.</p>
+<p><strong>Test key.</strong> Ed25519 private key seed <code>000102…1f</code> (the bytes 0 to 31). It is
+published: never trust it for real records.</p>
+<!-- vector:public-key -->
+<div class="highlight"><pre><span></span><code>-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=
+-----END PUBLIC KEY-----
+</code></pre></div>
+<!-- vector:key-id -->
+<div class="highlight"><pre><span></span><code>56475aa75463474c
+</code></pre></div>
+<p><strong>Policy.</strong> <code>tests/fixtures/spec/policy.yaml</code>; its version id:</p>
+<!-- vector:policy-version-id -->
+<div class="highlight"><pre><span></span><code>f1c435cc1c0d58c81db250c0406f55d87a694825e30b6a99cc7ad6ed55e5531d
+</code></pre></div>
+<p><strong>Record 0.</strong> Canonical form (one line; note <code>\u00e9</code> for <code>é</code>):</p>
+<!-- vector:canonical-0 -->
+<div class="highlight"><pre><span></span><code>{"action":"stop","chain_index":0,"inputs":{"min_range_m":0.4,"site":"Montr\u00e9al"},"key_id":"56475aa75463474c","policy_path":"policy.yaml","policy_version_id":"f1c435cc1c0d58c81db250c0406f55d87a694825e30b6a99cc7ad6ed55e5531d","prev_hash":null,"reasoning":"obstacle at 0.4 m, closer than 0.5 m","record_type":"decision","requires_operator_approval":false,"rule_id":"stop-on-obstacle","source":"safety_controller","subject_id":"amr-01","timestamp_iso":"2026-10-07T12:00:00+00:00"}
+</code></pre></div>
+<!-- vector:payload-hash-0 -->
+<div class="highlight"><pre><span></span><code>0b01a56d2a397cea67ac75305f2dd8f0b4a61c08b578571370de3bc81255392d
+</code></pre></div>
+<!-- vector:signature-0 -->
+<div class="highlight"><pre><span></span><code>ZJbIjabM1N5wIfHChMXYYqzXS9ZUwIGEu/kv85ijKqvlxXhTeDoJtN/fKRSBef4ili0vSQv/UkZwO7wlrYF5AA==
+</code></pre></div>
+<p><strong>Record 1</strong> links to record 0 (<code>prev_hash</code> = the hash above) and has
+<code>payload_hash</code>:</p>
+<!-- vector:payload-hash-1 -->
+<div class="highlight"><pre><span></span><code>2d01cd2f2e951f06b042a84a5a0eb4e8ceb643f823f401ba3acd720a8d9e8f5b
+</code></pre></div>
+<p><strong>Anchor statement</strong> for record 1, and its SHA-256 (the message imprint a
+TSA signs):</p>
+<!-- vector:statement-1 -->
+<div class="highlight"><pre><span></span><code>{"chain_index":1,"kyvern_anchor":1,"payload_hash":"2d01cd2f2e951f06b042a84a5a0eb4e8ceb643f823f401ba3acd720a8d9e8f5b"}
+</code></pre></div>
+<!-- vector:imprint-1 -->
+<div class="highlight"><pre><span></span><code>fcadc7d2f01f02f198e605e09b6144279d5e313692a60c6f979383728978ae9c
+</code></pre></div>
+<p><strong>A real receipt.</strong> RFC 3161 tokens are not deterministic, so there is no
+vector for one. <code>tests/fixtures/rfc3161/</code> holds a recorded chain with a
+receipt from IdenTrust and the roots to check it. Its records are dated
+about 15 minutes after the receipt, so <code>--max-lag 10m</code> fails it and
+<code>--max-lag 1h</code> passes.</p>
+<h2 id="versions">Versions<a class="headerlink" href="#versions" title="Permanent link">&para;</a></h2>
+<p><code>kyvern_anchor</code> in the anchor statement is 1. A future change to the
+canonical form, the statement or the receipt fields will change this
+document's version and say how older chains are verified.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.expand", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

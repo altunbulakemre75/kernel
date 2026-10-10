@@ -1,0 +1,1215 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://altunbulakemre75.github.io/kyvern/">
+      
+      
+      
+        <link rel="next" href="architecture/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Kyvern</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#kyvern" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="." title="Kyvern" class="md-header__button md-logo" aria-label="Kyvern" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Kyvern
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Home
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/altunbulakemre75/kyvern" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    altunbulakemre75/kyvern
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="." title="Kyvern" class="md-nav__button md-logo" aria-label="Kyvern" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Kyvern
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/altunbulakemre75/kyvern" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    altunbulakemre75/kyvern
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="." class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recording-your-own-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recording your own decisions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verifying-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verifying decisions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#eu-ai-act-evidence-reports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EU AI Act evidence reports
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mcp-server-claude-desktop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCP server (Claude Desktop)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#integrations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integrations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#roadmap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roadmap
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#license" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        License
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#contact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contact
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="threat-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Threat Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="verification-spec/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verification spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compliance
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Compliance
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="compliance/eu_ai_act/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EU AI Act
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integrations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Integrations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="integrations/ros2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ROS2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="integrations/mcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Patterns
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Patterns
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="patterns/dual_llm_sandwich/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dual-LLM Sandwich
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="pilots/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pilots
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recording-your-own-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recording your own decisions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verifying-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verifying decisions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#eu-ai-act-evidence-reports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EU AI Act evidence reports
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mcp-server-claude-desktop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCP server (Claude Desktop)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#integrations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integrations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#roadmap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roadmap
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#license" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        License
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#contact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contact
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="kyvern">Kyvern<a class="headerlink" href="#kyvern" title="Permanent link">&para;</a></h1>
+<p><a href="https://github.com/altunbulakemre75/kyvern/actions"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/altunbulakemre75/kyvern/ci.yml?branch=main&amp;label=build" /></a> <a href="https://github.com/altunbulakemre75/kyvern/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-blue" /></a> <a href="#verifying-decisions"><img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue" /></a> <a href="#status"><img alt="Status" src="https://img.shields.io/badge/status-alpha-orange" /></a> <a href="compliance/eu_ai_act/"><img alt="EU AI Act" src="https://img.shields.io/badge/EU%20AI%20Act-Article%2012%20%7C%2014-blue" /></a></p>
+<p>Decision provenance and accountability infrastructure for autonomous systems.</p>
+<p>When an autonomous system makes a consequential decision — a robot stops
+mid-motion, a vehicle reroutes, an actuator fires — <em>what</em> happened is
+usually loggable. <em>Why</em> it happened, in a form a safety officer, regulator,
+or court can read, is almost always reconstructed after the fact, by hand.</p>
+<p>Kyvern is the missing layer:</p>
+<ul>
+<li><strong>Records your system's own decisions.</strong> <code>record_decision()</code> signs
+  what your robot, planner or operator decided, why, on which inputs and
+  under which version of your policy, into a verifiable chain. Your
+  decision logic stays yours.</li>
+<li><strong>Optional rule-first decision engine.</strong> Kyvern's own engine traces every
+  action back to a human-authored policy. AI advises; rules decide.</li>
+<li><strong>Cryptographically signed audit chain.</strong> Every decision is recorded
+  with full provenance: which rule fired, which inputs triggered it,
+  which guardrails ran, what was downgraded. Linked via Ed25519 signature.</li>
+<li><strong>Guardrail-downgrade-only pattern.</strong> Safety layers can only make
+  decisions safer, never more dangerous. Mathematically enforced.</li>
+<li><strong>LLM advisor with prompt injection defense.</strong> Models suggest; they
+  do not act. Adversarial inputs are sanitized before reaching the
+  decision boundary.</li>
+<li><strong>Air-gap deployable.</strong> Runs fully offline with local model fallback.
+  No data leaves the deployment environment.</li>
+</ul>
+<h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
+<p>Pre-1.0. Core engine and audit chain are battle-tested in a private
+deployment (separate codebase). This repository is the generalized,
+domain-neutral open-core extraction.</p>
+<p>Active areas: recording a system's own decisions, the ROS2 safety-controller
+demo, the MCP server interface, EU AI Act evidence reports.</p>
+<h2 id="recording-your-own-decisions">Recording your own decisions<a class="headerlink" href="#recording-your-own-decisions" title="Permanent link">&para;</a></h2>
+<p>Install from a clone of the repository (<code>pip install .</code>), then record a
+decision your system made:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">kyvern</span><span class="w"> </span><span class="kn">import</span> <span class="n">record_decision</span>
+
+<span class="n">record_decision</span><span class="p">(</span>
+    <span class="s2">"stop"</span><span class="p">,</span>                                   <span class="c1"># what your system did</span>
+    <span class="n">source</span><span class="o">=</span><span class="s2">"safety_controller"</span><span class="p">,</span>               <span class="c1"># who decided ("operator" for a person)</span>
+    <span class="n">reasoning</span><span class="o">=</span><span class="s2">"obstacle at 0.4 m, closer than 0.5 m"</span><span class="p">,</span>
+    <span class="n">inputs</span><span class="o">=</span><span class="p">{</span><span class="s2">"obstacle_distance_m"</span><span class="p">:</span> <span class="mf">0.4</span><span class="p">},</span>      <span class="c1"># what it was based on (up to 64 KB)</span>
+    <span class="n">rule_id</span><span class="o">=</span><span class="s2">"stop-on-obstacle"</span><span class="p">,</span>               <span class="c1"># the rule in your policy that fired</span>
+    <span class="n">policy_path</span><span class="o">=</span><span class="s2">"safety_policy.yaml"</span><span class="p">,</span>         <span class="c1"># binds the decision to that policy version</span>
+<span class="p">)</span>
+</code></pre></div>
+<p>The policy is your own YAML file with a <code>rules:</code> list; Kyvern records a
+SHA-256 of its rules (the parsed YAML, so comments and key order do not
+change it) with each decision. The decision is signed and
+appended to <code>~/.kyvern/chain.jsonl</code> (or <code>$KYVERN_CHAIN_PATH</code>) and can then be
+verified, anchored and reported on.</p>
+<h2 id="verifying-decisions">Verifying decisions<a class="headerlink" href="#verifying-decisions" title="Permanent link">&para;</a></h2>
+<p>For auditors and compliance officers, the decision provenance chain can be
+verified offline without writing code:</p>
+<div class="highlight"><pre><span></span><code>kyvern-verify<span class="w"> </span>chain.jsonl<span class="w"> </span>--policy<span class="w"> </span>config/policies/default.yaml<span class="w"> </span>--pubkey<span class="w"> </span>~/.kyvern/keys/signing.pub
+</code></pre></div>
+<p><strong>Output:</strong></p>
+<div class="highlight"><pre><span></span><code>✓ Chain integrity: VALID (3 decisions, 1 runtime events, all signed)
+✓ Policy match: 5b64432b2dd0796f (default.yaml @ 2026-10-08 04:51 UTC): 3 decisions
+✓ Signature verification: PASSED (Ed25519)
+  Anchors: none (no chain.anchors.jsonl)
+
+Decision summary:
+  [0] 14:32:07  action=LOG     rule_id=POL-1  guardrails=[input-single-tick]
+  [1] 14:32:09  action=ALERT   rule_id=POL-2  guardrails=[]
+  [2] 14:32:12  event=sensor_anomaly source=imu_monitor
+  [3] 14:32:15  action=ALERT   rule_id=POL-2  guardrails=[]
+
+Audit hash: 5b64432b2dd0796f (verifiable against deployed policy)
+</code></pre></div>
+<h2 id="eu-ai-act-evidence-reports">EU AI Act evidence reports<a class="headerlink" href="#eu-ai-act-evidence-reports" title="Permanent link">&para;</a></h2>
+<p>Generate a PDF of checks run on a signed decision chain, mapped to the EU AI
+Act Articles they support: Article 12 (record-keeping) and Article 14 (human
+oversight):</p>
+<div class="highlight"><pre><span></span><code>kyvern-report<span class="w"> </span>chain.jsonl<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--policy<span class="w"> </span>config/policies/default.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--pubkey<span class="w"> </span>~/.kyvern/keys/signing.pub<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--output<span class="w"> </span>report.pdf<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--system-id<span class="w"> </span><span class="s2">"AMR-Fleet-A"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--operator<span class="w"> </span><span class="s2">"Operations Team"</span>
+</code></pre></div>
+<p>The PDF covers chain integrity, the policy check, action and threat-level
+distribution, the Article 12 and 14 checks, the policy version timeline, and a
+fingerprint of the report content. Each check is computed from the chain
+(PASS/FAIL with counts) or marked NOT ASSESSED where a chain cannot show it,
+such as whether an operator can override the system. The report supports an
+assessment; it does not establish conformity. See <a href="compliance/eu_ai_act/">EU AI Act</a>.</p>
+<h2 id="mcp-server-claude-desktop">MCP server (Claude Desktop)<a class="headerlink" href="#mcp-server-claude-desktop" title="Permanent link">&para;</a></h2>
+<p>Plug Kyvern into Claude Desktop in ~30 seconds and ask questions like
+<em>"what did my autonomous system do in the last hour?"</em>:</p>
+<p>Kyvern is not published on PyPI yet, so install from source:</p>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/altunbulakemre75/kyvern.git
+<span class="nb">cd</span><span class="w"> </span>kyvern
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">".[mcp]"</span>
+</code></pre></div>
+<p>Then add to your Claude Desktop config:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">"mcpServers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"kyvern"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"command"</span><span class="p">:</span><span class="w"> </span><span class="s2">"kyvern-mcp"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"--chain-file"</span><span class="p">,</span><span class="w"> </span><span class="s2">"/path/to/chain.jsonl"</span><span class="p">,</span><span class="w"> </span><span class="s2">"--pubkey"</span><span class="p">,</span><span class="w"> </span><span class="s2">"/path/to/signing.pub"</span><span class="p">]</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Five read-only tools (<code>query_events</code>, <code>get_event</code>, <code>get_stats</code>,
+<code>verify_chain</code>, <code>search_events</code>) and four resources cover signed audit
+query, chain verification, and active-policy metadata. See <a href="integrations/mcp/">MCP integration</a>.</p>
+<h2 id="integrations">Integrations<a class="headerlink" href="#integrations" title="Permanent link">&para;</a></h2>
+<p><strong>ROS2 safety-controller demo:</strong> a robot's own stop / slow / continue
+decisions, recorded with <code>record_decision()</code> from a <code>/scan</code> subscriber,
+then verified and reported. It runs without ROS2 too. See
+<a href="https://github.com/altunbulakemre75/kyvern/tree/main/examples/ros2_safety_demo"><code>examples/ros2_safety_demo</code></a>.</p>
+<p><strong>ROS2 bridge:</strong> publishes signed Decision objects to a ROS2 topic for
+consumption by autonomous systems. See <a href="integrations/ros2/">ROS2 integration</a>.</p>
+<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
+<p>See <a href="architecture/">Architecture</a> for the full design:
+components, data flow, audit chain implementation (Ed25519 + SHA-256
+hash chain), the guardrail downgrade-only invariant, and integration
+points.</p>
+<h2 id="security">Security<a class="headerlink" href="#security" title="Permanent link">&para;</a></h2>
+<p>Kyvern defends against two primary threats: insider post-hoc tampering of
+decision history (Ed25519 + SHA-256 hash chain) and AI-induced unsafe
+escalation (LLM advisory ceiling + guardrail downgrade-only invariant).</p>
+<p>It does not defend against signing key compromise, sensor-level deception,
+runtime intrusion, or network attacks — those are operator responsibilities.</p>
+<p>See <a href="threat-model/">Threat Model</a> for the full threat model,
+including explicit non-defenses and what this means for compliance claims.</p>
+<h2 id="roadmap">Roadmap<a class="headerlink" href="#roadmap" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] EU AI Act Article 12 &amp; 14 evidence report (<code>cli/kyvern_report.py</code>)</li>
+<li>[x] ROS2 publisher (<code>services/integrations/ros2_bridge.py</code>)</li>
+<li>[ ] ROS2 action sink with feedback loop (planned)</li>
+<li>[x] MCP server interface (<code>kyvern/mcp/</code>, <code>kyvern-mcp</code>)</li>
+<li>[ ] IMM filter as default in TrackManager</li>
+<li>[ ] OpenAI provider in LLM chain</li>
+<li>[ ] Internationalization of in-code documentation (Turkish → English)</li>
+</ul>
+<h2 id="license">License<a class="headerlink" href="#license" title="Permanent link">&para;</a></h2>
+<p>Apache 2.0.</p>
+<h2 id="contact">Contact<a class="headerlink" href="#contact" title="Permanent link">&para;</a></h2>
+<p>Discussion on <a href="https://discourse.openrobotics.org/t/the-accountability-gap-in-ros2-where-does-why-did-the-robot-do-that-get-answered/54841">Open Robotics Discourse</a>
+or open a GitHub issue.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.sections", "navigation.expand", "content.code.copy"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

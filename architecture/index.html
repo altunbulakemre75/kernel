@@ -1,0 +1,1522 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://altunbulakemre75.github.io/kyvern/architecture/">
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../threat-model/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Architecture - Kyvern</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#kyvern-architecture" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Kyvern" class="md-header__button md-logo" aria-label="Kyvern" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Kyvern
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Architecture
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/altunbulakemre75/kyvern" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    altunbulakemre75/kyvern
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Kyvern" class="md-nav__button md-logo" aria-label="Kyvern" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Kyvern
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/altunbulakemre75/kyvern" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    altunbulakemre75/kyvern
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-core-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Core Components
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Core Components">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-servicesdecision-rule-engine-llm-advisor-guardrails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 services/decision/ — Rule Engine + LLM Advisor + Guardrails
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-what-is-not-in-this-repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 What is not in this repository
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-shared" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 shared/
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-data-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Data Flow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-audit-chain-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Audit Chain Design
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-policy-versioning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Policy Versioning
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-guardrail-downgrade-only-invariant" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Guardrail Downgrade-Only Invariant
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-integration-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Integration Points
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Integration Points">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#llm-backends-implemented" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LLM Backends (implemented)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#action-sinks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Action Sinks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audit-query-interface-implemented" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit Query Interface (implemented)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-upstream-evidence-events" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Upstream Evidence Events
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-directory-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix: Directory Map
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../threat-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Threat Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../verification-spec/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verification spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compliance
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Compliance
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../compliance/eu_ai_act/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EU AI Act
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integrations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Integrations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../integrations/ros2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ROS2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../integrations/mcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Patterns
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Patterns
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../patterns/dual_llm_sandwich/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dual-LLM Sandwich
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../pilots/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pilots
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-core-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Core Components
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Core Components">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-servicesdecision-rule-engine-llm-advisor-guardrails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 services/decision/ — Rule Engine + LLM Advisor + Guardrails
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-what-is-not-in-this-repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 What is not in this repository
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-shared" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 shared/
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-data-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Data Flow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-audit-chain-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Audit Chain Design
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-policy-versioning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Policy Versioning
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-guardrail-downgrade-only-invariant" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Guardrail Downgrade-Only Invariant
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-integration-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Integration Points
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Integration Points">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#llm-backends-implemented" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LLM Backends (implemented)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#action-sinks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Action Sinks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audit-query-interface-implemented" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit Query Interface (implemented)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-upstream-evidence-events" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Upstream Evidence Events
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-directory-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix: Directory Map
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="kyvern-architecture">Kyvern — Architecture<a class="headerlink" href="#kyvern-architecture" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p>Last updated: 2026-10-08 · Status: pre-1.0</p>
+</blockquote>
+<hr />
+<h2 id="1-overview">1. Overview<a class="headerlink" href="#1-overview" title="Permanent link">&para;</a></h2>
+<p>Kyvern is a decision-provenance layer that sits between autonomous/AI
+systems (sensors, perception, planners) and downstream actuators (robots,
+vehicles, effectors). It does not replace the autonomy stack — it wraps
+the decision boundary so that every consequential action is traceable to a
+human-authored policy rule, every guardrail evaluation is recorded, and the
+full chain is cryptographically replayable. The core guarantee: an
+external auditor can take any historical decision, feed in the same
+inputs, and reproduce the exact same output — including which rules fired,
+which LLM advice was considered and overridden, and which guardrails
+downgraded the action.</p>
+<hr />
+<h2 id="2-core-components">2. Core Components<a class="headerlink" href="#2-core-components" title="Permanent link">&para;</a></h2>
+<h3 id="21-servicesdecision-rule-engine-llm-advisor-guardrails">2.1 <code>services/decision/</code> — Rule Engine + LLM Advisor + Guardrails<a class="headerlink" href="#21-servicesdecision-rule-engine-llm-advisor-guardrails" title="Permanent link">&para;</a></h3>
+<p>The decision layer is the heart of the system. It has three sub-layers
+that execute in a fixed order:</p>
+<table>
+<thead>
+<tr>
+<th>Sub-layer</th>
+<th>Key files</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Rule engine</strong></td>
+<td><code>rules.py</code> (<code>assess_threat</code>), <code>roe.py</code> (<code>evaluate_roe</code>)</td>
+<td>Deterministic, weighted-score assessment. Factors: zone proximity, transponder presence, speed, heading, confidence. Thresholds map to <code>ThreatLevel</code> enum (LOW/MEDIUM/HIGH/CRITICAL). Policy rules are loaded from YAML (<code>config/policies/default.yaml</code>) via the <code>ROERule</code> Pydantic model. First matching enabled rule wins.</td>
+</tr>
+<tr>
+<td><strong>LLM advisor</strong></td>
+<td><code>llm_client.py</code> (<code>query_llm</code>), <code>llm_graph.py</code> (<code>_reconcile_action</code>)</td>
+<td>Optional. Queries an LLM for an independent assessment. Provider fallback chain: Anthropic Claude → Ollama (local) → None. The advisor <strong>cannot</strong> recommend ENGAGE — only LOG, ALERT, or HANDOFF. Prompt injection defense is handled by <code>sanitize.py</code> (<code>sanitize_track_for_llm</code>), which applies allowlist filtering, control-char stripping, and injection-pattern detection before any track data reaches the LLM prompt.</td>
+</tr>
+<tr>
+<td><strong>Guardrails</strong></td>
+<td><code>guardrails.py</code> (<code>apply_guardrails</code>)</td>
+<td>Post-decision safety filters. Three implemented guardrails: <code>input_track_guardrail</code> (rejects low-confidence or single-tick tracks), <code>friendly_zone_guardrail</code> (blocks action inside protected areas), <code>civilian_pattern_guardrail</code> (detects civil transponder codes and airliner flight profiles). Guardrails can only <strong>downgrade</strong> — see §6.</td>
+</tr>
+</tbody>
+</table>
+<p>The full pipeline is orchestrated by a 5-node state machine in
+<code>llm_graph.py</code> (<code>run_graph</code>): classify → retrieve_roe → reason →
+guardrail → finalize. <code>retrieve_roe</code> is a hook for a policy-retrieval
+(RAG) module that this repository does not ship; without one it passes
+the state through. When LangGraph is installed, it runs as a
+<code>StateGraph</code>; otherwise, it falls back to plain sequential <code>await</code> calls.
+Both paths produce the same <code>Decision</code> output.</p>
+<p>Entry points:
+- <code>threat_graph.decide()</code> — sync, rule-only fast path (no LLM).
+- <code>threat_graph.decide_full()</code> — sync wrapper over <code>run_graph</code> (full pipeline).
+- <code>llm_graph.run_graph()</code> — async, production entry point.</p>
+<h3 id="22-what-is-not-in-this-repository">2.2 What is not in this repository<a class="headerlink" href="#22-what-is-not-in-this-repository" title="Permanent link">&para;</a></h3>
+<p>The original deployment also had sensor adapters (camera, RF/OpenDroneID,
+Wi-Fi), multi-sensor tracking (Kalman/IMM fusion over NATS) and counter-UAS
+autonomy (intercept planning, MAVSDK). That code now lives in a separate
+private repository. Kyvern does not need it: it records decisions from
+whatever perception and planning stack produces them — its own example
+engine (§2.1) or yours, through <code>RuntimeEvent</code> (§8).</p>
+<h3 id="23-shared">2.3 <code>shared/</code><a class="headerlink" href="#23-shared" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>paths.py</code></td>
+<td>Per-user locations: <code>~/.kyvern</code>, the default chain path (<code>KYVERN_CHAIN_PATH</code>), the pre-rename <code>~/.kernel</code> guard.</td>
+</tr>
+<tr>
+<td><code>schemas.py</code></td>
+<td><code>RuntimeEvent</code>, the record type for upstream evidence (§8).</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-data-flow">3. Data Flow<a class="headerlink" href="#3-data-flow" title="Permanent link">&para;</a></h2>
+<p>The system processes data through a linear pipeline:</p>
+<ol>
+<li>
+<p><strong>Input</strong> — A track or situation report from your perception stack: a
+   dict with an identifier, position, velocity, confidence and source
+   information. Kyvern does not do perception or tracking itself.</p>
+</li>
+<li>
+<p><strong>Decision engine</strong> — Each track is evaluated by the
+   rule engine (<code>assess_threat</code> → <code>evaluate_roe</code>). If the LLM advisor
+   is enabled (<code>KYVERN_DECISION_LLM_ENABLED=true</code>), the track is
+   independently assessed by the LLM via <code>query_llm</code>. The rule engine
+   and LLM outputs are reconciled: the LLM can escalate (LOG → ALERT
+   → HANDOFF) but <strong>never</strong> to ENGAGE, and it cannot downgrade.</p>
+</li>
+<li>
+<p><strong>Guardrails</strong> — <code>apply_guardrails</code> runs all registered guardrail
+   functions against the pre-decision. Any triggered guardrail can only
+   <strong>downgrade</strong> the action severity (see §6). Guardrail IDs and
+   reasoning are appended to the <code>Decision</code> object without truncation.</p>
+</li>
+<li>
+<p><strong>Audit chain</strong> — The finalized <code>Decision</code> (including raw LLM
+   response, guardrail trace, rule reference, and full reasoning) is
+   signed and appended to the JSONL audit chain by <code>ChainWriter</code>
+   (<code>services/decision/chain_writer.py</code>): under an inter-process file
+   lock it reads the last entry, links and signs the new one, writes it
+   and fsyncs. The chain file is <code>run_graph(chain_path=...)</code>, else
+   <code>$KYVERN_CHAIN_PATH</code>, else <code>~/.kyvern/chain.jsonl</code> — the same file
+   <code>kyvern-verify</code>, <code>kyvern-report</code> and <code>kyvern-mcp</code> read. If the
+   decision cannot be recorded, <code>run_graph()</code> raises <code>AuditWriteError</code>
+   and returns nothing.</p>
+</li>
+<li>
+<p><strong>Action</strong> — The <code>Decision</code> is published for downstream consumption.
+   For ENGAGE actions, <code>requires_operator_approval</code> is hardcoded to
+   <code>true</code> regardless of policy configuration. See §7 for action sinks.</p>
+</li>
+</ol>
+<hr />
+<h2 id="4-audit-chain-design">4. Audit Chain Design<a class="headerlink" href="#4-audit-chain-design" title="Permanent link">&para;</a></h2>
+<p>Every <code>Decision</code> object carries full provenance: the originating track
+state, the rule that fired (<code>roe_reference</code>), the raw LLM response
+(unsanitized, stored in <code>llm_raw_response</code>), the provider and model used,
+which guardrails triggered (<code>guardrails_triggered</code> list), and the
+guardrail reasoning (untruncated in <code>guardrail_reasoning</code>, separate from
+the main <code>reasoning</code> field which is capped at 500 chars).</p>
+<p>The planned cryptographic signing pattern works as follows: each
+<code>Decision</code> is serialized to a canonical JSON form, hashed (SHA-256), and
+the hash is signed with a deployment-specific Ed25519 key. The previous
+decision's hash is included in the current record, forming a hash chain.
+This means any tampering with a historical record breaks the chain from
+that point forward. A verifier can replay the entire decision sequence:
+feed the same track inputs through the same rule set and guardrails, and
+confirm that the outputs match the signed records.</p>
+<p><strong>Current status:</strong> Every entry carries <code>signature</code>, <code>prev_hash</code>,
+<code>payload_hash</code>, <code>chain_index</code> and <code>key_id</code> (the first 16 hex chars of
+SHA-256 over the raw public key, covered by the signature). Decisions
+from <code>run_graph()</code> and RuntimeEvents from <code>append_runtime_event()</code> are
+both appended through <code>ChainWriter</code>, so they share one chain and one
+<code>chain_index</code> sequence. Several processes on one host can append
+safely; several hosts writing one chain is not supported.</p>
+<p>Code example:
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">services.decision.audit_chain</span><span class="w"> </span><span class="kn">import</span> <span class="n">Keyring</span><span class="p">,</span> <span class="n">describe_chain_failure</span><span class="p">,</span> <span class="n">verify_chain</span>
+
+<span class="n">keys</span> <span class="o">=</span> <span class="n">Keyring</span><span class="o">.</span><span class="n">from_pem_files</span><span class="p">([</span><span class="s2">"signing.pub"</span><span class="p">,</span> <span class="s2">"signing-&lt;old key id&gt;.pub"</span><span class="p">])</span>
+<span class="n">is_valid</span><span class="p">,</span> <span class="n">broken_idx</span> <span class="o">=</span> <span class="n">verify_chain</span><span class="p">(</span><span class="n">decisions</span><span class="p">,</span> <span class="n">keys</span><span class="p">)</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">is_valid</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Chain broken at index </span><span class="si">{</span><span class="n">broken_idx</span><span class="si">}</span><span class="s2">: "</span>
+          <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">describe_chain_failure</span><span class="p">(</span><span class="n">decisions</span><span class="p">,</span><span class="w"> </span><span class="n">broken_idx</span><span class="p">,</span><span class="w"> </span><span class="n">keys</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</code></pre></div></p>
+<p><strong>Anchoring.</strong> <code>kyvern-anchor</code> (<code>cli/kyvern_anchor.py</code>) timestamps the chain
+head with an external authority. The statement it anchors is the canonical
+JSON <code>{"chain_index": n, "kyvern_anchor": 1, "payload_hash": h}</code>; the receipt
+goes to <code>&lt;chain stem&gt;.anchors.jsonl</code>. <code>services/decision/anchors.py</code> defines
+the <code>Anchor</code> protocol (<code>name</code>, <code>request(statement)</code>, <code>verify(statement,
+receipt)</code>); <code>services/decision/rfc3161_anchor.py</code> is the RFC 3161
+implementation. Another kind of anchor implements the same two methods under
+a new <code>name</code> and is added to the mapping <code>kyvern-verify</code> passes to
+<code>check_anchors()</code>.</p>
+<p>The same chain also carries signed evidence events from external
+systems (<code>RuntimeEvent</code>) — see §8.</p>
+<hr />
+<h2 id="5-policy-versioning">5. Policy Versioning<a class="headerlink" href="#5-policy-versioning" title="Permanent link">&para;</a></h2>
+<p>Every Decision is cryptographically tied to a specific policy version. 
+When the rules are evaluated, a canonical, deterministic SHA-256 hash 
+(<code>version_id</code>) of the <code>default.yaml</code> policy is computed. This hash 
+is attached to the Decision prior to signing. </p>
+<p>If someone edits the YAML between two decisions, the hash changes, 
+creating an immutable record of the divergence. An external auditor 
+can verify a historical decision against the policy file claimed by 
+its <code>policy_version_id</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">services.decision.audit_chain</span><span class="w"> </span><span class="kn">import</span> <span class="n">verify_decision_against_policy</span>
+
+<span class="n">is_valid</span><span class="p">,</span> <span class="n">reason</span> <span class="o">=</span> <span class="n">verify_decision_against_policy</span><span class="p">(</span><span class="n">decision</span><span class="p">,</span> <span class="s2">"config/policies/default.yaml"</span><span class="p">,</span> <span class="n">public_key</span><span class="p">)</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">is_valid</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Verification failed: </span><span class="si">{</span><span class="n">reason</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="6-guardrail-downgrade-only-invariant">6. Guardrail Downgrade-Only Invariant<a class="headerlink" href="#6-guardrail-downgrade-only-invariant" title="Permanent link">&para;</a></h2>
+<p>Guardrails enforce a one-way safety property: they can only reduce the
+severity of a decision, never increase it. This is the
+<strong>downgrade-only invariant</strong>.</p>
+<p>The <code>Action</code> enum has a strict severity ordering maintained in
+<code>guardrails.py</code>:</p>
+<div class="highlight"><pre><span></span><code>LOG (0) &lt; ALERT (1) &lt; HANDOFF (2) &lt; ENGAGE (3)
+</code></pre></div>
+<p>When a guardrail triggers, it proposes a <code>downgrade_to</code> action. The
+orchestrator (<code>apply_guardrails</code>) only applies the downgrade if
+<code>_SEVERITY[proposed] &lt; _SEVERITY[current_action]</code>. A guardrail that
+returns <code>downgrade_to=ENGAGE</code> when the current action is <code>ALERT</code> is
+silently ignored — the comparison fails and the action stays at <code>ALERT</code>.</p>
+<p>This means a false-positive guardrail trigger produces a safer (more
+conservative) outcome, never a dangerous one. The worst case of a
+guardrail bug is an unnecessary downgrade to LOG, which results in
+logging-only — the safest possible state. The system cannot be tricked
+into escalation through guardrail manipulation.</p>
+<p>The same principle applies to the LLM advisor reconciliation (in
+<code>llm_graph.py</code>, <code>_reconcile_action</code>): the LLM can <strong>escalate</strong> (propose
+a higher severity than the rule engine), but guardrails run <strong>after</strong>
+reconciliation and can only bring it back down.</p>
+<hr />
+<h2 id="7-integration-points">7. Integration Points<a class="headerlink" href="#7-integration-points" title="Permanent link">&para;</a></h2>
+<h3 id="llm-backends-implemented">LLM Backends (implemented)<a class="headerlink" href="#llm-backends-implemented" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Ollama</strong> — Default for air-gapped deployments. Connects to
+  <code>localhost:11434</code>, model configurable via <code>OLLAMA_MODEL</code> env
+  (default: <code>llama3.1:8b</code>). Structured output via <code>format=json</code>.</li>
+<li><strong>Anthropic Claude</strong> — Used when <code>ANTHROPIC_API_KEY</code> is set; model from
+  <code>KYVERN_LLM_MODEL</code> (default <code>claude-sonnet-4-6</code>). Structured
+  output via tool-use (<code>submit_assessment</code>). Provider chain:
+  Anthropic → Ollama → None (graceful degradation).</li>
+<li><strong>OpenAI</strong> — Not yet implemented. <code>llm_client.py</code> is structured for
+  adding a <code>_try_openai</code> step in the provider chain.</li>
+</ul>
+<h3 id="action-sinks">Action Sinks<a class="headerlink" href="#action-sinks" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>ROS2</strong> — <code>services/integrations/ros2_bridge.py</code> publishes signed
+  Decisions as JSON on a ROS2 topic (<code>std_msgs/String</code>);
+  <code>ros2_subscriber_example.py</code> verifies them on the receiving side.</li>
+<li><strong>Custom</strong> — The <code>Decision</code> Pydantic model serializes to JSON. Any
+  system that can consume JSON over NATS, HTTP, or direct import can act
+  as a sink today.</li>
+</ul>
+<h3 id="audit-query-interface-implemented">Audit Query Interface (implemented)<a class="headerlink" href="#audit-query-interface-implemented" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>MCP (Model Context Protocol)</strong> — <code>kyvern-mcp</code> (<code>kyvern/mcp/</code>) is a
+  read-only stdio MCP server that lets MCP-compatible AI agents query the
+  JSONL audit chain: 5 tools (<code>query_events</code>, <code>get_event</code>, <code>get_stats</code>,
+  <code>verify_chain</code>, <code>search_events</code>) and 4 <code>kyvern://</code> resources. It covers
+  both Decisions and upstream RuntimeEvents — see §8.</li>
+</ul>
+<hr />
+<h2 id="8-upstream-evidence-events">8. Upstream Evidence Events<a class="headerlink" href="#8-upstream-evidence-events" title="Permanent link">&para;</a></h2>
+<p><code>RuntimeEvent</code> is a typed record for signing evidence events from
+<strong>external systems</strong> (sensor monitors, guard middleware, external policy
+adapters) into the audit chain. How it differs from a <code>Decision</code>:</p>
+<ul>
+<li>A <strong>Decision</strong> comes out of Kyvern's own decision graph ("I did
+  this") — controlled.</li>
+<li>A <strong>RuntimeEvent</strong> comes from an external source ("I observed
+  this") — uncontrolled.</li>
+</ul>
+<p>Both are written to the same JSONL audit chain file with <strong>the same
+Ed25519 signature scheme, the same SHA-256 hash link, and the same
+<code>chain_index</code> counter</strong>. RuntimeEvent records carry a
+<code>record_type: "runtime_event"</code> discriminator field; Decisions do not
+have this field (backward compatibility — a record without
+<code>record_type</code> is read as a Decision).</p>
+<p><strong>Your own decisions.</strong> A third record type, <code>RecordedDecision</code>
+(<code>record_type: "decision"</code>, in <code>shared/schemas.py</code>), holds a decision made
+by the user's own system — a robot's safety controller, a planner, an
+operator — appended with <code>kyvern.record_decision()</code>. The auditor tools
+treat it as a decision: it is counted with decisions and its
+<code>policy_version_id</code> is checked against <code>--policy</code>. Its fields are
+domain-neutral: <code>action</code>, <code>source</code> (who decided; <code>"operator"</code> for a
+person), <code>reasoning</code>, <code>inputs</code> (what the decision was based on, at most
+64 KB), <code>rule_id</code>, <code>subject_id</code>, <code>requires_operator_approval</code>,
+<code>timestamp_iso</code> (UTC), and <code>policy_version_id</code> / <code>policy_path</code> when
+<code>policy_path=</code> is given. A policy is any YAML file with a <code>rules:</code> list;
+its version id is the SHA-256 of its canonical content.</p>
+<p><strong>Use cases:</strong>
+- Sensor anomaly reports (e.g. <code>event_type="sensor_anomaly"</code>,
+  <code>source="lidar_monitor"</code>)
+- Downgrades by external guard middleware
+  (<code>event_type="guardrail_downgrade"</code>, <code>source="kinematic_guard"</code>)
+- Violation reports from policy adapters
+  (<code>event_type="policy_violation"</code>)</p>
+<p><strong>Mixed-chain verification:</strong> <code>verify_chain()</code> is type-agnostic; it
+verifies a chain of interleaved RuntimeEvents and Decisions in a single
+linear scan. <code>chain_index</code> forms <strong>one monotonic sequence</strong> across both
+record types — there are no separate counters.</p>
+<p><strong>Asymmetric protection:</strong> Because a RuntimeEvent comes from an external
+system, its <code>payload</code> is capped at 64 KB (<code>PayloadTooLargeError</code>).
+Decisions have no such limit, since they are produced by Kyvern's own
+controlled policy engine.</p>
+<p><strong>API:</strong>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">shared.schemas</span><span class="w"> </span><span class="kn">import</span> <span class="n">RuntimeEvent</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">services.decision.audit_chain</span><span class="w"> </span><span class="kn">import</span> <span class="n">append_runtime_event</span>
+
+<span class="n">event</span> <span class="o">=</span> <span class="n">RuntimeEvent</span><span class="p">(</span>
+    <span class="n">event_type</span><span class="o">=</span><span class="s2">"sensor_anomaly"</span><span class="p">,</span>
+    <span class="n">source</span><span class="o">=</span><span class="s2">"lidar_monitor"</span><span class="p">,</span>
+    <span class="n">source_id</span><span class="o">=</span><span class="s2">"lidar-front-01"</span><span class="p">,</span>
+    <span class="n">timestamp_iso</span><span class="o">=</span><span class="s2">"2026-05-20T12:00:00+00:00"</span><span class="p">,</span>
+    <span class="n">payload</span><span class="o">=</span><span class="p">{</span><span class="s2">"distance_m"</span><span class="p">:</span> <span class="mf">4.2</span><span class="p">,</span> <span class="s2">"object_class"</span><span class="p">:</span> <span class="s2">"vehicle"</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="n">signed</span> <span class="o">=</span> <span class="n">append_runtime_event</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">chain_path</span><span class="p">,</span> <span class="n">signing_key</span><span class="p">)</span>  <span class="c1"># policy_version_id= is optional</span>
+</code></pre></div></p>
+<p>The MCP <code>query_events</code> tool filters RuntimeEvents via its <code>event_type</code>
+and <code>source</code> parameters; its <code>action</code> and <code>threat_level</code> parameters
+filter Decisions.</p>
+<hr />
+<h2 id="appendix-directory-map">Appendix: Directory Map<a class="headerlink" href="#appendix-directory-map" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>kyvern/
+├── cli/
+│   ├── kyvern_anchor.py          # kyvern-anchor: RFC 3161 receipts for the chain head
+│   ├── kyvern_report.py          # kyvern-report: EU AI Act evidence PDF
+│   └── kyvern_verify.py          # kyvern-verify: offline chain, policy and anchor check
+├── config/
+│   └── policies/
+│       └── default.yaml          # Decision policy rules (YAML)
+├── kyvern/
+│   ├── audit/store.py            # AuditChainStore: read, filter and verify the JSONL chain
+│   ├── mcp/                      # kyvern-mcp: read-only MCP server (tools, resources)
+│   └── sandwich/                 # Dual-LLM (privileged/quarantined) isolation
+├── services/
+│   ├── decision/
+│   │   ├── anchors.py            # Anchor protocol, receipts, check_anchors
+│   │   ├── audit_chain.py        # Sign/verify entries, keyring, policy binding, RuntimeEvent append
+│   │   ├── chain_writer.py       # ChainWriter: locked, fsynced appends
+│   │   ├── guardrails.py         # apply_guardrails, GuardrailResult, haversine_m
+│   │   ├── llm_client.py         # LLMResponse, query_llm, provider chain
+│   │   ├── llm_graph.py          # 5-node GraphState pipeline, run_graph
+│   │   ├── policy_loader.py      # load_policy, SHA-256 policy version id
+│   │   ├── rfc3161_anchor.py     # RFC 3161 timestamp authority client
+│   │   ├── roe.py                # load_roe, evaluate_roe
+│   │   ├── rules.py              # assess_threat, ThreatAssessment
+│   │   ├── sanitize.py           # sanitize_track_for_llm, UnsafeContent
+│   │   ├── schemas.py            # Decision, Action, ThreatLevel, ROERule
+│   │   └── threat_graph.py       # decide (sync), decide_full (sync wrapper)
+│   └── integrations/
+│       ├── ros2_bridge.py        # Publish signed Decisions on a ROS2 topic
+│       └── ros2_subscriber_example.py  # Verify them on the receiving side
+├── shared/
+│   ├── paths.py                  # ~/.kyvern, default chain path, ~/.kernel guard
+│   └── schemas.py                # RuntimeEvent
+├── scripts/                      # Demo chain generator, core-install smoke test
+└── tests/                        # audit, cli, decision, integrations, mcp, sandwich
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.expand", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
