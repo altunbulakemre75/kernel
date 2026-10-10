@@ -40,7 +40,10 @@ at all, several processes can append safely, every entry names its signing
 key, and the chain head can be anchored with external RFC 3161 timestamps.
 v0.4.0 (2026-10-08) records a system's own decisions (`record_decision()`),
 adds a ROS2 safety-controller example, and makes the EU AI Act report a set
-of checks computed from the chain. See [`CHANGELOG.md`](CHANGELOG.md).
+of checks computed from the chain. v0.5.0 (2026-10-10) adds
+`kyvern-verify --max-lag`, which bounds how far an anchored entry can have
+been backdated, and a tamper demo; it also turns tracebacks and silent
+failures in the CLIs into clear errors. See [`CHANGELOG.md`](CHANGELOG.md).
 
 ## See it catch tampering
 
