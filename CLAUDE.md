@@ -18,14 +18,17 @@ pip install -r requirements.txt   # editable install with every extra
 pytest                            # whole suite; tests needing an extra skip themselves
 pytest tests/audit -q             # one area
 ruff check .                      # must be clean; CI fails otherwise
+pyright                           # type check of kyvern, cli, services, shared; must be clean
 mkdocs serve                      # docs site (needs the docs extra)
 python examples/ros2_safety_demo/run_demo.py --out <dir>   # end-to-end demo, no ROS2 needed
+python examples/tamper_demo/run_demo.py --offline         # attacks on a log, and what catches them
 ```
 
-CI (`.github/workflows/ci.yml`) runs ruff and pytest on Python 3.10–3.13, a
-core-only install smoke test (`scripts/smoke_core_install.py`) and the tests
-with only the `dev` extra. Keep all three green: core code must not import an
-optional extra (`llm`, `mcp`, `docs`) at module level.
+CI (`.github/workflows/ci.yml`) runs ruff and pytest on Python 3.10–3.13,
+pyright, a core-only install smoke test (`scripts/smoke_core_install.py`) and
+the tests with only the `dev` extra. All are required checks on `main`. Core
+code must not import an optional extra (`llm`, `mcp`, `docs`) at module level.
+Tests that call the real RFC 3161 TSA run only with `KYVERN_TSA_E2E=1`.
 
 ## Layout
 
@@ -90,4 +93,9 @@ optional extra (`llm`, `mcp`, `docs`) at module level.
 - Environment variables: `KYVERN_CHAIN_PATH`, `KYVERN_DECISION_LLM_ENABLED`,
   `KYVERN_LLM_MODEL`.
 - Without anchors, entries deleted from the end of a chain cannot be detected;
-  `kyvern-verify --require-anchors` makes anchors mandatory.
+  `kyvern-verify --require-anchors` makes anchors mandatory, and `--max-lag`
+  bounds how far an anchored entry can have been backdated.
+- On Windows a running `kyvern-mcp.exe` locks the script, so `pip install -e .`
+  fails until it stops; run the MCP server as `python -m kyvern.mcp.server`.
+- Stacked pull requests: retarget a child PR to `main` before merging its base
+  with branch deletion, or GitHub closes the child instead of retargeting it.
