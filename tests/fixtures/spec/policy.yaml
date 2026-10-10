@@ -1,0 +1,7 @@
+# Policy of the spec test vectors.
+rules:
+  - id: stop-on-obstacle
+    action: stop
+    below_m: 0.5
+  - id: clear-path
+    action: continue

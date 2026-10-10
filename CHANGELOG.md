@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `docs/verification-spec.md`: the chain, receipt and policy formats, the
+  exact canonical form that is hashed and signed (Python's `json.dumps`
+  rules, which are not RFC 8785), and every check `kyvern-verify` runs, so
+  a chain can be verified without Kyvern. Test vectors from a published
+  test key are in `tests/fixtures/spec/` (`scripts/generate_spec_vectors.py`),
+  and a test keeps them and the spec in step with the code
+
+### Fixed
+- The README, the docs and the ROS2 demo policy said Kyvern records the
+  SHA-256 of a policy file's content. It records the SHA-256 of the parsed
+  YAML in canonical form, so comments and key order do not change a
+  policy's version id
+
 ## [0.5.0] — 2026-10-10
 
 ### Added
