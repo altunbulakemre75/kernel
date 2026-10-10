@@ -1,7 +1,6 @@
 """AuditChainStore — JSONL-backed read-only store for Kyvern decision audit chains."""
 from __future__ import annotations
 
-import json
 import time
 from dataclasses import dataclass
 from datetime import datetime
@@ -56,11 +55,13 @@ class AuditChainStore:
         if not self._chain_file.exists():
             from kyvern.mcp.errors import KyvernMCPError
             raise KyvernMCPError(f"chain file not found at {self._chain_file}")
-        self._events = [
-            json.loads(line)
-            for line in self._chain_file.read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        ]
+        from services.decision.audit_chain import ChainFormatError, read_chain
+
+        try:
+            self._events = read_chain(self._chain_file)
+        except ChainFormatError as exc:
+            from kyvern.mcp.errors import KyvernMCPError
+            raise KyvernMCPError(f"cannot read {self._chain_file}: {exc}") from exc
         self._mtime = self._chain_file.stat().st_mtime
         self._last_check_monotonic = time.monotonic()
 

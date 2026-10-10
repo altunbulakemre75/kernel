@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- A chain line that is valid JSON but not an object (`[1, 2]`, say) stopped
+  `kyvern-verify` and `kyvern-report` with a Python traceback and broke
+  `kyvern-mcp`'s queries. All three now read the chain with
+  `read_chain()`, which names the first bad line ("line 4 is not a JSON
+  object", "line 2 is not valid JSON") and fails; a line that is not UTF-8
+  is reported the same way
+
 ## [0.5.0] — 2026-10-10
 
 ### Added
