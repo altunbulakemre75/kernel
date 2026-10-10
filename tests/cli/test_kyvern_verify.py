@@ -445,3 +445,17 @@ def test_max_lag_rejects_a_bad_duration(anchored, value):
     res = _verify_anchored(anchored, "--max-lag", value)
     assert res.returncode == 2
     assert "--max-lag" in res.stderr
+
+
+
+def test_verify_reports_a_line_that_is_not_a_json_object(temp_workspace):
+    chain_path = temp_workspace["chain_path"]
+    chain_path.write_text(chain_path.read_text(encoding="utf-8") + "[1, 2]\n", encoding="utf-8")
+    res = run_cli(
+        str(chain_path),
+        "--policy", str(temp_workspace["policy_path"]),
+        "--pubkey", str(temp_workspace["pub_path"]),
+    )
+    assert res.returncode == 1
+    assert "line 4 is not a JSON object" in res.stdout
+    assert "Traceback" not in res.stderr

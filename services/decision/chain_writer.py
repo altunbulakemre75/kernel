@@ -121,7 +121,14 @@ class ChainWriter:
         entry["chain_index"] = 0 if last is None else last["chain_index"] + 1
         prev_hash = None if last is None else last["payload_hash"]
         signed = sign_decision(entry, prev_hash=prev_hash, signing_key=self._signing_key)
-        line = json.dumps(signed, separators=(",", ":")) + "\n"
+        try:
+            # Python would write NaN/Infinity bare, which is not JSON: only Python could
+            # read the entry back, so a verifier in any other language could not check it.
+            line = json.dumps(signed, separators=(",", ":"), allow_nan=False) + "\n"
+        except ValueError as exc:
+            raise AuditWriteError(
+                f"not appended: the record holds NaN or Infinity, which JSON cannot represent ({exc})"
+            ) from exc
         with open(self._chain_path, "a", encoding="utf-8", newline="\n") as f:
             f.write(line)
             f.flush()

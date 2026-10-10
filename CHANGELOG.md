@@ -16,6 +16,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a test keeps them and the spec in step with the code
 
 ### Fixed
+- A record holding NaN or Infinity (in `inputs`, say) is refused with
+  `AuditWriteError` and nothing is appended. Python wrote such values as a
+  bare `NaN`/`Infinity`, which is not JSON: only Python could read the entry
+  back, so no verifier in another language could check the chain
+- A chain line that is valid JSON but not an object (`[1, 2]`, say) stopped
+  `kyvern-verify` and `kyvern-report` with a Python traceback and broke
+  `kyvern-mcp`'s queries. All three now read the chain with
+  `read_chain()`, which names the first bad line ("line 4 is not a JSON
+  object", "line 2 is not valid JSON") and fails; a line that is not UTF-8
+  is reported the same way
 - The README, the docs and the ROS2 demo policy said Kyvern records the
   SHA-256 of a policy file's content. It records the SHA-256 of the parsed
   YAML in canonical form, so comments and key order do not change a

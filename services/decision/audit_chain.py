@@ -115,6 +115,32 @@ def _candidate_keys(record: dict[str, Any], keys: PublicKeys) -> list[ed25519.Ed
         return [keys]
     return []
 
+class ChainFormatError(ValueError):
+    """A line of a chain file that is not a JSON object."""
+
+
+def read_chain(path: str | Path) -> list[dict[str, Any]]:
+    """The records of a chain file: one JSON object per non-empty line.
+
+    Raises ChainFormatError naming the first line that is not valid JSON (or not
+    UTF-8) or not an object: verification cannot skip such a line, and code that
+    reads records as dicts would otherwise fail on it with a traceback.
+    FileNotFoundError if there is no file.
+    """
+    records: list[dict[str, Any]] = []
+    for n, line in enumerate(Path(path).read_bytes().splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            record = json.loads(line.decode("utf-8"))
+        except (ValueError, RecursionError) as exc:  # UnicodeDecodeError is a ValueError
+            raise ChainFormatError(f"line {n} is not valid JSON ({exc})") from exc
+        if not isinstance(record, dict):
+            raise ChainFormatError(f"line {n} is not a JSON object")
+        records.append(record)
+    return records
+
+
 def canonical_json(decision: dict[str, Any]) -> bytes:
     clean_dict = {k: v for k, v in decision.items() if k not in ("signature", "payload_hash")}
     return json.dumps(clean_dict, separators=(",", ":"), sort_keys=True).encode("utf-8")

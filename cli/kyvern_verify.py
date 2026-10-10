@@ -18,10 +18,12 @@ from services.decision.anchors import (
     read_receipts,
 )
 from services.decision.audit_chain import (
+    ChainFormatError,
     Keyring,
     check_policy_binding,
     describe_chain_failure,
     load_public_key,
+    read_chain,
     record_type_of,
     verify_chain,
 )
@@ -51,24 +53,14 @@ def format_time(ts: str) -> str:
         return ts[:8]
 
 def load_jsonl(path: str) -> list[dict[str, Any]]:
-    decisions = []
     try:
-        with open(path, encoding="utf-8") as f:
-            for line_no, line in enumerate(f, start=1):
-                line = line.strip()
-                if line:
-                    try:
-                        decisions.append(json.loads(line))
-                    except json.JSONDecodeError:
-                        print(f"{RED_CROSS} Error reading {path}: line {line_no} is not valid JSON")
-                        sys.exit(1)
+        return read_chain(path)
     except FileNotFoundError:
         print(f"{RED_CROSS} File not found: {path}")
         sys.exit(1)
-    except Exception as e:
+    except (ChainFormatError, OSError) as e:
         print(f"{RED_CROSS} Error reading {path}: {e}")
         sys.exit(1)
-    return decisions
 
 def load_pubkey(path: str) -> Ed25519PublicKey:
     try:

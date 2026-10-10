@@ -136,3 +136,20 @@ def test_run_reports_a_bad_key_without_a_traceback(sample_chain_file, tmp_path, 
         run()
     assert exc.value.code == 1
     assert "kyvern-mcp: " in capsys.readouterr().err
+
+
+def test_run_reports_a_bad_chain_line_without_a_traceback(sample_chain_file, signing_keypair, monkeypatch, capsys):
+    import sys
+
+    from kyvern.mcp.server import run
+
+    _, _, pub_path = signing_keypair
+    with open(sample_chain_file, "a", encoding="utf-8") as f:
+        f.write("[1, 2]\n")
+    monkeypatch.setattr(sys, "argv", [
+        "kyvern-mcp", "--chain-file", str(sample_chain_file), "--pubkey", str(pub_path),
+    ])
+    with pytest.raises(SystemExit) as exc:
+        run()
+    assert exc.value.code == 1
+    assert "is not a JSON object" in capsys.readouterr().err

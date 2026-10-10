@@ -37,11 +37,13 @@ from reportlab.platypus import (
 from reportlab.platypus.flowables import HRFlowable
 
 from services.decision.audit_chain import (
+    ChainFormatError,
     Keyring,
     PolicyCheck,
     check_policy_binding,
     load_private_key,
     load_public_key,
+    read_chain,
     record_type_of,
     verify_chain,
 )
@@ -735,13 +737,12 @@ def generate_pdf(
 
 def _load_jsonl(path: str) -> list[dict[str, Any]]:
     try:
-        with open(path, encoding="utf-8") as f:
-            return [json.loads(line) for line in f if line.strip()]
+        return read_chain(path)
     except FileNotFoundError:
         print(f"Error: file not found: {path}", file=sys.stderr)
         sys.exit(1)
-    except json.JSONDecodeError as e:
-        print(f"Error: invalid JSON in {path}: {e}", file=sys.stderr)
+    except (ChainFormatError, OSError) as e:
+        print(f"Error: cannot read {path}: {e}", file=sys.stderr)
         sys.exit(1)
 
 
